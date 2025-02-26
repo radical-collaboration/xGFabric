@@ -4,6 +4,8 @@ import math
 from argparse import ArgumentParser
 
 
+import zipfile
+
 
 def update_by_val(vx, vy, vz, core_folder_path):
     if not os.path.exists(core_folder_path):
@@ -52,7 +54,7 @@ def speed_and_dir_2_xyz(windspeed, winddir):
         angle=5.5
     elif winddir == "NNW":
         angle=5.85
-    else
+    else:
         angle=0 # Just for now, will fix later
     return windspeed * math.cos(angle), windspeed * math.sin(angle), 0
 
@@ -73,6 +75,10 @@ if __name__ == "__main__":
          raise Exception("Windspeed is not numeric")
     windspeed = int(args.windspeed)
     x, y, z = speed_and_dir_2_xyz(windspeed, args.winddir)
-    # Unzip  from golden folder to foldername
-    foldername = ""
+    foldername = "testfstrucutre"
+    with zipfile.ZipFile(args.filename, 'r') as zip_ref:
+        zip_ref.extractall(foldername)
+
+
+    
     update_by_val(x, y, z, foldername)
