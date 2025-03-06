@@ -9,4 +9,4 @@ winddir=$(awk -F":" '{print $7}' <<< "$vals")
 
 
 # Update files
-python3 unzip_and_update.py $windspeed $winddir --file angled_test_fixing
+python3 update_files/unzip_and_update.py $windspeed $winddir --file cfd_test.zip
