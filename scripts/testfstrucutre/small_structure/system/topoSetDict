@@ -1,0 +1,182 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2206                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+actions
+(
+    
+    {
+        name    porousBlockageCellSet_x1;
+        type    cellSet;
+        action  new;
+        source  surfaceToCell;
+        sourceInfo
+        {
+            file  "constant/triSurface/porous_side_x1.stl";
+            useSurfaceOrientation false;  // use closed surface inside/outside
+                                          // test (ignores includeCut,
+                                          // outsidePoints)
+            outsidePoints   ((-0.1 -0.1 1.9));    // definition of outside
+            includeCut      true;               // cells cut by surface
+            includeInside   true;               // cells not on outside of surf
+            includeOutside  false;              // cells on outside of surf
+            nearDistance    -1;                 // cells with centre near surf
+                                                // (set to -1 if not used)
+            curvature       -100;               // cells within nearDistance
+                                                // and near surf curvature
+                                                // (set to -100 if not used)           
+        }
+    }
+    {
+        name    porousBlockage_x1;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     porousBlockageCellSet_x1;
+    }
+
+
+
+    {
+    name    porousBlockageCellSet_x2;
+    type    cellSet;
+    action  new;
+    source  surfaceToCell;
+    sourceInfo
+        {
+            file  "constant/triSurface/porous_side_x2.stl";
+            useSurfaceOrientation false;  // use closed surface inside/outside
+                                          // test (ignores includeCut,
+                                          // outsidePoints)
+            outsidePoints   ((-0.1 -0.1 1.9));    // definition of outside
+            includeCut      true;               // cells cut by surface
+            includeInside   true;               // cells not on outside of surf
+            includeOutside  false;              // cells on outside of surf
+            nearDistance    -1;                 // cells with centre near surf
+                                                // (set to -1 if not used)
+            curvature       -100;               // cells within nearDistance
+                                                // and near surf curvature
+                                                // (set to -100 if not used)           
+        }
+    }
+    {
+        name    porousBlockage_x2;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     porousBlockageCellSet_x2;
+    }
+
+
+
+    {
+        name    porousBlockageCellSet_y1;
+        type    cellSet;
+        action  new;
+        source  surfaceToCell;
+        sourceInfo
+        {
+            file  "constant/triSurface/porous_side_y1.stl";
+            useSurfaceOrientation false;  // use closed surface inside/outside
+                                          // test (ignores includeCut,
+                                          // outsidePoints)
+            outsidePoints   ((-0.1 -0.1 1.9));    // definition of outside
+            includeCut      true;               // cells cut by surface
+            includeInside   true;               // cells not on outside of surf
+            includeOutside  false;              // cells on outside of surf
+            nearDistance    -1;                 // cells with centre near surf
+                                                // (set to -1 if not used)
+            curvature       -100;               // cells within nearDistance
+                                                // and near surf curvature
+                                                // (set to -100 if not used)           
+        }
+    }
+    {
+        name    porousBlockage_y1;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     porousBlockageCellSet_y1;
+    }
+
+
+
+    {
+    name    porousBlockageCellSet_y2;
+    type    cellSet;
+    action  new;
+    source  surfaceToCell;
+    sourceInfo
+        {
+            file  "constant/triSurface/porous_side_y2.stl";
+            useSurfaceOrientation false;  // use closed surface inside/outside
+                                          // test (ignores includeCut,
+                                          // outsidePoints)
+            outsidePoints   ((-0.1 -0.1 1.9));    // definition of outside
+            includeCut      true;               // cells cut by surface
+            includeInside   true;               // cells not on outside of surf
+            includeOutside  false;              // cells on outside of surf
+            nearDistance    -1;                 // cells with centre near surf
+                                                // (set to -1 if not used)
+            curvature       -100;               // cells within nearDistance
+                                                // and near surf curvature
+                                                // (set to -100 if not used)           
+        }
+    }
+    {
+        name    porousBlockage_y2;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     porousBlockageCellSet_y2;
+    }
+
+
+
+    {
+    name    porousBlockageCellSet_roof;
+    type    cellSet;
+    action  new;
+    source  surfaceToCell;
+    sourceInfo
+        {
+            file  "constant/triSurface/porous_roof.stl";
+            useSurfaceOrientation false;  // use closed surface inside/outside
+                                          // test (ignores includeCut,
+                                          // outsidePoints)
+            outsidePoints   ((-0.1 -0.1 1.9));    // definition of outside
+            includeCut      true;               // cells cut by surface
+            includeInside   true;               // cells not on outside of surf
+            includeOutside  false;              // cells on outside of surf
+            nearDistance    -1;                 // cells with centre near surf
+                                                // (set to -1 if not used)
+            curvature       -100;               // cells within nearDistance
+                                                // and near surf curvature
+                                                // (set to -100 if not used)           
+        }
+    }
+    {
+    name    porousBlockage_roof;
+    type    cellZoneSet;
+    action  new;
+    source  setToCellZone;
+    set     porousBlockageCellSet_roof;
+    }
+
+       
+);
+
+
+// ************************************************************************* //

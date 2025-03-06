@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -e
+
+# Source tutorial run functions
+. /opt/openfoam-dev/etc/bashrc # Change this for ND cluster? 
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+##  Run the meshing and preparations
+# Comment: supposebly done beforehand because same for all temperatures.
+# Case with edit the presision avoided for now
+
+# runApplication surfaceFeatures -dict ./system/surfaceFeatureExtractDict   
+# runApplication blockMesh
+# runApplication snappyHexMesh -overwrite
+# runApplication topoSet
+
+# Run the solver
+decomposePar
+
+sbatch -n 4 mpi_run.sh 
+# mpirun -np 4 pimpleFoam -parallel > log.pimpleFoam &
+reconstructPar
+
+
+# Alternative to solver, adjust according to server
+# decomposePar
+# mpirun -np 4 pimpleFoam -parallel > log.pimpleFoam &
+# reconstructPar
+
+
+
+# Notes
+#cd ${0%/*} || exit 1    # Run from this directory
+
+# Source tutorial run functions
+#. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+#runApplication blockMesh -dict $FOAM_TUTORIALS/resources/blockMesh/angledDuct
+#runApplication $(getApplication)
+

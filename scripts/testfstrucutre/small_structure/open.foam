@@ -1,0 +1,48 @@
+porousSimpleFoam
+
+
+cp -r /old/small_room_flow_try_01/porousBlockage/ /home/openfoam/
+
+//surfaceFeatureExtract
+surfaceFeatures -dict ./system/surfaceFeatureExtractDict   
+blockMesh
+snappyHexMesh -overwrite
+topoSet
+porousSimpleFoam | tee log logs/log_$(date '+%y-%m-%d_%X')
+
+gnuplot Residuals -
+
+cp -r ./0.orig ./0
+
+find ./ \( -regex "./[0-9]+.[0-9]+" -o -regex "./[1-9][0-9]*" \)  | xargs rm -r
+rm -rf  constant/extendedFeatureEdgeMesh/
+rm -rf  constant/triSurface/*.eMesh
+rm -rf  constant/polyMesh/
+
+
+source /usr/lib/openfoam/openfoam2206/etc/bashrc
+
+source /usr/lib/openfoam/openfoam2306/etc/bashrc
+
+decomposePar
+mpirun -np 4 pimpleFoam -parallel > log.pimpleFoam &
+
+
+
+find ./ \( -regex "./[0-9]+.[0-9]+" -o -regex "./[1-9]+" \)  | xargs rm -r
+
+
+TODO: seems like tilting worked, we can start adding multiple porous zones
+
+TODO: what is nesseary in blockMesh file now?
+
+
+0. set D as 0 on x does not provide any visible effect (1 m/s flow)
+1. set D as 100 on x creates sloving down on the area
+2. set D as 100 on y does not provide any visible effect (1 m/s flow)
+
+docker pull liukurafeeva/cfd1
+docker run -it --name cfd1 -v /home/nectostr/CFDs:/old liukurafeeva/cfd1 bash
+
+
+docker start -i CONTAINER_ID

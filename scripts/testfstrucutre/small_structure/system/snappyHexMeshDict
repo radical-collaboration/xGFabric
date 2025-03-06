@@ -1,0 +1,186 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2206                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+castellatedMesh true;
+snap            false;
+addLayers       false;
+
+geometry
+{
+    small_test.stl{ type triSurfaceMesh; name small_test;}
+    inlet.stl{ type triSurfaceMesh; name inlet;}
+}
+
+geometry
+{
+    porous_side_x1.stl{ type triSurfaceMesh; name porous_sides_x1;}
+    porous_side_x2.stl{ type triSurfaceMesh; name porous_sides_x2;}
+    porous_side_y1.stl{ type triSurfaceMesh; name porous_sides_y1;}
+    porous_side_y2.stl{ type triSurfaceMesh; name porous_sides_y2;}
+    porous_roof.stl{ type triSurfaceMesh; name porous_roof;}
+
+}
+
+castellatedMeshControls
+{
+    maxLocalCells 100000;
+    maxGlobalCells 8000000;
+    minRefinementCells 0;
+    maxLoadUnbalance 0.10;
+    nCellsBetweenLevels 2;
+
+    features
+    (
+        { file "porous_side_x1.eMesh"; level 3}
+        { file "porous_side_x2.eMesh"; level 3}
+        { file "porous_side_y1.eMesh"; level 3}
+        { file "porous_side_y2.eMesh"; level 3}
+        { file "porous_roof.eMesh"; level 3}
+        { file "small_test.eMesh"; level 3;} //was3
+        { file "inlet.eMesh"; level 3;}
+    );
+
+    refinementSurfaces
+    {
+        small_test{ level (2 2);} // was2
+        inlet{ level (2 2);}
+        porous_sides_x1
+        {
+            level (2 2);   
+            faceType internal;
+            faceZone porous_sides_x1;        
+            // patchInfo
+            // {
+            //     type empty;
+            // }
+        } 
+        porous_sides_x2
+        {
+            level (2 2);  
+            faceType internal;
+            faceZone porous_sides_x2;          
+            // patchInfo
+            // {
+            //     type empty;
+            // }
+        } 
+        porous_sides_y1
+        {
+            level (2 2); 
+            faceType internal;
+            faceZone porous_sides_y1;           
+            // patchInfo
+            // {
+            //     type empty;
+            // }
+        } 
+        porous_sides_y2
+        {
+            level (2 2);  
+            faceType internal;
+            faceZone porous_sides_y2;          
+            // patchInfo
+            // {
+            //     type empty;
+            // }
+        } 
+        porous_roof
+        {
+            level (2 2);   
+            faceType internal;
+            faceZone porous_roof;         
+            // patchInfo
+            // {
+            //     type empty;
+            // }
+        } 
+    }
+
+    resolveFeatureAngle 30;
+
+    refinementRegions
+    {
+        // Note: for better mesh quality utilize this refinement region
+        // AMI{ mode inside; levels ((1E15 3));}
+        
+    }
+
+    locationInMesh (1 1 1);
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls
+{
+    nSmoothPatch 3;
+    tolerance 4.0;
+    nSolveIter 300;
+    nRelaxIter 5;
+    nFeatureSnapIter 10;
+    implicitFeatureSnap true;
+    explicitFeatureSnap false;
+    multiRegionFeatureSnap true;
+}
+
+addLayersControls
+{
+    relativeSizes true;
+
+    layers
+    {
+    }
+
+    expansionRatio 1.0;
+    finalLayerThickness 0.3;
+    minThickness 0.1;
+    nGrow 0;
+    featureAngle 30;
+    nRelaxIter 3;
+    nSmoothSurfaceNormals 1;
+    nSmoothNormals 3;
+    nSmoothThickness 10;
+    maxFaceThicknessRatio 0.5;
+    maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle 90;
+    nBufferCellsNoExtrude 0;
+    nLayerIter 50;
+}
+
+meshQualityControls
+{
+    maxNonOrtho 65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave 80;
+    minVol 1e-13;
+    minTetQuality -1;
+    minArea -1;
+    minTwist 0.01;
+    minDeterminant 0.001;
+    minFaceWeight 0.05;
+    minVolRatio 0.01;
+    minTriangleTwist -1;
+    nSmoothScale 4;
+    errorReduction 0.75;
+    relaxed
+    {
+        maxNonOrtho 75;
+    }
+}
+
+mergeTolerance 1e-6;
+
+
+// ************************************************************************* //
