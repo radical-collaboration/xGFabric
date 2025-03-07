@@ -54,7 +54,7 @@ class ServiceEndpoint(ru.zmq.Server):
     def start(self):
 
         super().start()
-        return selfutils
+        return self.addr
 
 
     # --------------------------------------------------------------------------
