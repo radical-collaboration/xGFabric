@@ -1,0 +1,5 @@
+#!/bin/sh
+find ./ \( -regex "./[0-9]+.[0-9]+" -o -regex "./[1-9][0-9]*" \)  | xargs rm -rf
+rm -rf  constant/extendedFeatureEdgeMesh/
+rm -rf  constant/triSurface/*.eMesh
+rm -rf  constant/polyMesh/

@@ -65,14 +65,12 @@ if __name__ == "__main__":
     # parser.add_argument("vy", type=float, help="Y component of velocity")
     # parser.add_argument("vz", type=float, help="Z component of velocity")
 
-    parser.add_argument("windseed", type=float, help="Windspeed average value")
-    parser.add_argument("winddir", type=float, help="Wind direction [N, S, W, E, SW, etc]")
+    parser.add_argument("windspeed", type=float, help="Windspeed average value")
+    parser.add_argument("winddir", type=str, help="Wind direction [N, S, W, E, SW, etc]")
     parser.add_argument("-f", "--file", dest="filename",
                         help="filename for core files list", default="small_structure.zip")
 
     args = parser.parse_args()
-    if not args.windspeed.isnumeric():
-         raise Exception("Windspeed is not numeric")
     windspeed = int(args.windspeed)
     x, y, z = speed_and_dir_2_xyz(windspeed, args.winddir)
     foldername = "testfstrucutre"
@@ -81,4 +79,4 @@ if __name__ == "__main__":
 
 
     
-    update_by_val(x, y, z, foldername)
+    update_by_val(x, y, z, os.path.join(foldername,"small_structure"))

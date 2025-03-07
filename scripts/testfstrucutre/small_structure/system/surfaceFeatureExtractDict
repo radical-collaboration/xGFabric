@@ -1,0 +1,31 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2206                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      surfaceFeatureExtractDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+surface1
+{
+    surfaces (
+    "porous_side_x1.stl"
+    "porous_side_x2.stl"
+    "porous_side_y1.stl"
+    "porous_side_y2.stl"
+    "porous_roof.stl"
+    "small_test.stl"
+    "inlet.stl");
+    extractionMethod    extractFromSurface;
+    includedAngle       180;
+}
+
+// ************************************************************************* //
