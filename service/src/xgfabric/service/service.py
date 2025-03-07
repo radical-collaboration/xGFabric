@@ -1,20 +1,3 @@
-#!/usr/bin/env python3
-
-'''
-This file implements a xGFabric HPC service endpoint.  The service can be
-contacted via a REST API.
-
-    register() -> str
-
-        REST: GET /register
-        returns: a unique ID to identify the client on further requests.
-
-        Register client and return a unique client ID.  That ID is required for
-        all further requests.
-
-      - use cookie instead of client id
-      - add authorization and authentication
-'''
 
 from typing import List
 
@@ -26,7 +9,7 @@ import radical.pilot as rp
 
 # ------------------------------------------------------------------------------
 #
-class Client(ru.TypedDict):
+class _Client(ru.TypedDict):
 
     _schema = {
         'uid'    : str,              # client uid
@@ -52,7 +35,7 @@ class Client(ru.TypedDict):
 
 # ------------------------------------------------------------------------------
 #
-class xGFabric_EP(ru.zmq.Server):
+class ServiceEndpoint(ru.zmq.Server):
 
     #---------------------------------------------------------------------------
     #
@@ -71,12 +54,12 @@ class xGFabric_EP(ru.zmq.Server):
     def start(self):
 
         super().start()
-        print(self.addr)
+        return selfutils
 
 
     # --------------------------------------------------------------------------
     #
-    def get_clients(self, uid:str) -> Client:
+    def get_clients(self, uid:str) -> _Client:
 
         assert uid in self._clients, 'unknown client [%s]' % uid
         return self._clients[uid]
@@ -86,8 +69,8 @@ class xGFabric_EP(ru.zmq.Server):
     #
     def register(self) -> str:
 
-        client = Client(uid=ru.generate_id('client'),
-                        t_reg=time.time())
+        client = _Client(uid=ru.generate_id('client'),
+                         t_reg=time.time())
 
         self._clients[client.uid] = client
 
@@ -143,15 +126,6 @@ class xGFabric_EP(ru.zmq.Server):
         self._log.info('client %s result: %s', uid, res)
 
         return str(res)
-
-
-# ------------------------------------------------------------------------------
-#
-if __name__ == '__main__':
-
-    s = xGFabric_EP(url='tcp://*:10000-10020')
-    s.start()
-    s.wait()
 
 
 # ------------------------------------------------------------------------------
