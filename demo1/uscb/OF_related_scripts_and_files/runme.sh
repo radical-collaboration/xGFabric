@@ -5,7 +5,7 @@
 # module load openfoam/10.0/gcc/8.5.0 # For ND cluster
 source /opt/openfoam10/etc/bashrc # For UCSB pseudo cluster
 
-# 3. Load most recent online data
+# 3. Load most recent online data # Not working on ND as of now
 b=$(/sharedfs/cups-data/senspot-get -W woof://169.231.230.76/sharedfs/cups-data/daviscupsout)
 vals=$(awk -F" " '{print $1}' <<< "$b")
 windspeed=$(awk -F":" '{print $6}' <<< "$vals")
