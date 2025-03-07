@@ -17,3 +17,8 @@ runApplication topoSet
 # but before this, it has to be unpacked from default configuration zip 
 # (And if possible, update from CSPOT - that is not possible on ND at the time of the meeting)
 runApplication porousSimpleFoam | tee log logs/log_$(date '+%y-%m-%d_%X')
+
+# Liu adds:
+# For installation - see the installation folder
+# Then unpacking should go (with optional or skipped woof/cspot update
+# Then only runnning the solver as of line 19
