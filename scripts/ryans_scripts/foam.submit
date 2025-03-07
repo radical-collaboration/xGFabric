@@ -8,7 +8,7 @@ executable   = foamrun.sh
 Error   = err.$(Process)
 Input   = in.$(Process)
 Output  = out.$(Process)
-Log = foo.log
+Log = foamrun.log
 
 request_cpus   = 1
 request_memory = 4 Gb
