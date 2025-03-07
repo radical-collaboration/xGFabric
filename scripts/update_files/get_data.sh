@@ -10,3 +10,7 @@ winddir=$(awk -F":" '{print $7}' <<< "$vals")
 
 # Update files
 python3 update_files/unzip_and_update.py $windspeed $winddir --file cfd_test.zip
+
+
+# cd testfstructure/small_structure
+# ./Allrun
