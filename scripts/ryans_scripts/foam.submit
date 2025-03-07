@@ -1,0 +1,20 @@
+# Example 1
+# Simple HTCondor submit description file
+# Everything with a leading # is a comment
+Universe     = vanilla
+executable   = foamrun.sh
+# arguments    = SomeArgument
+
+Error   = err.$(Process)
+Input   = in.$(Process)
+Output  = out.$(Process)
+Log = foo.log
+
+request_cpus   = 1
+request_memory = 4 Gb
+request_disk   = 10 Gb
+
+should_transfer_files = yes
+when_to_transfer_output = on_exit
+
+queue
