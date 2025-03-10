@@ -1,5 +1,6 @@
 import radical.pilot as rp
 
+
 # ------------------------------------------------------------------------------
 class PilotController(object):
     """
@@ -27,6 +28,7 @@ class PilotController(object):
         """
         for pilot_id in self._pilots:
             self.cancel_pilot(pilot_id)
+
 
     # --------------------------------------------------------------------------
     def _submit_pilot(self, nodes=1, runtime=600):
@@ -61,16 +63,16 @@ class PilotController(object):
             del self._pilots[pilot_id]
 
     # --------------------------------------------------------------------------
-    def start_initial_pilot(self, expected_workload):
+    def start_initial_pilot(self, expected_workload=None):
         """
         Start an initial pilot job based on available resources and workload demand.
-        
+
         :param expected_workload: Dictionary describing expected data and workload characteristics.
         :return: UID of the submitted pilot, or None if no pilot is started.
         """
         if self._pilots:
             return  # A pilot is already running, avoid redundant submission.
-        
+
         if expected_workload and expected_workload.get("size", 0) > 0:
             nodes = min(self._resource_description.get("nodes", 1), max(1, expected_workload["size"] // 10))  # Adjust nodes dynamically
             runtime = min(self._resource_description.get("max_runtime", 600), 600)  # Ensure reasonable runtime
@@ -84,28 +86,30 @@ class PilotController(object):
     def start_pilot(self, data):
         """
         Start a new pilot based on new incoming data.
-        
+
         Algorithm:
         1. Assess the amount of new data that has not been used in any simulation.
         2. Determine if this data is sufficient to require a new pilot.
         3. Evaluate if the current pilots have enough resources to handle this workload.
         4. If current pilots have sufficient resources, do nothing.
         5. If additional resources are required, start a new pilot with appropriate resource allocation.
-        
+
         :param data: Dictionary describing new incoming data and its characteristics.
         :return: UID of the submitted pilot if applicable, else None.
         """
         # Determine if new data justifies launching a new pilot
         data_size = data.get("size", 0)
         required_nodes = max(1, data_size // 10)  # Determine needed resources dynamically
-        
+
         # Check if existing pilots can handle the workload
-        total_available_nodes = sum(pilot.nodes for pilot in self._pilots.values())
+        total_available_nodes = sum(len(pilot.nodelist)
+                                    for pilot in self._pilots.values()
+                                    if  pilot.state == rp.PMGR_ACTIVE)
         if total_available_nodes >= required_nodes:
             return None  # No need to start a new pilot
-        
+
         # Ensure we do not exceed available system resources
         nodes_to_allocate = min(self._resource_description.get("nodes", 1), required_nodes)
         runtime = min(self._resource_description.get("max_runtime", 600), 600)
-        
+
         return self._submit_pilot(nodes=nodes_to_allocate, runtime=runtime)

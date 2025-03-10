@@ -1,29 +1,10 @@
-#!/usr/bin/env python3
-
-'''
-This file implements a xGFabric HPC service endpoint.  The service can be
-contacted via a REST API.
-
-    register() -> str
-
-        REST: GET /register
-        returns: a unique ID to identify the client on further requests.
-
-        Register client and return a unique client ID.  That ID is required for
-        all further requests.
-
-      - use cookie instead of client id
-      - add authorization and authentication
-'''
-
-from typing import List
 
 import time
 
 import radical.utils as ru
 import radical.pilot as rp
 
-from pilot_controller import PilotController
+from .pilot_controller import PilotController
 
 
 # ------------------------------------------------------------------------------
@@ -49,7 +30,7 @@ class _Client(ru.TypedDict):
 
 # ------------------------------------------------------------------------------
 #
-class xGFabric_EP(ru.zmq.Server):
+class ServiceEndpoint(ru.zmq.Server):
 
     #---------------------------------------------------------------------------
     #
@@ -83,11 +64,14 @@ class xGFabric_EP(ru.zmq.Server):
         self._tmgr    = rp.TaskManager(session=self._session)
         self._pmgr    = rp.PilotManager(session=self._session)
 
-        self._p_ctrl  = PilotController(self._pmgr, self._tmgr)
+        self._p_ctrl  = PilotController(self._pmgr, self._tmgr,
+                                        {'resource_type': 'local.localhost',
+                                         'nodes'        : 8,
+                                         'max_runtime'  : 600})
         self._p_ctrl.start_initial_pilot()
 
         super().start()
-        print(self.addr)
+        return self.addr
 
 
     # --------------------------------------------------------------------------
@@ -124,7 +108,7 @@ class xGFabric_EP(ru.zmq.Server):
 
         client.fname = fname
         client.data  = data
-        client.pid   = self._p_ctrl.start_pilot(data)
+        client.pid   = self._p_ctrl.start_pilot({'data': data})
 
         tds = list()
         td  = rp.TaskDescription()
@@ -142,15 +126,6 @@ class xGFabric_EP(ru.zmq.Server):
         self._log.info('client %s result: %s', uid, res)
 
         return str(res)
-
-
-# ------------------------------------------------------------------------------
-#
-if __name__ == '__main__':
-
-    s = xGFabric_EP(url='tcp://*:10000-10020')
-    s.start()
-    s.wait()
 
 
 # ------------------------------------------------------------------------------
