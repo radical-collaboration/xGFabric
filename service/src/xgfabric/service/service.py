@@ -81,9 +81,10 @@ class ServiceEndpoint(ru.zmq.Server):
         pmgr    = rp.PilotManager(session=session)
 
         pd = rp.PilotDescription()
-        pd.resource = 'xgfabric.vslurm'
+      # pd.resource = 'xgfabric.vslurm'
+        pd.resource = 'local.localhost'
         pd.cores    = 8
-        pd.runtime  = 600
+        pd.runtime  = 60
 
 
         pilot = pmgr.submit_pilots(pd)
