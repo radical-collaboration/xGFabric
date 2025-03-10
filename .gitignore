@@ -58,3 +58,5 @@ com.apple.timemachine.donotpresent
 .metadata_never_index
 .fseventsd
 
+# data files
+demo1/nd/ryans_scripts/squarecil/
