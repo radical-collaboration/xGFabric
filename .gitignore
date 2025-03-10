@@ -38,3 +38,7 @@ nosetests.xml
 .project
 .pydevproject
 .idea
+
+
+# data files
+demo1/nd/ryans_scripts/squarecil/
