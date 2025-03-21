@@ -14,13 +14,7 @@ DIRECTORY=openfoam-partial
 if [ -d "$DIRECTORY" ]; then
     cd openfoam-partial
     echo "$DIRECTORY already existed. restoring all"
-    sh combustion/reactingFoam/LES/DLRCJH/piloted/Allclean
-    rm -rf combustion/reactingFoam/LES/DLRCJH/piloted/log.*
-    rm -rf combustion/reactingFoam/LES/DLRCJH/piloted/0
-    rm -rf combustion/reactingFoam/LES/DLRCJH/piloted/constant/extendedFeatureEdgeMesh/
-    rm -rf combustion/reactingFoam/LES/DLRCJH/piloted/constant/polyMesh/
-    rm -rf combustion/reactingFoam/LES/DLRCJH/piloted/dynamicCode/
-    git restore .
+    foamCleanTutorials
 else 
     echo "Downloading repo..."
     git clone --no-checkout https://develop.openfoam.com/committees/hpc openfoam-partial
