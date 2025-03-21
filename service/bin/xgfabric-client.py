@@ -16,16 +16,13 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
         uid = sys.argv[3]
 
-    with open(fname) as fin:
-        data = fin.read()
-
     c = ru.zmq.Client(url=addr)
 
     if not uid:
-        uid = c.request('register')
+        uid = c.request('register_client')
         print('uid: %s' % uid)
 
-    result = c.request('register_data', uid=uid, data=data)
+    result = c.request('register_fname', uid=uid, fname=fname)
 
     print(1, result)
 

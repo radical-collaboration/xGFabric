@@ -39,6 +39,24 @@ nosetests.xml
 .pydevproject
 .idea
 
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# macOS Finder files
+Icon?
+._*
+
+# macOS resource forks
+.Spotlight-V100
+.Trashes
+.VolumeIcon.icns
+com.apple.timemachine.donotpresent
+
+# macOS folder settings
+.metadata_never_index
+.fseventsd
 
 # data files
 demo1/nd/ryans_scripts/squarecil/

@@ -1,10 +1,10 @@
 
-from typing import List
-
 import time
 
 import radical.utils as ru
 import radical.pilot as rp
+
+from .pilot_controller import PilotController
 
 
 # ------------------------------------------------------------------------------
@@ -14,23 +14,18 @@ class _Client(ru.TypedDict):
     _schema = {
         'uid'    : str,              # client uid
         't_reg'  : float,            # registration time
+        'fname'  : str,              # file name
         'data'   : str,              # fake input data
-
-        'session': rp.Session,       # RP session etc.
-        'pmgr'   : rp.PilotManager,
-        'tmgr'   : rp.TaskManager,
-        'pilot'  : rp.Pilot,
-        }
+        'pid'    : str,              # pilot id
+    }
 
     _defaults = {
         'uid'    : None,
         't_reg'  : None,
+        'fname'  : None,
         'data'   : None,
-        'session': None,
-        'pmgr'   : None,
-        'tmgr'   : None,
-        'pilot'  : None,
-        }
+        'pid'    : None,
+    }
 
 
 # ------------------------------------------------------------------------------
@@ -44,14 +39,36 @@ class ServiceEndpoint(ru.zmq.Server):
         super().__init__(url)
 
         self._clients = dict()
+        self._session = None
+        self._tmgr    = None
+        self._pmgr    = None
+        self._p_ctrl  = None
 
-        self.register_request('register',      self.register)
-        self.register_request('register_data', self.register_data)
+        self.register_request('register_client', self.register_client)
+        self.register_request('register_fname',  self.register_fname)
+
+
+    # --------------------------------------------------------------------------
+    #
+    def __del__(self):
+
+        if self._session:
+            self._session.close()
 
 
     # --------------------------------------------------------------------------
     #
     def start(self):
+
+        self._session = rp.Session()
+        self._tmgr    = rp.TaskManager(session=self._session)
+        self._pmgr    = rp.PilotManager(session=self._session)
+
+        self._p_ctrl  = PilotController(self._pmgr, self._tmgr,
+                                        {'resource_type': 'local.localhost',
+                                         'nodes'        : 8,
+                                         'max_runtime'  : 600})
+        self._p_ctrl.start_initial_pilot()
 
         super().start()
         return self.addr
@@ -67,58 +84,40 @@ class ServiceEndpoint(ru.zmq.Server):
 
     # --------------------------------------------------------------------------
     #
-    def register(self) -> str:
+    def register_client(self) -> str:
 
-        client = _Client(uid=ru.generate_id('client'),
-                         t_reg=time.time())
+        client = _Client(uid=ru.generate_id('client'), t_reg=time.time())
 
         self._clients[client.uid] = client
 
         self._log.info('client %s registered', client.uid)
-
-        session = rp.Session()
-        tmgr    = rp.TaskManager(session=session)
-        pmgr    = rp.PilotManager(session=session)
-
-        pd = rp.PilotDescription()
-      # pd.resource = 'xgfabric.vslurm'
-        pd.resource = 'local.localhost'
-        pd.cores    = 8
-        pd.runtime  = 60
-
-
-        pilot = pmgr.submit_pilots(pd)
-        tmgr.add_pilots(pilot)
-
-        client.session = session
-        client.pmgr    = pmgr
-        client.tmgr    = tmgr
-        client.pilot   = pilot
-
-
-        self._log.info('client %s session: %s', client.uid, session.uid)
 
         return client.uid
 
 
     # --------------------------------------------------------------------------
     #
-    def register_data(self, uid:str, data: str) -> str:
+    def register_fname(self, uid:str, fname: str) -> str:
 
         client = self.get_clients(uid)
-        tmgr   = client.tmgr
+
+        with ru.ru_open(fname) as fin:
+            data = fin.read()
 
         self._log.info('client %s registered %s', uid, len(data))
 
+        client.fname = fname
+        client.data  = data
+        client.pid   = self._p_ctrl.start_pilot({'data': data})
+
         tds = list()
-        client.data = data
-        td = rp.TaskDescription()
+        td  = rp.TaskDescription()
         td.executable = '/bin/echo'
         td.arguments  = ['DATA:', data]
         tds.append(td)
 
-        tasks = tmgr.submit_tasks(tds)
-        tmgr.wait_tasks()
+        tasks = self._tmgr.submit_tasks(tds)
+        self._tmgr.wait_tasks()
 
         res = list()
         for task in tasks:

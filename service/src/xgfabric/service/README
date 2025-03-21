@@ -1,0 +1,4 @@
+
+terminal 1:  ./service.py
+terminal 2:  ./client.py tcp://10.0.0.39:10001 input_openfoam.dat
+
