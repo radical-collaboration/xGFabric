@@ -18,3 +18,12 @@ if [ -d "$DIRECTORY" ]; then
 else 
     cp -r $FOAM_TUTORIALS/multiphase/interFoam/laminar/damBreak/damBreak .
 fi
+
+DIRECTORY=figures
+
+if [ -d "$DIRECTORY" ]; then
+    echo "$DIRECTORY already exists. Removing it..."
+    rm $DIRECTORY/*
+else 
+    mkdir "figures"
+fi
