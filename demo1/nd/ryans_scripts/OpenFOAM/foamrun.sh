@@ -107,9 +107,12 @@ echo "Finished plotting all files."
 
 mv *.png ../figures
 
-# foamToVTK -allPatches
-
+foamToVTK -allPatches
 
 cd ..
+
+pvpython --force-offscreen-rendering render_foam.py
+
+python create_gif.py
 
 echo "Task finished at [$(date '+%Y-%m-%d %H:%M:%S')]" >> out.log
