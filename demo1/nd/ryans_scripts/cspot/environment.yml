@@ -1,0 +1,26 @@
+name: cspot
+channels:
+ - conda-forge
+ - anaconda
+dependencies:
+ - python=3.10
+ - gcc
+ - gxx
+ - gxx_linux-64
+ - cmake=3.19.1
+ - ninja
+ - cxx-compiler
+ - unzip
+ - mgckind::glibc
+ - wget
+ - apptainer
+ - zeromq
+ - libmicrohttpd
+ - libpcap
+ - libstdcxx-ng
+ - pkgconfig
+ - anaconda::lz4
+ - libcurl
+ - libsystemd
+ - nss
+ - openssl
