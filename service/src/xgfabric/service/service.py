@@ -108,7 +108,8 @@ class ServiceEndpoint(ru.zmq.Server):
 
         client.fname = fname
         client.data  = data
-        client.pid   = self._p_ctrl.start_pilot({'data': data})
+
+        pid = self._p_ctrl.start_pilot({'data': data})
 
         tds = list()
         td  = rp.TaskDescription()
@@ -124,6 +125,8 @@ class ServiceEndpoint(ru.zmq.Server):
             res.append(task.stdout)
 
         self._log.info('client %s result: %s', uid, res)
+
+        self._p_ctr.cancel_pilot(pid)
 
         return str(res)
 
