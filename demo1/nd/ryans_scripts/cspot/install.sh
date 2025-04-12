@@ -4,28 +4,6 @@ conda activate cspot
 
 # conda env update --file environment.yml --prune
 
-# wget https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip
-# unzip ninja-linux.zip 
-# mv ninja $HOME/.local/bin
-# rm ninja-linux.zip
-
-# wget https://github.com/Kitware/CMake/releases/download/v3.19.1/cmake-3.19.1-Linux-x86_64.sh
-# chmod +x cmake-3.19.1-Linux-x86_64.sh 
-# mkdir ~/.cmake
-# ./cmake-3.19.1-Linux-x86_64.sh --skip-license --prefix=$HOME/.cmake
-
-# yum -y localinstall https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/c/czmq-3.0.2-3.el7.x86_64.rpm
-
-# echo 'case ":$PATH:" in
-#     *:/afs/crc.nd.edu/user/r/rhartung/.cmake/bin:*)
-#         ;;
-
-#     *)
-#         export PATH=/afs/crc.nd.edu/user/r/rhartung/.cmake/bin${PATH:+:${PATH}}
-#         ;;
-# esac' >> ~/.bashrc
-
-
 git clone https://github.com/MAYHEM-Lab/cspot
 cd cspot
 git submodule update --init --recursive
@@ -34,12 +12,107 @@ mv deps/libzmq/CMakeLists.txt deps/libzmq/CMakeLists.orig.txt
 sed 's/build the tests" ON/build the tests" OFF/' deps/libzmq/CMakeLists.orig.txt > deps/libzmq/CMakeLists.txt
 
 
-# wget https://github.com/openssl/openssl/releases/download/openssl-3.4.1/openssl-3.4.1.tar.gz
-# tar -xvzf openssl-3.4.1.tar.gz
-# cd openssl-3.4.1
-# ./config --prefix=/usr/local/openssl --openssldir=/usr/local/openssl
-# make
-# make install
+# fix some files
+line_to_prepend="#define _GNU_SOURCE"
+file="deps/mio/mio.c"
+sed -i "1i $line_to_prepend" "$file"
+
+line_to_prepend="#include <sys/wait.h>"
+file="apps/runs-test/cspot-runstat-multi-ns.c"
+sed -i "1i $line_to_prepend" "$file"
+
+line_to_prepend="#include <arpa/inet.h>"
+file="apps/senspot/senspot.c"
+sed -i "1i $line_to_prepend" "$file"
+
+line_to_prepend="#include <arpa/inet.h>"
+file="apps/senspot/senspot-put.c"
+sed -i "1i $line_to_prepend" "$file"
+
+content='
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+
+#include "woofc.h"
+#include "senspot.h"
+
+
+/*
+ * put on the target and not on the WOOF with the args
+ */
+int senspot_log(WOOF *wf, unsigned long seq_no, void *ptr)
+{
+    SENSPOT *spt = (SENSPOT *)ptr;
+    time_t timer;
+    timer = (time_t)spt->tv_sec;
+    fprintf(stdout,"seq_no: %lu %s recv type %c from %s and timestamp %s\\n",
+            seq_no,
+            WoofGetFileName(wf),
+            spt->type,
+            spt->ip_addr,
+            ctime(&timer));
+    fflush(stdout);
+    return(1);
+}
+'
+file="apps/senspot/senspot_log.c"
+echo "$content" > "$file"
+
+
+content='
+find_package(OpenSSL REQUIRED)
+
+if(NOT OpenSSL_FOUND)
+    message(FATAL_ERROR "OpenSSL not found.")
+else()
+    include_directories(${OpenSSL_INCLUDE_DIRS})
+endif()
+
+string(REPLACE ".so" ".a" OPENSSL_STATIC_LIBS "${OPENSSL_LIBRARIES}")
+
+target_compile_options(woofc-container PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
+target_compile_options(woofc-forker-helper PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
+target_compile_options(woofc-mqtt-gateway PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
+'
+file="CMakeLists.txt"
+echo "$content" >> "$file"
+
+
+content='
+target_compile_options(log-test-thread PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
+target_compile_options(log-test        PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
+'
+file="src/CMakeLists.txt"
+echo "$content" >> "$file"
+
+content='
+find_package(OpenSSL REQUIRED)
+if(OPENSSL_FOUND)
+  include_directories(${OPENSSL_INCLUDE_DIR})
+else()
+  message(FATAL_ERROR "OpenSSL library not found.")
+endif()
+message(STATUS "OpenSSL CFlags: ${OPENSSL_LIBRARIES}")
+include_directories("./include" "../include" "../../src/include" "../src/include")
+add_library(woof_caplets woofc-caplets.c)
+target_link_libraries(woof_caplets PUBLIC woof)
+target_include_directories(woof_caplets PRIVATE "." "../../include")
+add_executable(woofc-init-principal woofc-init-principal.c)
+target_link_libraries(woofc-init-principal PRIVATE woof_caplets woof crypto dl)
+target_include_directories(woofc-init-principal PRIVATE "../include")
+add_executable(woofc-print-cap woofc-print-cap.c)
+target_link_libraries(woofc-print-cap PRIVATE woof_caplets woof crypto dl)
+target_include_directories(woofc-print-cap PRIVATE "../include")
+target_compile_options(woof_caplets PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
+target_compile_options(woofc-init-principal PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
+target_compile_options(woofc-print-cap PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
+'
+file="src/caplets/CMakeLists.txt"
+echo "$content" > "$file"
+
 
 
 mkdir build
@@ -47,19 +120,14 @@ cd build/
 source ~/.bashrc
 conda activate cspot
 
-export CPATH=$CONDA_PREFIX/include
-export LIBRARY_PATH=$CONDA_PREFIX/lib
-export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
-export CXXFLAGS="-std=c++17"
-export CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0"
-export CC=$(which x86_64-conda-linux-gnu-cc)
-export CXX=$(which x86_64-conda-linux-gnu-c++)
-export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
-
-
-cmake -G Ninja ..
+cmake -G Ninja -DCMAKE_INSTALL_PREFIX=$HOME/.local ..
 ninja
 ninja install
+
+
+# ----------------------------------------------------------------------------
+# Should be working up until this point. Haven't started work with docker yet.
+# ----------------------------------------------------------------------------
 
 
 #scl enable devtoolset-9 ./helper.sh
@@ -73,26 +141,3 @@ fi
 cp ../SELF-TEST.sh ./bin
 cd ./bin
 ./SELF-TEST.sh
-
-
-
-
-# -- Install:
-# --   Install prefix    :/usr/local
-# -- 
-# -- ************************* Options ***************************
-# -- Options:
-# --   Use the Draft API (default = yes):
-# --   -DENABLE-DRAFTS=[yes|no]
-# -- 
-# -- *************************************************************
-# -- Configuration complete! Now procced with:
-# --   'make'                 compile the project
-# --   'make test'            run the project's selftest
-# --   'make install'         install the project to /usr/local
-# -- 
-# -- Further options are:
-# --   'ctest -V              run test with verbose logging
-# --   'ctest -R <test_name>' run a specific test
-# --   'ctest -T memcheck'    run the project's selftest with
-# --                          valgrind to check for memory leaks
