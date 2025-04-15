@@ -126,7 +126,7 @@ class ServiceEndpoint(ru.zmq.Server):
 
         self._log.info('client %s result: %s', uid, res)
 
-        self._p_ctr.cancel_pilot(pid)
+        self._p_ctrl.cancel_pilot(pid)
 
         return str(res)
 
