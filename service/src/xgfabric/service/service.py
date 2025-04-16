@@ -60,6 +60,8 @@ class ServiceEndpoint(ru.zmq.Server):
     #
     def start(self):
 
+        super().start()
+
         self._session = rp.Session()
         self._tmgr    = rp.TaskManager(session=self._session)
         self._pmgr    = rp.PilotManager(session=self._session)
@@ -70,7 +72,6 @@ class ServiceEndpoint(ru.zmq.Server):
                                          'max_runtime'  : 600})
         self._p_ctrl.start_initial_pilot()
 
-        super().start()
         return self.addr
 
 
