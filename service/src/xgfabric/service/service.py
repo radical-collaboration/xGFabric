@@ -91,7 +91,7 @@ class ServiceEndpoint(ru.zmq.Server):
                 uid = self.register_client()
                 res = self.register_fname(uid, fname)
 
-                tgt = '%s/%s' % (output_dir, os.path.basename(fname))
+                tgt = '%s/%s.out' % (output_dir, os.path.basename(fname))
                 with open(tgt, 'w') as fout:
                     fout.write(res)
 
