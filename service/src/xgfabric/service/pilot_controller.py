@@ -50,6 +50,8 @@ class PilotController(object):
         self._tmgr.add_pilots(pilot)
         self._pilots[pilot.uid] = pilot
 
+        self._pmgr.wait_pilots(pilot.uid, state=[rp.PMGR_ACTIVE] + rp.FINAL)
+
         return pilot.uid
 
 
@@ -63,6 +65,7 @@ class PilotController(object):
         pilot = self._pilots.get(pilot_id)
         if pilot:
             pilot.cancel()
+            self._pmgr.wait_pilots(pilot.uid, state=rp.FINAL)
             del self._pilots[pilot_id]
 
 
@@ -96,6 +99,8 @@ class PilotController(object):
 
         else:
             return None
+
+        self._pmgr.wait_pilots(pilot)
 
 
     # --------------------------------------------------------------------------

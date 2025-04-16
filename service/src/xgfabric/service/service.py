@@ -1,10 +1,17 @@
 
+import os
 import time
+import glob
+
+import threading as mt
 
 import radical.utils as ru
 import radical.pilot as rp
 
 from .pilot_controller import PilotController
+
+watcher_cfg = {'data' : {'input' : './INPUT/',
+                         'output': './OUTPUT/'}}
 
 
 # ------------------------------------------------------------------------------
@@ -44,8 +51,57 @@ class ServiceEndpoint(ru.zmq.Server):
         self._pmgr    = None
         self._p_ctrl  = None
 
-        self.register_request('register_client', self.register_client)
-        self.register_request('register_fname',  self.register_fname)
+
+    # --------------------------------------------------------------------------
+    def _watcher_service(self):
+        '''
+        Watch the input dir.  If new data items are found, register them with
+        the service.  This is a placeholder for a more sophisticated
+        implementation, e.g. using inotify.
+        '''
+
+        print('watcher started')
+
+        cfg = ru.Config(watcher_cfg)
+
+        input_dir  = str(cfg.data.input)
+        output_dir = str(cfg.data.output)
+
+        ru.rec_makedir(input_dir)
+        ru.rec_makedir(output_dir)
+
+        while True:
+
+            # check for new files in the input dir
+            files = glob.glob('%s/*' % input_dir)
+
+            for fname in files:
+
+                # ignore done markers
+                if fname.endswith('.done'):
+                    continue
+
+                # check for done marker
+                if os.path.exists('%s.done' % fname):
+                    continue
+
+                print('new input data: %s' % fname)
+
+                # register new file with the service
+                uid = self.register_client()
+                res = self.register_fname(uid, fname)
+
+                tgt = '%s/%s' % (output_dir, os.path.basename(fname))
+                with open(tgt, 'w') as fout:
+                    fout.write(res)
+
+                # create done marker
+                with open('%s.done' % fname, 'w') as fout:
+                    fout.write('done')
+
+                print('output data: %s' % tgt)
+
+            time.sleep(1)
 
 
     # --------------------------------------------------------------------------
@@ -71,6 +127,13 @@ class ServiceEndpoint(ru.zmq.Server):
                                          'nodes'        : 8,
                                          'max_runtime'  : 600})
         self._p_ctrl.start_initial_pilot()
+
+        self.register_request('register_client', self.register_client)
+        self.register_request('register_fname',  self.register_fname)
+
+        self._watcher = mt.Thread(target=self._watcher_service)
+        self._watcher.daemon = True
+        self._watcher.start()
 
         return self.addr
 
@@ -114,7 +177,7 @@ class ServiceEndpoint(ru.zmq.Server):
 
         tds = list()
         td  = rp.TaskDescription()
-        td.executable = '/bin/echo'
+        td.executable = '/bin/wc'
         td.arguments  = ['DATA:', data]
         tds.append(td)
 
