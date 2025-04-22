@@ -25,3 +25,7 @@ is a more parameterized version that will pull data from the CUPS data cache
 on the UCSB cluster head node which is being populated from a device running
 on the UNL 5G network.
 
+````weather-change.sh
+````
+This script runs a laminar program that can detect a change point in the
+davis time series every 30 minutes.
