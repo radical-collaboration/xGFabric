@@ -17,3 +17,11 @@ to be run (i.e. the head node of the cluster).
 The script does not require special user privileges but it does require write
 access to the CSPOT namespace directory.
 
+````
+replicate-unl-data.sh
+````
+
+is a more parameterized version that will pull data from the CUPS data cache
+on the UCSB cluster head node which is being populated from a device running
+on the UNL 5G network.
+
