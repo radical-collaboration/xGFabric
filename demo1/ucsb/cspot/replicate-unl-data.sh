@@ -1,9 +1,9 @@
 #!/bin/bash
 
-BIN=/sharedfs/cups-data
-HERE=/sharedfs/cups-data
-LOCALWOOF="woof://169.231.230.76$HERE/daviscupsout"
-DATAWOOF="woof://128.111.45.61/davisstations/daviscupsout"
+BIN=<path to senspot tools on head node>
+HERE=<path to daviscupsout on head node>
+LOCALWOOF="woof://XXX.XXX.XXX.XXX$HERE/daviscupsout"
+DATAWOOF="woof://169.231.230.76/sharedfs/unl-data/daviscupsout"
 
 LINE=`$BIN/senspot-get -W $DATAWOOF`
 
