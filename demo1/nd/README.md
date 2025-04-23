@@ -1,1 +1,1 @@
-Here go the installation and run scripts for Notre Dame
+- For running and installing OpenFOAM
