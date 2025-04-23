@@ -2,21 +2,22 @@ name: cspot
 channels:
  - conda-forge
 dependencies:
- - python=3.10.14
+ - apptainer=1.3.2
+ - cmake=3.19.1
  - gcc_linux-64=14.2.0
  - gxx_linux-64=14.2.0
- - sysroot_linux-64=2.17
- - cmake=3.19.1
+ - libcurl=8.8.0
+ - libmicrohttpd=1.0.1
+ - libopenssl-static=3.5.0
+ - libpcap=1.10.4
+ - libsystemd=256.9
+ - lz4=4.3.3
  - ninja=1.10.2
+ - nss=3.100
+ - openssl=3.5.0
+ - pkgconfig=1.5.5
+ - python=3.12.3
+ - sysroot_linux-64=2.17
  - unzip=6.0
  - wget=1.21.4
  - zeromq=4.3.5
- - libmicrohttpd=1.0.1
- - libpcap=1.10.4
- - pkgconfig=1.5.5
- - lz4=4.3.3
- - libcurl=8.8.0
- - libsystemd=257.3
- - nss=3.100
- - openssl=3.5.0
- - libopenssl-static=3.5.0

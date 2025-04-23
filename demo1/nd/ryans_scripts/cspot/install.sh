@@ -35,27 +35,20 @@ content='
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-
 #include "woofc.h"
 #include "senspot.h"
-
-
-/*
- * put on the target and not on the WOOF with the args
- */
 int senspot_log(WOOF *wf, unsigned long seq_no, void *ptr)
 {
-    SENSPOT *spt = (SENSPOT *)ptr;
-    time_t timer;
-    timer = (time_t)spt->tv_sec;
-    fprintf(stdout,"seq_no: %lu %s recv type %c from %s and timestamp %s\\n",
-            seq_no,
-            WoofGetFileName(wf),
-            spt->type,
-            spt->ip_addr,
-            ctime(&timer));
-    fflush(stdout);
-    return(1);
+	SENSPOT *spt = (SENSPOT *)ptr;
+	time_t t = (time_t)spt->tv_sec;
+	fprintf(stdout,"seq_no: %lu %s recv type %c from %s and timestamp %s\n",
+			seq_no,
+			WoofGetFileName(wf),
+			spt->type,
+			spt->ip_addr,
+			ctime(&t));
+	fflush(stdout);
+	return(1);
 }
 '
 file="apps/senspot/senspot_log.c"
@@ -113,8 +106,6 @@ target_compile_options(woofc-print-cap PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
 file="src/caplets/CMakeLists.txt"
 echo "$content" > "$file"
 
-
-
 mkdir build
 cd build/
 source ~/.bashrc
@@ -125,17 +116,10 @@ ninja
 ninja install
 
 
-# ----------------------------------------------------------------------------
-# Should be working up until this point. Haven't started work with docker yet.
-# ----------------------------------------------------------------------------
+apptainer build cspot-docker-centos7.sif docker://racelab/cspot-docker-centos7
 
-
-#scl enable devtoolset-9 ./helper.sh
-docker pull racelab/cspot-docker-centos7
-docker tag racelab/cspot-docker-centos7 cspot-docker-centos7
-
-if ! [[ $LD_LIBRARY_PATH == *"/usr/local/lib"* ]]; then
-    echo -e "if ! [[ \$LD_LIBRARY_PATH == *\"/usr/local/lib\"* ]]; then\nexport  LD_LIBRARY_PATH=\"\$LD_LIBRARY_PATH:/usr/local/lib\"\nfi" >> ~/.bashrc
+if ! [[ $LD_LIBRARY_PATH == *"$HOME/.local/lib"* ]]; then
+    echo -e "if ! [[ \$LD_LIBRARY_PATH == *\"$HOME/.local/lib\"* ]]; then\nexport  LD_LIBRARY_PATH=\"\$LD_LIBRARY_PATH:$HOME/.local/lib\"\nfi" >> ~/.bashrc
     source ~/.bashrc
 fi
 cp ../SELF-TEST.sh ./bin
