@@ -1,5 +1,13 @@
 #!/bin/bash
-conda env create --file=environment.yml
+
+if [ conda list --name cspot ]
+then
+    echo "already created cspot environment"
+else
+    echo "creating cspot environment"
+    conda env create --file=environment.yml
+fi
+
 conda activate cspot
 
 # conda env update --file environment.yml --prune
