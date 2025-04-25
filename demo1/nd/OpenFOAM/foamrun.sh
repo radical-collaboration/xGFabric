@@ -2,10 +2,10 @@
 
 touch out.log
 
-echo "Task started at [$(date '+%Y-%m-%d %H:%M:%S')]" >> out.log
+#echo "Task started at [$(date '+%Y-%m-%d %H:%M:%S')]" >> out.log
 
 source ~/.bashrc
-conda activate cctools-env
+conda activate cspot
 
 # add OpenFOAM module to computer
 module add openfoam/10.0/gcc/8.5.0
@@ -115,4 +115,4 @@ pvpython --force-offscreen-rendering render_foam.py
 
 python create_gif.py
 
-echo "Task finished at [$(date '+%Y-%m-%d %H:%M:%S')]" >> out.log
+#echo "Task finished at [$(date '+%Y-%m-%d %H:%M:%S')]" >> out.log

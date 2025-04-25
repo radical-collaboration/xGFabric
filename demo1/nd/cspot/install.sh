@@ -130,6 +130,25 @@ if ! [[ $LD_LIBRARY_PATH == *"$HOME/.local/lib"* ]]; then
     echo -e "if ! [[ \$LD_LIBRARY_PATH == *\"$HOME/.local/lib\"* ]]; then\nexport  LD_LIBRARY_PATH=\"\$LD_LIBRARY_PATH:$HOME/.local/lib\"\nfi" >> ~/.bashrc
     source ~/.bashrc
 fi
+
+HERE=`pwd`
+content='
+# >>> CSPOT initialize >>>
+case ":$PATH:" in
+    *:'$HERE'/bin:*)
+        ;;
+
+    *)
+        export PATH='$HERE'/bin${PATH:+:${PATH}}
+        ;;
+esac
+
+# <<< CSPOT initialize <<<'
+file="$HOME/.bashrc"
+echo "$content" >> "$file"
+source ~/.bashrc
+
+
 cp ../SELF-TEST.sh ./bin
 cd ./bin
 ./SELF-TEST.sh
