@@ -2,7 +2,7 @@
 
 # activate conda environment
 source ~/.bashrc
-conda activate cctools-env
+conda activate nd-xgfabric
 
 # add OpenFOAM module to computer
 module add openfoam/10.0/gcc/8.5.0

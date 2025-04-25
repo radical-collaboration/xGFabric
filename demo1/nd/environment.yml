@@ -1,4 +1,4 @@
-name: cspot
+name: nd-xgfabric
 channels:
  - conda-forge
 dependencies:

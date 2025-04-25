@@ -16,3 +16,16 @@ to be run (i.e. the head node of the cluster).
 
 The script does not require special user privileges but it does require write
 access to the CSPOT namespace directory.
+
+
+
+
+## Steps for installing CSPOT
+
+1. Make sure that you have Miniconda installed on your machine.
+
+2. Run the install script with the command: `sh install.sh`
+
+## Steps for running CSPOT
+
+1. 

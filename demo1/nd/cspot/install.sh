@@ -1,14 +1,14 @@
 #!/bin/bash
 
-if [ conda list --name cspot ]
+if [ conda list --name nd-xgfabric ]
 then
-    echo "already created cspot environment"
+    echo "already created fabric environment"
 else
-    echo "creating cspot environment"
+    echo "creating fabric environment"
     conda env create --file=environment.yml
 fi
 
-conda activate cspot
+conda activate nd-xgfabric
 
 # conda env update --file environment.yml --prune
 
@@ -117,7 +117,7 @@ echo "$content" > "$file"
 mkdir build
 cd build/
 source ~/.bashrc
-conda activate cspot
+conda activate nd-xgfabric
 
 cmake -G Ninja -DCMAKE_INSTALL_PREFIX=$HOME/.local ..
 ninja
@@ -147,6 +147,7 @@ esac
 file="$HOME/.bashrc"
 echo "$content" >> "$file"
 source ~/.bashrc
+conda activate nd-xgfabric
 
 
 cp ../SELF-TEST.sh ./bin
