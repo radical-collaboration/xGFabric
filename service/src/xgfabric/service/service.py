@@ -178,7 +178,7 @@ class ServiceEndpoint(ru.zmq.Server):
         tds = list()
         td  = rp.TaskDescription()
         td.executable = '/bin/wc'
-        td.arguments  = ['DATA:', data]
+        td.arguments  = [fname]
         tds.append(td)
 
         tasks = self._tmgr.submit_tasks(tds)
@@ -186,6 +186,7 @@ class ServiceEndpoint(ru.zmq.Server):
 
         res = list()
         for task in tasks:
+            print('%s: %s [%s][%s]' % task.state, task.stdout, task.stderr)
             res.append(task.stdout)
 
         self._log.info('client %s result: %s', uid, res)

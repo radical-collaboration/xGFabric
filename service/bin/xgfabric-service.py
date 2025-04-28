@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sys
+
 import xgfabric.service as xs
 
 
@@ -23,7 +25,12 @@ contacted via a REST API.
 #
 if __name__ == '__main__':
 
-    s = xs.ServiceEndpoint(url='tcp://*:10000-10020')
+    if len(sys.argv) < 2:
+        raise ValueError('no config file specified')
+
+    cfg = sys.argv[1]
+
+    s = xs.ServiceEndpoint(url='tcp://*:10000-10200', cfg=cfg)
     addr = s.start()
     print('address: %s' % addr)
     s.wait()
