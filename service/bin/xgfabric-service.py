@@ -28,9 +28,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         raise ValueError('no config file specified')
 
-    cfg = sys.argv[1]
-
-    s = xs.ServiceEndpoint(url='tcp://*:10000-10200', cfg=cfg)
+    s = xs.ServiceEndpoint(cfg_file=sys.argv[1])
     addr = s.start()
     print('address: %s' % addr)
     s.wait()

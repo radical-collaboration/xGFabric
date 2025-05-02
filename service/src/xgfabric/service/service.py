@@ -8,10 +8,7 @@ import threading as mt
 import radical.utils as ru
 import radical.pilot as rp
 
-from .pilot_controller import PilotController
-
-watcher_cfg = {'data' : {'input' : './INPUT/',
-                         'output': './OUTPUT/'}}
+from .controller import Controller
 
 
 # ------------------------------------------------------------------------------
@@ -41,15 +38,14 @@ class ServiceEndpoint(ru.zmq.Server):
 
     #---------------------------------------------------------------------------
     #
-    def __init__(self, url: str):
-
-        super().__init__(url)
+    def __init__(self, cfg_file: str = None) -> None:
 
         self._clients = dict()
-        self._session = None
-        self._tmgr    = None
-        self._pmgr    = None
-        self._p_ctrl  = None
+        self._ctrl    = None
+
+        self._cfg = ru.Config(path=cfg_file)
+
+        super().__init__(self._cfg.url)
 
 
     # --------------------------------------------------------------------------
@@ -62,10 +58,8 @@ class ServiceEndpoint(ru.zmq.Server):
 
         print('watcher started')
 
-        cfg = ru.Config(watcher_cfg)
-
-        input_dir  = str(cfg.data.input)
-        output_dir = str(cfg.data.output)
+        input_dir  = str(self._cfg.data.input)
+        output_dir = str(self._cfg.data.output)
 
         ru.rec_makedir(input_dir)
         ru.rec_makedir(output_dir)
@@ -108,8 +102,8 @@ class ServiceEndpoint(ru.zmq.Server):
     #
     def __del__(self):
 
-        if self._session:
-            self._session.close()
+        if self._ctrl:
+            self._ctrl.close()
 
 
     # --------------------------------------------------------------------------
@@ -118,15 +112,8 @@ class ServiceEndpoint(ru.zmq.Server):
 
         super().start()
 
-        self._session = rp.Session()
-        self._tmgr    = rp.TaskManager(session=self._session)
-        self._pmgr    = rp.PilotManager(session=self._session)
-
-        self._p_ctrl  = PilotController(self._pmgr, self._tmgr,
-                                        {'resource_type': 'local.localhost',
-                                         'nodes'        : 8,
-                                         'max_runtime'  : 600})
-        self._p_ctrl.start_initial_pilot()
+        self._ctrl  = Controller(self._cfg.controller)
+        self._ctrl.start_initial_pilot()
 
         self.register_request('register_client', self.register_client)
         self.register_request('register_fname',  self.register_fname)
@@ -173,27 +160,29 @@ class ServiceEndpoint(ru.zmq.Server):
         client.fname = fname
         client.data  = data
 
-        pid = self._p_ctrl.start_pilot({'data': data})
-
-        tds = list()
-        td  = rp.TaskDescription()
-        td.executable = '/bin/wc'
-        td.arguments  = [fname]
-        tds.append(td)
-
-        tasks = self._tmgr.submit_tasks(tds)
-        self._tmgr.wait_tasks()
-
-        res = list()
-        for task in tasks:
-            print('%s: %s [%s][%s]' % task.state, task.stdout, task.stderr)
-            res.append(task.stdout)
+        pid  = self._ctrl.start_pilot({'data': {'size': len(data)}})
+        work = self._get_workload(client)
+        res  = self._ctrl.run_workload(work)
 
         self._log.info('client %s result: %s', uid, res)
 
-        self._p_ctrl.cancel_pilot(pid)
+        if pid:
+            self._ctrl.cancel_pilot(pid)
 
         return str(res)
+
+
+    # --------------------------------------------------------------------------
+    #
+    def _get_workload(self, client: _Client):
+
+        work = list()
+        for template in self._cfg.workload:
+            td = rp.TaskDescription(template)
+            td.named_env = 'rp'
+            work.append(td)
+
+        return work
 
 
 # ------------------------------------------------------------------------------
