@@ -13,15 +13,18 @@ cd ..
 
 
 git clone git@github.com:radical-cybertools/xGFabric.git
-./bin/xgfabric-service.py
+cd xGFabric/service
+git checkout devel
+pip install .
+
+cat service.cfg
+xgfabric-service.py service.cfg
 ```
 
 Shell 2:
 ```sh
-cd INPUT/
-touch 'new_data.dat'
-ls -l 'new_data.dat.done'
-cd ../OUTPUT/
-ls -l 'new_data.dat.out'
+touch 'INPUT/test_1.dat'
+# sleep ...
+cat 'OUTPUT/test_1.dat.out'
 ```
 
