@@ -61,8 +61,11 @@ class ServiceEndpoint(ru.zmq.Server):
         input_dir  = str(self._cfg.data.input)
         output_dir = str(self._cfg.data.output)
 
-        ru.rec_makedir(input_dir)
-        ru.rec_makedir(output_dir)
+        try   : ru.rec_makedir(input_dir)
+        except: pass
+
+        try   : ru.rec_makedir(output_dir)
+        except: pass
 
         while True:
 
