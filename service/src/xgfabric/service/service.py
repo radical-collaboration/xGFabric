@@ -116,6 +116,7 @@ class ServiceEndpoint(ru.zmq.Server):
         super().start()
 
         self._ctrl  = Controller(self._cfg.controller)
+        print('=== submit initial pilot')
         self._ctrl.start_initial_pilot()
 
         self.register_request('register_client', self.register_client)
@@ -163,13 +164,17 @@ class ServiceEndpoint(ru.zmq.Server):
         client.fname = fname
         client.data  = data
 
+        print('=== submit additional pilot - maybe')
         pid  = self._ctrl.start_pilot({'data': {'size': len(data)}})
+
+        print('=== submit workload')
         work = self._get_workload(client)
         res  = self._ctrl.run_workload(work)
 
         self._log.info('client %s result: %s', uid, res)
 
         if pid:
+            print('=== cancel additional pilot')
             self._ctrl.cancel_pilot(pid)
 
         return str(res)
