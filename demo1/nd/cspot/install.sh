@@ -5,7 +5,7 @@ then
     echo "already created fabric environment"
 else
     echo "creating fabric environment"
-    conda env create --file=environment.yml
+    conda env create -file ../environment.yml
 fi
 
 conda activate nd-xgfabric
