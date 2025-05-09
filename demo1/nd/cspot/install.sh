@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ conda list --name nd-xgfabric ]
+if conda env list | grep -q "nd-xgfabric"
 then
     echo "already created fabric environment"
 else
