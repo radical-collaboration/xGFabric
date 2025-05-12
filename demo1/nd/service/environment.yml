@@ -3,9 +3,9 @@ channels:
 - conda-forge
 dependencies:
 - python=3.12.3
-- radical.utils
-- radical.pilot
-- numpy
-- h5py
-- mpi4py
-- cupy
+- radical.utils=1.91.1
+- radical.pilot=1.92.0
+- numpy=2.2.5
+- h5py=3.13.0
+- mpi4py=4.0.3
+- cupy=13.4.1
