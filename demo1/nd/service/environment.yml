@@ -1,0 +1,11 @@
+name: fabric-service
+channels:
+- conda-forge
+dependencies:
+- python=3.12.3
+- radical.utils
+- radical.pilot
+- numpy
+- h5py
+- mpi4py
+- cupy
