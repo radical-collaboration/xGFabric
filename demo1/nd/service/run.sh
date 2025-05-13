@@ -1,5 +1,5 @@
 #!/bin/bash
-if conda env list | grep -q "fabric-service"
+if conda env list | grep -q "nd-xgfabric"
 then
     echo "already created service environment"
 else
@@ -7,7 +7,11 @@ else
     conda env create -f environment.yml
 fi
 
-conda activate fabric-service
+conda init bash
+
+source ~/.bashrc
+
+conda activate nd-xgfabric
 
 touch service.cfg
 

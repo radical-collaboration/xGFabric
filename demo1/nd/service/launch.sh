@@ -1,3 +1,5 @@
 #!/bin/bash
 
-echo "success" > output.txt
+cd ../OpenFOAM
+
+sh foamrun.sh
