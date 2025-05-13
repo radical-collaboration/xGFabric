@@ -1,0 +1,8 @@
+OpenFOAM/damBreak/
+cspot/cspot
+cspot/data/
+cspot/daviscupsout.last
+service/INPUT/*
+service/OUTPUT/*
+service/launch.sh.*
+service/rp.session.*
