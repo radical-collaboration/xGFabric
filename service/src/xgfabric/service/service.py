@@ -49,7 +49,7 @@ class ServiceEndpoint(ru.zmq.Server):
 
 
     # --------------------------------------------------------------------------
-    def _watcher_service(self):
+    def _watcher_filesystem(self):
         '''
         Watch the input dir.  If new data items are found, register them with
         the service.  This is a placeholder for a more sophisticated
@@ -102,6 +102,36 @@ class ServiceEndpoint(ru.zmq.Server):
 
 
     # --------------------------------------------------------------------------
+    def _watcher_cspot(self):
+        '''
+        Tail the cspot log file, extract sequence numbers and data, once changes
+        are detected, the *entire* log is passed as input data to data prep
+        script
+        '''
+
+        print('cspot watcher started')
+
+        logfile = ...
+
+        fin  = ru.ru_open(logfile, 'r')
+        data = ...
+
+        while True:
+
+            new_data = fin.read()
+
+            # TODO: split into lines, extract sequence numbers and data
+
+            last_data = data[-1]
+            if new_data[0] != last_data:
+
+                # trigger data prep script / miniapp / OpenFoam
+                uid = self.register_client()
+                res = self.register_fname(uid, fname)
+
+
+
+    # --------------------------------------------------------------------------
     #
     def __del__(self):
 
@@ -122,9 +152,13 @@ class ServiceEndpoint(ru.zmq.Server):
         self.register_request('register_client', self.register_client)
         self.register_request('register_fname',  self.register_fname)
 
-        self._watcher = mt.Thread(target=self._watcher_service)
-        self._watcher.daemon = True
-        self._watcher.start()
+        self._watcher_fs = mt.Thread(target=self._watcher_filesystem)
+        self._watcher_fs.daemon = True
+        self._watcher_fs.start()
+
+        self._watcher_cspot = mt.Thread(target=self._watcher_cspot)
+        self._watcher_cspot.daemon = True
+        self._watcher_cspot.start()
 
         return self.addr
 
