@@ -26,6 +26,15 @@ class Controller(object):
         self._pmgr    = rp.PilotManager(session=self._session)
         self._descr   = rp.PilotDescription(self._cfg.description)
 
+        self._tmgr.register_callback(self._rp_callback)
+
+
+    # ---------------------------------------------------------------------------
+    #
+    def _rp_callback(self, task, state):
+
+        print('    %s: %s' % (task.uid, state))
+
 
     # --------------------------------------------------------------------------
     #
@@ -111,7 +120,7 @@ class Controller(object):
         :param pilot_id: UID of the pilot to be canceled.
         """
         self._pmgr.cancel_pilots(pilot_id)
-        self._pmgr.wait_pilots(pilot_id, state=rp.FINAL)
+      # self._pmgr.wait_pilots(pilot_id, state=rp.FINAL)
 
 
     # --------------------------------------------------------------------------
@@ -169,14 +178,19 @@ class Controller(object):
 
     # --------------------------------------------------------------------------
     #
-    def run_workload(self, work):
-
-        tasks = self._tmgr.submit_tasks(work)
-        self._tmgr.wait_tasks(uids=[t.uid for t in tasks])
+    def run_workload(self, work, pid):
 
         res = list()
-        for task in tasks:
-            print('%s: [%s][%s]' % (task.state, task.stdout, task.stderr))
+
+        for td in work:
+            tid = td.uid
+            td['pilot'] = pid
+            print('=== submit %s' % tid)
+            task = self._tmgr.submit_tasks(td)
+            print('=== wait   %s' % tid)
+            self._tmgr.wait_tasks(uids=tid)
+            print('=== result %s: %s: [%s][%s]' % (tid, task.state, task.stdout,
+                                                                   task.stderr))
             res.append(task.stdout)
 
         return res

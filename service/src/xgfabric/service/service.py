@@ -40,26 +40,32 @@ class ServiceEndpoint(ru.zmq.Server):
     #
     def __init__(self, cfg_file: str = None) -> None:
 
-        self._clients = dict()
-        self._ctrl    = None
+        self._clients = dict()   # client map
+        self._ctrl    = None     # controller instance
+        self._seen    = list()   # see sequence numbers
 
         self._cfg = ru.Config(path=cfg_file)
 
         super().__init__(self._cfg.url)
 
+        self._log = ru.Logger('radical.xgfabric', level='DEBUG_9')
+
 
     # --------------------------------------------------------------------------
-    def _watcher_filesystem(self):
+    def _watch_fs(self):
         '''
         Watch the input dir.  If new data items are found, register them with
         the service.  This is a placeholder for a more sophisticated
         implementation, e.g. using inotify.
         '''
 
-        print('watcher started')
+        # register with the service
+        uid = self.register_client()
 
-        input_dir  = str(self._cfg.data.input)
-        output_dir = str(self._cfg.data.output)
+        input_dir  = str(self._cfg.filesystem.input)
+        output_dir = str(self._cfg.filesystem.output)
+
+        print('=== starting filesystem watcher: %s' % input_dir)
 
         try   : ru.rec_makedir(input_dir)
         except: pass
@@ -84,9 +90,10 @@ class ServiceEndpoint(ru.zmq.Server):
 
                 print('new input data: %s' % fname)
 
+                seq_num = random.randint(0, 1000)
+
                 # register new file with the service
-                uid = self.register_client()
-                res = self.register_fname(uid, fname)
+                res = self.register_fname(uid, seq_num, fname)
 
                 tgt = '%s/%s.out' % (output_dir, os.path.basename(fname))
                 with open(tgt, 'w') as fout:
@@ -102,33 +109,97 @@ class ServiceEndpoint(ru.zmq.Server):
 
 
     # --------------------------------------------------------------------------
-    def _watcher_cspot(self):
+    #
+    def _parse_cspot_data(self, data):
         '''
-        Tail the cspot log file, extract sequence numbers and data, once changes
-        are detected, the *entire* log is passed as input data to data prep
-        script
+        For the given data item, return sequence number, wind speed and
+        wind direction
         '''
 
-        print('cspot watcher started')
+        elems     = data.split()
+        seq_num   = int(elems[-1])
+        windspeed = int(elems[0].split(':')[3])
+        winddir   = str(elems[0].split(':')[6])
 
-        logfile = ...
+        return seq_num, windspeed, winddir
 
-        fin  = ru.ru_open(logfile, 'r')
-        data = ...
 
-        while True:
+    # --------------------------------------------------------------------------
+    def _watch_cspot(self):
+        '''
+        constantly (in intervals) pull cspot data and append to log file.  Tail
+        that file , extract sequence numbers and data, once changes are
+        detected, the *entire* log is passed as input data to data prep script.
+        '''
 
-            new_data = fin.read()
+        # register with the service
+        uid = self.register_client()
 
-            # TODO: split into lines, extract sequence numbers and data
+        interval  = int(self._cfg.cspot.interval)
+        woof_url  = str(self._cfg.cspot.woof_url)
+        woof_path = str(self._cfg.cspot.woof_path)
+        data_dir  = str(self._cfg.cspot.data_dir)
+        cspot_get = str(self._cfg.cspot.cspot_get)
 
-            last_data = data[-1]
-            if new_data[0] != last_data:
+        print('=== starting cspot watcher: %s/%s' % (woof_url, woof_path))
 
-                # trigger data prep script / miniapp / OpenFoam
-                uid = self.register_client()
-                res = self.register_fname(uid, fname)
+        logfile = '%s/cspot_data.log' % data_dir
 
+        self._log.info('woof url: %s', woof_url)
+        self._log.info('woof path: %s', woof_path)
+
+        try   : ru.rec_makedir(data_dir)
+        except: pass
+
+        # read exising log file
+        data = list()
+        if os.path.exists(logfile):
+            with ru.ru_open(logfile, 'r') as fin:
+                try:
+                    for line in fin:
+                        data.append(self._parse_cspot_data(line))
+                        self._log.info('old cspot data: %s', data[-1])
+                except:
+                    self._log.error('failed to parse cspot data: %s', line)
+
+        # append new data to log file
+        with open(logfile, 'a') as fout:
+
+            # in interval seconds, fetch data from the woof url/path with
+            # `cspot-get`
+            while True:
+
+                cmd = '%s %s/%s' % (cspot_get, woof_url, woof_path)
+                out, err, ret = ru.sh_callout(cmd)
+
+                if ret != 0:
+                    self._log.error('cspot-get failed: %s', err)
+                    time.sleep(interval)
+                    continue
+
+                # allend to logfile
+                fout.write(out)
+
+                # evaluate data
+                lines = out.strip().split('\n')
+                for line in lines:
+
+                    # evaluate data
+                    self._log.debug('new cspot data: %s', line)
+                    self._log.info('new cspot data: %s', line)
+                    data.append(self._parse_cspot_data(line))
+                    self._log.info('new cspot data: %s', data[-1])
+
+                    # trigger computation on new sequence numbers
+                    if data[-2][0] != data[-1][0]:
+
+                        print('=== new cspot sequence: %s != %s'
+                                         % (data[-1][0], data[-2][0]))
+
+                        res = self.register_fname(uid, data[-1][0], logfile)
+                        self._log.info('trigger computation: %s', res)
+
+                time.sleep(interval)
 
 
     # --------------------------------------------------------------------------
@@ -143,20 +214,22 @@ class ServiceEndpoint(ru.zmq.Server):
     #
     def start(self):
 
+        print('=== starting service')
+
         super().start()
 
         self._ctrl  = Controller(self._cfg.controller)
-        print('=== submit initial pilot')
-        self._ctrl.start_initial_pilot()
+      # print('=== submit initial pilot')
+      # self._ctrl.start_initial_pilot()
 
         self.register_request('register_client', self.register_client)
         self.register_request('register_fname',  self.register_fname)
 
-        self._watcher_fs = mt.Thread(target=self._watcher_filesystem)
+        self._watcher_fs = mt.Thread(target=self._watch_fs)
         self._watcher_fs.daemon = True
         self._watcher_fs.start()
 
-        self._watcher_cspot = mt.Thread(target=self._watcher_cspot)
+        self._watcher_cspot = mt.Thread(target=self._watch_cspot)
         self._watcher_cspot.daemon = True
         self._watcher_cspot.start()
 
@@ -179,36 +252,43 @@ class ServiceEndpoint(ru.zmq.Server):
 
         self._clients[client.uid] = client
 
-        self._log.info('client %s registered', client.uid)
+        self._log.info('=== client %s registered', client.uid)
 
         return client.uid
 
 
     # --------------------------------------------------------------------------
     #
-    def register_fname(self, uid:str, fname: str) -> str:
+    def register_fname(self, uid: str, seq_num: str, fname: str) -> str:
 
         client = self.get_clients(uid)
 
         with ru.ru_open(fname) as fin:
             data = fin.read()
 
-        self._log.info('client %s registered %s', uid, len(data))
+        print('=== %s: registered %d: %s' % (uid, seq_num, fname))
 
-        client.fname = fname
-        client.data  = data
+        if seq_num in self._seen:
+            print('=== %s: sequence number already seen' % client.uid)
+            return 'sequence %s declined - already seen' % seq_num
 
-        print('=== submit additional pilot - maybe')
+        self._seen.append(seq_num)
+
+        client.seq_num = seq_num
+        client.fname   = fname
+        client.data    = data
+
+        print('=== %s: check resource requirements' % uid)
         pid  = self._ctrl.start_pilot({'data': {'size': len(data)}})
 
-        print('=== submit workload')
+        print('=== %s: submit workload' % uid)
         work = self._get_workload(client)
-        res  = self._ctrl.run_workload(work)
+        res  = self._ctrl.run_workload(work, pid)
 
-        self._log.info('client %s result: %s', uid, res)
+        print('=== %s: result: %s' % (uid, res))
 
         if pid:
-            print('=== cancel additional pilot')
+            print('=== %s: cancel additional resources' % uid)
             self._ctrl.cancel_pilot(pid)
 
         return str(res)
@@ -218,10 +298,21 @@ class ServiceEndpoint(ru.zmq.Server):
     #
     def _get_workload(self, client: _Client):
 
+        print('=== %s: workload for sequence %s' % (client.uid, client.seq_num))
+
         work = list()
-        for template in self._cfg.workload:
+        for idx, template in enumerate(self._cfg.workload.tasks):
             td = rp.TaskDescription(template)
-            td.named_env = 'rp'
+            td.named_env   = 'rp'
+            td.environment = self._cfg.workload.environment
+
+            if td.uid:
+                td.uid = '%s.%s' % (client.seq_num, td.uid)
+            else:
+                td.uid = '%s.%d' % (client.seq_num, idx)
+
+            print('    === task %s' % td.uid)
+
             work.append(td)
 
         return work

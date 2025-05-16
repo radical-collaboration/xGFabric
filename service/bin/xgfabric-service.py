@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     s = xs.ServiceEndpoint(cfg_file=sys.argv[1])
     addr = s.start()
-    print('address: %s' % addr)
+    print('=== service endpoint: %s' % addr)
     s.wait()
 
 
