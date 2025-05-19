@@ -53,5 +53,9 @@ cd build/
 source ~/.bashrc
 conda activate nd-xgfabric
 
-cmake .. -DBUILD_SHARED=OFF -DCMAKE_INSTALL_PREFIX=$HOME/local
+
+conda=`echo "$CONDA_PREFIX"`
+cp "${HOME}/.local/lib64/libzmq.a" "${conda}/lib"
+
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local ..
 make
