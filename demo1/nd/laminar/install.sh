@@ -14,7 +14,8 @@ conda activate nd-xgfabric
 git clone https://github.com/MAYHEM-Lab/laminar
 cd laminar
 
-# fix some files
+
+# ---------------------------------- change lines in the middle of a file -------------------------------------------------
 INPUT_FILE="operation_system/src/operations/df_internal.c"
 TMP_FILE="$(mktemp)"
 sed "s|#include <woofc.h>|#include <$HOME/.local/include/woofc.h>|" "$INPUT_FILE" > "$TMP_FILE"
@@ -29,24 +30,40 @@ INPUT_FILE="type_system/src/serialization/ts_serialization_util.c"
 TMP_FILE="$(mktemp)"
 sed "s|#include <woofc.h>|#include <$HOME/.local/include/woofc.h>|" "$INPUT_FILE" > "$TMP_FILE"
 mv "$TMP_FILE" "$INPUT_FILE"
+# ---------------------------------- change lines in the middle of a file -------------------------------------------------
 
+
+# -------- replace file ---------
 cp ../.CMakeLists.txt .
 mv .CMakeLists.txt CMakeLists.txt
-    
-line_to_prepend="#include <stdlib.h>\n#include <unistd.h>\n#include <sys/time.h>\n#include <fcntl.h>\n#include <sys/stat.h>\n#include <errno.h>"
+# -------- replace file ---------
+
+
+# -------------- preprend lines to files --------------
+line_to_prepend='#include <stdlib.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <errno.h>'
 file="type_system/extern/uuid/src/gen_uuid.c"
 sed -i "1i $line_to_prepend" "$file"
 
 line_to_prepend='#include "operations/df_arithmetic.h"'
 file="operation_system/src/df_operation.c"
 sed -i "1i $line_to_prepend" "$file"
+# -------------- preprend lines to files --------------
 
+
+# ----------------- append lines to file ----------------------
 content='
 include(CheckIncludeFile)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 check_include_file("stdlib.h" HAVE_STDLIB_H)
 check_include_file("sys/time.h" HAVE_SYS_TIME_H)'
 echo "$content" >> 'type_system/extern/uuid/src/CMakeLists.txt'
+# ----------------- append lines to file ----------------------
+
 
 mkdir build
 cd build/
