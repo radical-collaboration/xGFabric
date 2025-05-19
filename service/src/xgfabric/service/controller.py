@@ -53,7 +53,7 @@ class Controller(object):
         """
 
         if self._session:
-            self._session.close()
+            self._session.close(download=True)
 
 
     # --------------------------------------------------------------------------

@@ -29,9 +29,13 @@ if __name__ == '__main__':
         raise ValueError('no config file specified')
 
     s = xs.ServiceEndpoint(cfg_file=sys.argv[1])
-    addr = s.start()
-    print('=== service endpoint: %s' % addr)
-    s.wait()
+    try:
+        addr = s.start()
+        print('=== service endpoint: %s' % addr)
+        s.wait()
+    finally:
+        s.stop()
+        print('=== service endpoint stopped')
 
 
 # ------------------------------------------------------------------------------
