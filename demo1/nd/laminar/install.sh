@@ -40,11 +40,11 @@ mv .CMakeLists.txt CMakeLists.txt
 
 
 # -------------- preprend lines to files --------------
-line_to_prepend='#include <stdlib.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <sys/stat.h>
+line_to_prepend='#include <stdlib.h>\
+#include <unistd.h>\
+#include <sys/time.h>\
+#include <fcntl.h>\
+#include <sys/stat.h>\
 #include <errno.h>'
 file="type_system/extern/uuid/src/gen_uuid.c"
 sed -i "1i $line_to_prepend" "$file"
