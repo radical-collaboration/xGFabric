@@ -2,6 +2,7 @@
 import os
 import time
 import glob
+import random
 
 import threading as mt
 
@@ -72,6 +73,8 @@ class ServiceEndpoint(ru.zmq.Server):
 
         try   : ru.rec_makedir(output_dir)
         except: pass
+
+        self._watcher_fs_ok.set()
 
         while True:
 
@@ -165,6 +168,8 @@ class ServiceEndpoint(ru.zmq.Server):
         # append new data to log file
         with open(logfile, 'a') as fout:
 
+            self._watcher_cspot_ok.set()
+
             # in interval seconds, fetch data from the woof url/path with
             # `cspot-get`
             while True:
@@ -191,7 +196,7 @@ class ServiceEndpoint(ru.zmq.Server):
                     self._log.info('new cspot data: %s', data[-1])
 
                     # trigger computation on new sequence numbers
-                    if data[-2][0] != data[-1][0]:
+                    if len(data) == 1 or data[-2][0] != data[-1][0]:
 
                         print('=== new cspot sequence: %s != %s'
                                          % (data[-1][0], data[-2][0]))
@@ -225,13 +230,24 @@ class ServiceEndpoint(ru.zmq.Server):
         self.register_request('register_client', self.register_client)
         self.register_request('register_fname',  self.register_fname)
 
-        self._watcher_fs = mt.Thread(target=self._watch_fs)
+        self._watcher_fs_ok = mt.Event()
+        self._watcher_fs    = mt.Thread(target=self._watch_fs)
         self._watcher_fs.daemon = True
         self._watcher_fs.start()
 
-        self._watcher_cspot = mt.Thread(target=self._watch_cspot)
+        self._watcher_cspot_ok = mt.Event()
+        self._watcher_cspot    = mt.Thread(target=self._watch_cspot)
         self._watcher_cspot.daemon = True
         self._watcher_cspot.start()
+
+        self._watcher_fs_ok.wait(timeout=5.0)
+        self._watcher_cspot_ok.wait(timeout=5.0)
+
+        if not self._watcher_fs_ok.is_set():
+            raise RuntimeError('could not start fs watcher')
+
+        if not self._watcher_cspot_ok.is_set():
+            raise RuntimeError('could not start cspot watcher')
 
         return self.addr
 
@@ -300,11 +316,18 @@ class ServiceEndpoint(ru.zmq.Server):
 
         print('=== %s: workload for sequence %s' % (client.uid, client.seq_num))
 
+        env   = self._cfg.workload.environment
+        ranks = int(env.get('XGFABRIC_RANKS', 1))
+
         work = list()
         for idx, template in enumerate(self._cfg.workload.tasks):
             td = rp.TaskDescription(template)
             td.named_env   = 'rp'
-            td.environment = self._cfg.workload.environment
+            td.sandbox     = 'sandbox'
+            td.environment = env
+
+            if 'ranks' in template and not template['ranks']:
+                td.ranks = ranks
 
             if td.uid:
                 td.uid = '%s.%s' % (client.seq_num, td.uid)
