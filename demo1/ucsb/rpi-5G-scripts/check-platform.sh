@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+# this makes sure the namespace platform is running (say after a reboot)
 
 HERE=/home/vuranlab/cups-data
 
