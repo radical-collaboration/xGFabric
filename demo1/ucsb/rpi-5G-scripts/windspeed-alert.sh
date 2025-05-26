@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+## this runs the laminar program on the edge
 HERE=/home/vuranlab/cups-data
 BIN=/home/vuranlab/bin
 SRC="woof://169.231.230.76/sharedfs/unl-data/daviscupsout"

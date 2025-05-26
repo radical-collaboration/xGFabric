@@ -48,5 +48,7 @@ echo "
     ]
 }" > service.cfg
 
+mkdir INPUT
+mkdir OUTPUT
 
 python bin/xgfabric-service.py service.cfg
