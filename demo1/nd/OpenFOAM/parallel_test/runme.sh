@@ -17,6 +17,11 @@ if [ -n "$3" ]; then
   seciteration="$3"
 fi
 
+if ! [ -f cups_structure.zip ]; then
+  wget https://notredame.box.com/s/j1nv30fb4vjerbwcc4nqogqi34rdnjj6 -O cups_structure.zip
+fi
+
+
 destination="${folder_name}_$(date '+%y-%m-%d_%H_%M_%S')"
 
 #if pgrep -x "python host_results.py"; then
