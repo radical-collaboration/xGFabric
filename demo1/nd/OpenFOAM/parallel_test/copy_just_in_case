@@ -1,0 +1,104 @@
+#!/bin/bash
+
+#$ -pe mpi-64 64
+##########$ -pe mpi-64 64
+treads=4
+folder_name="small_structure"
+if [ -n "$1" ]; then
+  folder_name="$1"
+fi
+
+destination="${folder_name}_$(date '+%y-%m-%d_%H_%M_%S')"
+
+#if pgrep -x "python host_results.py"; then
+#  echo "Killing previous flask and running new"
+#  kill $process_id
+#fi
+#rm static/*
+#kill $(ps aux | grep '.+python.+host_results.py' | awk '{print $2}')
+#nohup python3 host_results.py > flask.logs &
+
+start=$(date '+%s.%N')
+# 1. Install openfoam if needed
+# https://openfoam.org/download/10-ubuntu/
+
+# 2. Load openfoam
+module load openfoam/10.0/gcc/8.5.0 # For ND cluster
+#source /opt/openfoam10/etc/bashrc # For UCSB pseudo cluster
+
+
+# 3. Load most recent online data # Not working on ND as of now
+#b=$(/sharedfs/cups-data/senspot-get -W woof://169.231.230.76/sharedfs/cups-data/daviscupsout)
+#vals=$(awk -F" " '{print $1}' <<< "$b")
+#windspeed=$(awk -F":" '{print $4}' <<< "$vals")
+#winddir=$(awk -F":" '{print $7}' <<< "$vals")
+
+if [ -z "$windspeed" ]; then
+  windspeed="5"
+fi
+
+if [ -z "$winddir" ]; then
+  windspeed="S"
+fi
+
+# 4. Unpack zip and update it with data
+#python3 unzip_and_update.py $windspeed $winddir --file cfd_test.zipcups_structure.zip
+rm -r $folder_name
+#rm png_outputs/*
+echo $destination
+
+set -e
+unzip $folder_name
+mv $folder_name $destination
+
+
+#cp -r spare_details/* $destination
+python3 replace.py spare_details/system/decomposeParDict "$destination/system/decomposeParDict" @ $treads
+python3 replace.py spare_details/system/controlDict "$destination/system/controlDict" @ 80
+
+#echo "windspeed winddir $windspeed $winddir"
+#python3 update.py $windspeed $winddir -f $folder_name
+
+# 5. Run solver to perform the calculation
+cd $destination
+# For parallel version (sciped for now)
+if [ -n "$2" ]; then
+  decomposePar
+  #sbatch -n $treads
+  p_start=$(date '+%s.%N')
+  mpirun -np $treads porousSimpleFoam -parallel | tee log logs/log_$(date '+%y-%m-%d_%H_%M_%S')
+  p_stop=$(date '+%s.%N')
+  p_elapsed=$(bc -l <<< "$p_stop - $p_start")
+  reconstructPar
+else
+  porousSimpleFoam | tee log logs/log_$(date '+%y-%m-%d_%H_%M_%S')
+fi
+#decomposePar
+#sbatch -n 4
+#mpirun -np 4 porousSimpleFoam -parallel | tee log logs/log_$(date '+%y-%m-%d_%X')
+#reconstructPar
+
+# One thread version
+#runApplication
+#porousSimpleFoam | tee log logs/log_$(date '+%y-%m-%d_%X')
+
+stop=$(date '+%s.%N')
+elapsed=$(bc -l <<< "$stop - $start")
+
+echo "Run of $folder_name on $(date '+%y-%m-%d_%H_%M_%S') took $elapsed sec ($p_elapsed)" >> ../result_time
+
+# Demo is stopped on this stop for now
+
+# 6. Collect data
+# Some paraview scripts
+foamToVTK -allPatches
+
+cd ..
+
+pvpython --force-offscreen-rendering render_foam.py $destination
+xvfb-run -a -s "-screen 0 3840x2160x24" pvpython render_foam.py $destination
+
+python3 create_gif.py gif_$(date '+%y-%m-%d_%H_%M_%S').gif
+
+
+echo "All done"
