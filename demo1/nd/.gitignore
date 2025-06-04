@@ -1,4 +1,6 @@
 OpenFOAM/damBreak/
+OpenFOAM/parallel_test/logs/
+OpenFOAM/parallel_test/cups_structure.zip
 cspot/cspot
 cspot/data/
 cspot/daviscupsout.last
