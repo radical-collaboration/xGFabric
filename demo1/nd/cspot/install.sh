@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Check wheter the xGFabric conda environment has been created
 if conda env list | grep -q "nd-xgfabric"
 then
     echo "already created fabric environment"
@@ -8,10 +9,10 @@ else
     conda env create -f ../environment.yml
 fi
 
-conda activate nd-xgfabric
+# activate environment
+conda activate nd-xgfabric 
 
-# conda env update --file environment.yml --prune
-
+# clone source and update submodules
 git clone https://github.com/MAYHEM-Lab/cspot
 cd cspot
 git submodule update --init --recursive
@@ -20,7 +21,7 @@ mv deps/libzmq/CMakeLists.txt deps/libzmq/CMakeLists.orig.txt
 sed 's/build the tests" ON/build the tests" OFF/' deps/libzmq/CMakeLists.orig.txt > deps/libzmq/CMakeLists.txt
 
 
-# fix some files
+#------------- Prepend lines ------------------
 line_to_prepend="#define _GNU_SOURCE"
 file="deps/mio/mio.c"
 sed -i "1i $line_to_prepend" "$file"
@@ -36,7 +37,10 @@ sed -i "1i $line_to_prepend" "$file"
 line_to_prepend="#include <arpa/inet.h>"
 file="apps/senspot/senspot-put.c"
 sed -i "1i $line_to_prepend" "$file"
+#------------- Prepend lines ------------------
 
+
+#--------------------------------- Overwrite file --------------------------------
 content='
 #include <stdlib.h>
 #include <unistd.h>
@@ -62,7 +66,34 @@ int senspot_log(WOOF *wf, unsigned long seq_no, void *ptr)
 file="apps/senspot/senspot_log.c"
 echo "$content" > "$file"
 
+content='
+find_package(OpenSSL REQUIRED)
+if(OPENSSL_FOUND)
+  include_directories(${OPENSSL_INCLUDE_DIR})
+else()
+  message(FATAL_ERROR "OpenSSL library not found.")
+endif()
+message(STATUS "OpenSSL CFlags: ${OPENSSL_LIBRARIES}")
+include_directories("./include" "../include" "../../src/include" "../src/include")
+add_library(woof_caplets woofc-caplets.c)
+target_link_libraries(woof_caplets PUBLIC woof)
+target_include_directories(woof_caplets PRIVATE "." "../../include")
+add_executable(woofc-init-principal woofc-init-principal.c)
+target_link_libraries(woofc-init-principal PRIVATE woof_caplets woof crypto dl)
+target_include_directories(woofc-init-principal PRIVATE "../include")
+add_executable(woofc-print-cap woofc-print-cap.c)
+target_link_libraries(woofc-print-cap PRIVATE woof_caplets woof crypto dl)
+target_include_directories(woofc-print-cap PRIVATE "../include")
+target_compile_options(woof_caplets PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
+target_compile_options(woofc-init-principal PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
+target_compile_options(woofc-print-cap PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
+'
+file="src/caplets/CMakeLists.txt"
+echo "$content" > "$file"
+#--------------------------------- Overwrite file --------------------------------
 
+
+#--------------------------------- Add lines to end of file ------------------------------------------
 content='
 find_package(OpenSSL REQUIRED)
 
@@ -88,51 +119,36 @@ target_compile_options(log-test        PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPEN
 '
 file="src/CMakeLists.txt"
 echo "$content" >> "$file"
+#--------------------------------- Add lines to end of file ------------------------------------------
 
-content='
-find_package(OpenSSL REQUIRED)
-if(OPENSSL_FOUND)
-  include_directories(${OPENSSL_INCLUDE_DIR})
-else()
-  message(FATAL_ERROR "OpenSSL library not found.")
-endif()
-message(STATUS "OpenSSL CFlags: ${OPENSSL_LIBRARIES}")
-include_directories("./include" "../include" "../../src/include" "../src/include")
-add_library(woof_caplets woofc-caplets.c)
-target_link_libraries(woof_caplets PUBLIC woof)
-target_include_directories(woof_caplets PRIVATE "." "../../include")
-add_executable(woofc-init-principal woofc-init-principal.c)
-target_link_libraries(woofc-init-principal PRIVATE woof_caplets woof crypto dl)
-target_include_directories(woofc-init-principal PRIVATE "../include")
-add_executable(woofc-print-cap woofc-print-cap.c)
-target_link_libraries(woofc-print-cap PRIVATE woof_caplets woof crypto dl)
-target_include_directories(woofc-print-cap PRIVATE "../include")
-target_compile_options(woof_caplets PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
-target_compile_options(woofc-init-principal PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
-target_compile_options(woofc-print-cap PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
-'
-file="src/caplets/CMakeLists.txt"
-echo "$content" > "$file"
 
+# strip debug info off of static library files. This was required for Rocky Linux v8.10 (Purdue ANVIL's system)
+conda_loc=`echo $CONDA_PREFIX`
+strip --strip-debug $conda_loc/lib/gcc/x86_64-conda-linux-gnu/14.2.0/lib*.a
+# export LD=$CONDA_PREFIX/bin/ld
+
+# create the build folder
 mkdir build
 cd build/
+
+# activate the conda environment again
 source ~/.bashrc
 conda activate nd-xgfabric
 
+# build the project
 cmake -G Ninja -DCMAKE_INSTALL_PREFIX=$HOME/.local ..
 ninja
 ninja install
 
-
-apptainer build cspot-docker-centos7.sif docker://racelab/cspot-docker-centos7
-
+# add the following to .bashrc
 if ! [[ $LD_LIBRARY_PATH == *"$HOME/.local/lib"* ]]; then
     echo -e "if ! [[ \$LD_LIBRARY_PATH == *\"$HOME/.local/lib\"* ]]; then\nexport  LD_LIBRARY_PATH=\"\$LD_LIBRARY_PATH:$HOME/.local/lib\"\nfi" >> ~/.bashrc
     source ~/.bashrc
 fi
 
+# initalize cspot by putting it in .bashrc
 HERE=`pwd`
-content='
+read -r -d '' block <<'EOF'
 # >>> CSPOT initialize >>>
 case ":$PATH:" in
     *:'$HERE'/bin:*)
@@ -143,13 +159,26 @@ case ":$PATH:" in
         ;;
 esac
 
-# <<< CSPOT initialize <<<'
-file="$HOME/.bashrc"
-echo "$content" >> "$file"
+# <<< CSPOT initialize <<<
+EOF
+
+bashrc="$HOME/.bashrc"
+
+# check if it's already there
+if grep -Fxq "# >>> CSPOT initialize >>>" "$bashrc"; then
+    echo "CSPOT block already present in .bashrc"
+else
+    echo "Appending CSPOT block to .bashrc"
+    echo "$block" >> "$bashrc"
+fi
+
+
+# activate the conda environment again
 source ~/.bashrc
 conda activate nd-xgfabric
 
-
+# use self-test to verify whether the installation was successful
 cp ../SELF-TEST.sh ./bin
 cd ./bin
 ./SELF-TEST.sh
+
