@@ -122,10 +122,9 @@ echo "$content" >> "$file"
 #--------------------------------- Add lines to end of file ------------------------------------------
 
 
-# strip debug info off of static library files. This was required for Rocky Linux v8.10 (Purdue ANVIL's system)
+# strip debug info off of static library files. This was required for Rocky Linux v8.10 (Purdue's ANVIL system)
 conda_loc=`echo $CONDA_PREFIX`
 strip --strip-debug $conda_loc/lib/gcc/x86_64-conda-linux-gnu/14.2.0/lib*.a
-# export LD=$CONDA_PREFIX/bin/ld
 
 # create the build folder
 mkdir build
@@ -181,4 +180,3 @@ conda activate nd-xgfabric
 cp ../SELF-TEST.sh ./bin
 cd ./bin
 ./SELF-TEST.sh
-
