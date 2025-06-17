@@ -10,6 +10,7 @@ else
 fi
 
 # activate environment
+source ~/.bashrc
 conda activate nd-xgfabric 
 
 # clone source and update submodules
