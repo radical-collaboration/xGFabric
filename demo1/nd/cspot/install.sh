@@ -137,22 +137,6 @@ if ! [[ $LD_LIBRARY_PATH == *"$HOME/.local/lib"* ]]; then
     source ~/.bashrc
 fi
 
-# initalize cspot by putting it in .bashrc
-HERE=`pwd`
-read -r -d '' block <<'EOF'
-# >>> CSPOT initialize >>>
-case ":$PATH:" in
-    *:'$HERE'/bin:*)
-        ;;
-
-    *)
-        export PATH='$HERE'/bin${PATH:+:${PATH}}
-        ;;
-esac
-
-# <<< CSPOT initialize <<<
-EOF
-
 bashrc="$HOME/.bashrc"
 
 # check if it's already there
@@ -160,7 +144,18 @@ if grep -Fxq "# >>> CSPOT initialize >>>" "$bashrc"; then
     echo "CSPOT block already present in .bashrc"
 else
     echo "Appending CSPOT block to .bashrc"
-    echo "$block" >> "$bashrc"
+    # initialize cspot by putting it in .bashrc
+    HERE=$(pwd)
+    echo "# >>> CSPOT initialize >>>
+case \":\$PATH:\" in
+    *:$HERE/bin:*)
+        ;;
+    *)
+        export PATH=$HERE/bin\${PATH:+:\${PATH}}
+        ;;
+esac
+
+# <<< CSPOT initialize <<<" >> "$HOME/.bashrc"
 fi
 
 echo "Finished installing CSPOT"
