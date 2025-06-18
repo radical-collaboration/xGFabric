@@ -137,10 +137,8 @@ if ! [[ $LD_LIBRARY_PATH == *"$HOME/.local/lib"* ]]; then
     source ~/.bashrc
 fi
 
-bashrc="$HOME/.bashrc"
-
 # check if it's already there
-if grep -Fxq "# >>> CSPOT initialize >>>" "$bashrc"; then
+if grep -Fxq "# >>> CSPOT initialize >>>" "$HOME/.bashrc"; then
     echo "CSPOT block already present in .bashrc"
 else
     echo "Appending CSPOT block to .bashrc"
