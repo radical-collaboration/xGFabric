@@ -22,7 +22,7 @@ else
     conda env create -f environment.yml
 fi
 conda init zsh
-conda activate nd-xgfabric
+conda activate xgfabric
 
 destination="$1"
 

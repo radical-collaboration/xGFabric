@@ -1,13 +1,5 @@
 #!/bin/bash
-if conda env list | grep -q "nd-xgfabric"
-then
-    echo "already created fabric environment"
-else
-    echo "creating fabric environment"
-    conda env create -f ../environment.yml
-fi
-
-conda activate nd-xgfabric
+conda activate xgfabric
 
 mkdir data
 # Function to run woofc-namespace-platform in an infinite loop inside "data" directory

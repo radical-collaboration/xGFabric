@@ -1,14 +1,12 @@
 #!/bin/bash
-if conda env list | grep -q "nd-xgfabric"
-then
-    echo "already created fabric environment"
-else
-    echo "creating fabric environment"
-    conda env create -f ../../environment.yml
+if [ -z "$DISPLAY" ]; then
+    echo "No X11 environment detected (DISPLAY is not set). If you are accessing the machine via SSH, then please reconnect with the -Y flag to pass your display variables.
+EX: ssh -Y user@machine.edu"
+    exit 1
 fi
 
 source ~/.bashrc
-conda activate nd-xgfabric
+conda activate xgfabric
 
 
 echo -n "This script has been tested on the following clusters:
@@ -35,7 +33,7 @@ case $cluster_choice in
         ;;
     2)
         echo "==> You selected: Notre Dame"
-        module add openfoam/10.0/gcc/8.5.0
+        module add openfoam/10.0/gcc/8.5.0 > /dev/null 2>&1
         module add paraview/5.11.2
         option=2
         ;;
@@ -48,14 +46,32 @@ case $cluster_choice in
         ;;
 esac
 
-n_slots=3 # number of nodes
-n_threads=3 # number of cores
-seciteration=2
+echo -n "How many threads do you want to run this on? (default is 5)
+==> "
+
+read n_threads
+
+if [ -z "$n_threads" ]; then
+    n_threads=5
+fi
+
+echo "==> You selected: $n_threads threads"
+
+echo -n "How many iterations do you want to compute? (default is 3)
+==> "
+
+read seciteration
+
+if [ -z "$seciteration" ]; then
+    seciteration=3
+fi
+
+echo "==> You selected: $seciteration iterations"
+
 folder_name="cups_structure"
 destination="${folder_name}_$(date '+%y-%m-%d_%H_%M_%S')"
 
 touch config.ini
-echo $n_slots >> config.ini
 echo $n_threads >> config.ini
 echo $seciteration >> config.ini
 echo $folder_name >> config.ini
@@ -63,7 +79,7 @@ echo $destination >> config.ini
 echo $option >> config.ini
 
 if [ "$option" -eq 1 ]; then
-    job_id=$(sbatch --parsable --output="job_output_%j.out" cups.sh)
+    job_id=$(sbatch --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh)
     echo "Submitted job: $job_id"
 
     output_file="job_output_${job_id}.out"

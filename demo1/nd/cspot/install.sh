@@ -1,17 +1,8 @@
 #!/bin/bash
 
-# Check wheter the xGFabric conda environment has been created
-if conda env list | grep -q "nd-xgfabric"
-then
-    echo "already created fabric environment"
-else
-    echo "creating fabric environment"
-    conda env create -f ../environment.yml
-fi
-
 # activate environment
 source ~/.bashrc
-conda activate nd-xgfabric 
+conda activate xgfabric 
 
 # clone source and update submodules
 git clone https://github.com/MAYHEM-Lab/cspot
@@ -133,7 +124,7 @@ cd build/
 
 # activate the conda environment again
 source ~/.bashrc
-conda activate nd-xgfabric
+conda activate xgfabric
 
 # build the project
 cmake -G Ninja -DCMAKE_INSTALL_PREFIX=$HOME/.local ..
@@ -172,12 +163,5 @@ else
     echo "$block" >> "$bashrc"
 fi
 
-
-# activate the conda environment again
+echo "Finished installing CSPOT"
 source ~/.bashrc
-conda activate nd-xgfabric
-
-# use self-test to verify whether the installation was successful
-cp ../SELF-TEST.sh ./bin
-cd ./bin
-./SELF-TEST.sh

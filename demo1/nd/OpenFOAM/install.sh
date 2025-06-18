@@ -2,16 +2,7 @@
 
 # activate conda environment
 source ~/.bashrc
-
-if conda env list | grep -q "nd-xgfabric"
-then
-    echo "already created fabric environment"
-else
-    echo "creating fabric environment"
-    conda env create -f ../environment.yml
-fi
-
-conda activate nd-xgfabric
+conda activate xgfabric
 
 # add OpenFOAM module to computer
 module add openfoam/10.0/gcc/8.5.0

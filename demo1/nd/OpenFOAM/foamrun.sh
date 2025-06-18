@@ -5,7 +5,7 @@
 #echo "Task started at [$(date '+%Y-%m-%d %H:%M:%S')]" >> out.log
 
 source ~/.bashrc
-conda activate nd-xgfabric
+conda activate xgfabric
 
 # add OpenFOAM module to computer
 module add openfoam/10.0/gcc/8.5.0

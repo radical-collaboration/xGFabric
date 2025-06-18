@@ -1,19 +1,14 @@
 #!/bin/bash
-#SBATCH --ntasks=3
-#SBATCH --time=01:00:00
-#SBATCH --mem=16G
-
-slots=$(sed -n '1p' config.ini)
-threads=$(sed -n '2p' config.ini)
-seciteration=$(sed -n '3p' config.ini)
-folder_name=$(sed -n '4p' config.ini)
-destination=$(sed -n '5p' config.ini)
-option=$(sed -n '6p' config.ini)
+threads=$(sed -n '1p' config.ini)
+seciteration=$(sed -n '2p' config.ini)
+folder_name=$(sed -n '3p' config.ini)
+destination=$(sed -n '4p' config.ini)
+option=$(sed -n '5p' config.ini)
 
 rm config.ini
 
 source ~/.bashrc
-conda activate nd-xgfabric
+conda activate xgfabric
 
 if [ "$option" -eq 1 ]; then
     module load gcc/11.2.0
@@ -99,14 +94,14 @@ python3 update.py $windspeed $winddir -f $destination
 # 5. Run solver to perform the calculation
 cd $destination
 # For parallel version (sciped for now)
-touch "../logs/$threads_$slots_$destination"
+touch "../logs/$threads_$destination"
 
 if [ "$threads" -eq 1 ]; then
-    porousSimpleFoam | tee "../logs/$threads_$slots_$destination"
+    porousSimpleFoam | tee "../logs/$threads_$destination"
 else
     decomposePar -fileHandler uncollated -force
     p_start=$(date '+%s.%N')
-    mpirun -n $threads porousSimpleFoam -parallel | tee "../logs/$threads_$slots_$destination"
+    mpirun -n $threads porousSimpleFoam -parallel | tee "../logs/$threads_$destination"
     p_stop=$(date '+%s.%N')
     p_elapsed=$(bc -l <<< "$p_stop - $p_start")
     echo "Reconstruction started"

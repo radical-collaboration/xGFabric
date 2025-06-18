@@ -1,8 +1,7 @@
-name: nd-xgfabric
+name: xgfabric
 channels:
  - conda-forge
 dependencies:
- - apptainer=1.3.2
  - cmake=3.19.1
  - cupy=13.4.1
  - gcc_linux-64=14.2.0
