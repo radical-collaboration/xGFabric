@@ -17,34 +17,18 @@ echo -n "This script has been tested on the following clusters:
 ==> Which cluster are you running on? (1-3)
 ==> "
 
-read cluster_choice
+read option
 
-option=-1
-
-case $cluster_choice in
-    1)
-        echo "==> You selected: Purdue ANVIL"
-        module load gcc/11.2.0
-        module load openmpi/4.0.6
-        module load openfoam/8-20210316
-        source $FOAM_ETC/bashrc
-        module load paraview/5.10.1
-        option=1
-        ;;
-    2)
-        echo "==> You selected: Notre Dame"
-        module add openfoam/10.0/gcc/8.5.0 > /dev/null 2>&1
-        module add paraview/5.11.2
-        option=2
-        ;;
-    3)
-        echo "==> You selected: Texas Stampede3"
-        ;;
-    *)
-        echo "Invalid selection. Please choose 1, 2, or 3."
-        exit 1
-        ;;
-esac
+if [ "$option" -eq 1 ]; then
+    echo "==> You selected: Purdue ANVIL"
+elif [ "$option" -eq 2 ]; then
+    echo "==> You selected: Notre Dame"
+elif [ "$option" -eq 3 ]; then
+    echo "==> You selected: Texas Stampede3"
+else
+    echo "Invalid selection. Please choose 1, 2, or 3."
+    exit 1
+fi
 
 echo -n "How many threads do you want to run this on? (default is 5)
 ==> "
@@ -78,8 +62,12 @@ echo $folder_name >> config.ini
 echo $destination >> config.ini
 echo $option >> config.ini
 
-if [ "$option" -eq 1 ]; then
-    job_id=$(sbatch --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh)
+if [ "$option" -eq 1 ] || [ "$option" -eq 3 ]; then
+    if [ "$option" -eq 1 ]; then
+        job_id=$(sbatch --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh)
+    elif [ "$option" -eq 3 ]; then
+        job_id=$(sbatch --time="24:0:0" --nodes="1" --partition="skx" --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh | tail -n 1)
+    fi
     echo "Submitted job: $job_id"
 
     output_file="job_output_${job_id}.out"
@@ -102,6 +90,10 @@ if [ "$option" -eq 1 ]; then
     # Stop tailing and show final status
     kill $tail_pid 2>/dev/null
     echo "Job $job_id completed"
+
+    # generate images
+    sh render.sh $destination $option
+
 elif [ "$option" -eq 2 ]; then
 
     # Submit job and capture job ID
@@ -163,15 +155,13 @@ elif [ "$option" -eq 2 ]; then
         
         if [[ "$exit_status" == "0" && "$failed" == "0" ]]; then
             echo "Final State: COMPLETED"
+            sh render.sh $destination $option
         else
             echo "Final State: FAILED"
         fi
     else
         echo "Could not retrieve accounting information (job may have just finished)"
     fi
-
 else
     echo "An error occured"
 fi
-
-sh render.sh $destination

@@ -19,6 +19,10 @@ if [ "$option" -eq 1 ]; then
 elif [ "$option" -eq 2 ]; then
     module add openfoam/10.0/gcc/8.5.0
     module add paraview/5.11.2
+elif [ "$option" -eq 3 ]; then
+    module purge
+    module load intel/23.1 impi/21.9 openfoam/8 paraview/5.12.0
+    export LD_LIBRARY_PATH=/opt/intel/oneapi/mpi/2021.11/lib:$LD_LIBRARY_PATH
 fi
 
 
@@ -48,7 +52,7 @@ fi
 
 echo $destination
 
-unzip $folder_name
+unzip -q $folder_name
 mv $folder_name $destination
 
 
@@ -79,12 +83,12 @@ find "$destination" -type f | while read -r file; do
             }
             {print}
             ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-            echo "Updated: $file"
-        else
-            echo "Already has version line: $file"
+            # echo "Updated: $file"
+        # else
+        #     echo "Already has version line: $file"
         fi
-    else
-        echo "No FoamFile block found: $file"
+    # else
+    #     echo "No FoamFile block found: $file"
     fi
 done
 
@@ -95,6 +99,7 @@ python3 update.py $windspeed $winddir -f $destination
 cd $destination
 # For parallel version (sciped for now)
 touch "../logs/$threads_$destination"
+
 
 if [ "$threads" -eq 1 ]; then
     porousSimpleFoam | tee "../logs/$threads_$destination"
