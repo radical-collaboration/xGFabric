@@ -1,5 +1,5 @@
 #!/bin/bash
-BIN="/afs/crc.nd.edu/user/r/rhartung/Documents/xGFabric/xGFabric/demo1/nd/cspot/cspot/build/bin"
+BIN="cspot/build/bin"
 HERE=`pwd`
 LOCALWOOF="woof://127.0.0.1$HERE/daviscupsout"
 DATAWOOF="woof://169.231.230.76/sharedfs/unl-data/daviscupsout"
