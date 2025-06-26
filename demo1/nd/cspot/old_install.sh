@@ -7,9 +7,6 @@ conda activate xgfabric
 # clone source and update submodules
 git clone https://github.com/MAYHEM-Lab/cspot
 cd cspot
-git checkout caplets
-git checkout 61b662a76e21b34a4e9c6ed002b017888e287310
-
 git submodule update --init --recursive
 mv deps/libzmq/CMakeLists.txt deps/libzmq/CMakeLists.orig.txt
 
@@ -61,7 +58,8 @@ int senspot_log(WOOF *wf, unsigned long seq_no, void *ptr)
 file="apps/senspot/senspot_log.c"
 echo "$content" > "$file"
 
-content='find_package(OpenSSL REQUIRED)
+content='
+find_package(OpenSSL REQUIRED)
 if(OPENSSL_FOUND)
   include_directories(${OPENSSL_INCLUDE_DIR})
 else()
@@ -69,25 +67,27 @@ else()
 endif()
 message(STATUS "OpenSSL CFlags: ${OPENSSL_LIBRARIES}")
 include_directories("./include" "../include" "../../src/include" "../src/include")
-add_library(woof_caplets woofc-caplets.c woofc-keychain.c)
+add_library(woof_caplets woofc-caplets.c)
 target_link_libraries(woof_caplets PUBLIC woof)
 target_include_directories(woof_caplets PRIVATE "." "../../include")
 add_executable(woofc-init-principal woofc-init-principal.c)
-target_link_libraries(woofc-init-principal PRIVATE woof_caplets woof crypto dl pthread)
-target_include_directories(woofc-init-principal PRIVATE ../include)
+target_link_libraries(woofc-init-principal PRIVATE woof_caplets woof crypto dl)
+target_include_directories(woofc-init-principal PRIVATE "../include")
 add_executable(woofc-print-cap woofc-print-cap.c)
-target_link_libraries(woofc-print-cap PRIVATE woof_caplets woof crypto dl pthread)
-target_include_directories(woofc-print-cap PRIVATE ../include)
+target_link_libraries(woofc-print-cap PRIVATE woof_caplets woof crypto dl)
+target_include_directories(woofc-print-cap PRIVATE "../include")
 target_compile_options(woof_caplets PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
 target_compile_options(woofc-init-principal PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
-target_compile_options(woofc-print-cap PUBLIC "-I${OPENSSL_INCLUDE_DIR}")'
+target_compile_options(woofc-print-cap PUBLIC "-I${OPENSSL_INCLUDE_DIR}")
+'
 file="src/caplets/CMakeLists.txt"
 echo "$content" > "$file"
 #--------------------------------- Overwrite file --------------------------------
 
 
 #--------------------------------- Add lines to end of file ------------------------------------------
-content='find_package(OpenSSL REQUIRED)
+content='
+find_package(OpenSSL REQUIRED)
 
 if(NOT OpenSSL_FOUND)
     message(FATAL_ERROR "OpenSSL not found.")
@@ -95,7 +95,7 @@ else()
     include_directories(${OpenSSL_INCLUDE_DIRS})
 endif()
 
-# string(REPLACE ".so" ".a" OPENSSL_STATIC_LIBS "${OPENSSL_LIBRARIES}")
+string(REPLACE ".so" ".a" OPENSSL_STATIC_LIBS "${OPENSSL_LIBRARIES}")
 
 target_compile_options(woofc-container PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
 target_compile_options(woofc-forker-helper PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
@@ -105,38 +105,13 @@ file="CMakeLists.txt"
 echo "$content" >> "$file"
 
 
-content='target_compile_options(log-test-thread PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
-target_compile_options(log-test PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
+content='
+target_compile_options(log-test-thread PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
+target_compile_options(log-test        PUBLIC "-I${OPENSSL_INCLUDE_DIR} -I${OPENSSL_STATIC_LIBS}")
 '
 file="src/CMakeLists.txt"
 echo "$content" >> "$file"
-
-content='target_compile_options(woof_cmq_net PUBLIC "-I../../caplets/woofc-keychain.h")'
-file="src/net/cmq/CMakeLists.txt"
-echo "$content" >> "$file"
-
-content='target_compile_options(woof_zmq_net PUBLIC "-I../../caplets/woofc-keychain.h")'
-file="src/net/zmq/CMakeLists.txt"
-echo "$content" >> "$file"
-
 #--------------------------------- Add lines to end of file ------------------------------------------
-
-# ---------------------- change lines in the middle of a file -----------------------------
-INPUT_FILE="src/net/zmq/client.cpp"
-TMP_FILE="$(mktemp)"
-sed '/#include "woofc-caplets.h"/a #include "woofc-keychain.h"' "$INPUT_FILE" > "$TMP_FILE"
-mv "$TMP_FILE" "$INPUT_FILE"
-
-INPUT_FILE="src/net/cmq/client.cpp"
-TMP_FILE="$(mktemp)"
-sed '/#include "woofc-caplets.h"/a #include "woofc-keychain.h"' "$INPUT_FILE" > "$TMP_FILE"
-mv "$TMP_FILE" "$INPUT_FILE"
-
-INPUT_FILE="src/caplets/woofc-keychain.c"
-TMP_FILE="$(mktemp)"
-sed '/#include "woofc-caplets.h"/a #include "woofc-keychain.h"' "$INPUT_FILE" > "$TMP_FILE"
-mv "$TMP_FILE" "$INPUT_FILE"
-# ---------------------- change lines in the middle of a file -----------------------------
 
 
 # strip debug info off of static library files. This was required for Rocky Linux v8.10 (Purdue's ANVIL system)
