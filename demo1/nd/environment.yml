@@ -26,4 +26,5 @@ dependencies:
  - sysroot_linux-64=2.17
  - unzip=6.0
  - wget=1.21.4
+ - yaml=0.2.5
  - zeromq=4.3.5
