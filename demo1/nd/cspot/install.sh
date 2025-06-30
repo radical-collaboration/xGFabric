@@ -1,12 +1,43 @@
 #!/bin/bash
+option=0
+install_location="$HOME"
+usage="Usage: install.sh [cluster] [location]
+Installs CSPOT to the user's machine.
+
+Cluster:
+This install script has been tested on the following clusters:
+1 = Purdue ANVIL
+2 = Notre Dame
+3 = Texas Stampede3
+
+Location:
+Specify where you want the binaries to be installed. If you leave this blank, the default location will be \$HOME/.cspot/"
+
+if [ -n "$1" ]; then
+    option="$1"
+else
+    echo "$usage"
+    exit 1
+fi
+
+if [ -n "$2" ]; then
+    install_location="$2"
+fi
+
+if [ -d "$install_location/.cspot" ]; then
+    echo "Cannot install CSPOT at $install_location/.cspot. Directory already exists."
+    exit 1
+else
+    cd "$install_location"
+fi
 
 # activate environment
 source ~/.bashrc
 conda activate xgfabric 
 
 # clone source and update submodules
-git clone https://github.com/MAYHEM-Lab/cspot
-cd cspot
+git clone https://github.com/MAYHEM-Lab/cspot .cspot
+cd .cspot
 git checkout caplets
 git checkout 61b662a76e21b34a4e9c6ed002b017888e287310
 
