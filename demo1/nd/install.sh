@@ -1,4 +1,6 @@
 #!/bin/bash
+source ~/.bashrc
+
 echo -n "This script has been tested on the following clusters:
 1. Purdue ANVIL
 2. Notre Dame
@@ -30,13 +32,15 @@ if ! command -v conda &> /dev/null; then
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
     bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
     rm ~/miniconda3/miniconda.sh
+    conda init bash
+    source ~/.bashrc
 fi
 
-# Try to run conda with --help or similar to avoid side effects
 if conda --help &> /dev/null; then
     echo "Conda is available and works for the current user."
 else
     echo "Conda is available but failed to run (permission error or runtime failure)."
+    exit 1
 fi
 
 echo "Checking if the xGFabric Conda environment is installed..."
@@ -52,29 +56,13 @@ fi
 
 echo "Checking if the CSPOT is installed..."
 
-
-# Try to run senspot-get or similar to avoid side effects
+# Check if CSPOT is installed
 if which senspot-get &> /dev/null; then
     echo "CSPOT is available and works for the current user."
-    exit 0
 else
-    echo "CSPOT is not installed or not in PATH."
-    echo -n "Where would you like CSPOT to be installed?
-
-==> The default location is \$HOME/.cspot. Leave blank for default.
-==> "
-
-    read location
-    HERE=`pwd`
-    if [ -z "$location" ]; then
-        echo "Installing CSPOT to $HOME/.cspot"
-        cd cspot
-        sh install.sh $option
-    else
-        echo "Installing CSPOT to $location ..."
-        cd cspot
-        sh install.sh $option $location
-    fi
-    source ~/.bashrc
-    cd $HERE
+    echo "CSPOT is not installed or not in PATH. Installing..."
+    sh cspot/install.sh
 fi
+
+# Install is completed
+echo "All modules are installed correctly!"

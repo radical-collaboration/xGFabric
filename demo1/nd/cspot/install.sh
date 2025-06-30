@@ -1,35 +1,40 @@
 #!/bin/bash
-option=0
-install_location="$HOME"
-usage="Usage: install.sh [cluster] [location]
-Installs CSPOT to the user's machine.
+check_dir_exists (){
+    if [ -d "$1/.cspot" ]; then
+        echo -n "Cannot install CSPOT at $install_location/.cspot. Directory already exists. Would you like to install CSPOT in a different location?
 
-Cluster:
-This install script has been tested on the following clusters:
-1 = Purdue ANVIL
-2 = Notre Dame
-3 = Texas Stampede3
+==> Install location (leave blank to exit)
+==> "
+        read new_location
 
-Location:
-Specify where you want the binaries to be installed. If you leave this blank, the default location will be \$HOME/.cspot/"
+        if [ -z "$new_location" ]; then
+            exit 0
+        fi
 
-if [ -n "$1" ]; then
-    option="$1"
-else
-    echo "$usage"
-    exit 1
+        install_location=$new_location
+        check_dir_exists "$install_location"
+    fi
+}
+
+echo -n "Where would you like CSPOT to be installed?
+
+==> The default location is \$HOME/.cspot. Leave blank for default.
+==> "
+
+read install_location
+
+
+if [ -z "$install_location" ]; then
+    install_location="$HOME"
 fi
 
-if [ -n "$2" ]; then
-    install_location="$2"
-fi
+check_dir_exists "$install_location"
 
-if [ -d "$install_location/.cspot" ]; then
-    echo "Cannot install CSPOT at $install_location/.cspot. Directory already exists."
-    exit 1
-else
-    cd "$install_location"
-fi
+source ~/.bashrc
+
+echo "Installing CSPOT to $location"
+
+cd "$install_location"
 
 # activate environment
 source ~/.bashrc
