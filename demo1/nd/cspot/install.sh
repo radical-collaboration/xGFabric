@@ -1,6 +1,6 @@
 #!/bin/bash
 check_dir_exists (){
-    if [ -d "$1/.cspot" ]; then
+    if [ -d "$1/cspot" ]; then
         printf "Cannot install CSPOT at $install_location/.cspot. Directory already exists. Would you like to install CSPOT in a different location?\n\n==> Install location (leave blank to exit)\n==> "
         read new_location
 
@@ -27,7 +27,7 @@ check_dir_exists "$install_location"
 
 source ~/.bashrc
 
-echo "Installing CSPOT to $location"
+echo "Installing CSPOT to $install_location/cspot"
 
 cd "$install_location"
 
@@ -175,7 +175,7 @@ mv "$TMP_FILE" "$INPUT_FILE"
 
 INPUT_FILE="src/include/debug.h"
 TMP_FILE="$(mktemp)"
-sed "s|#define DEBUG|// #define DEBUG|" "$INPUT_FILE" > "$TMP_FILE"
+sed 's|^#define DEBUG$|// #define DEBUG|' "$INPUT_FILE" > "$TMP_FILE"
 mv "$TMP_FILE" "$INPUT_FILE"
 # ---------------------- change lines in the middle of a file -----------------------------
 
