@@ -1,5 +1,6 @@
 #!/bin/bash
 source ~/.bashrc
+module --force purge
 
 echo "Checking if Conda is installed..."
 
