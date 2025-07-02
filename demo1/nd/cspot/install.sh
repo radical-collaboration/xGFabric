@@ -1,10 +1,7 @@
 #!/bin/bash
 check_dir_exists (){
     if [ -d "$1/.cspot" ]; then
-        echo -n "Cannot install CSPOT at $install_location/.cspot. Directory already exists. Would you like to install CSPOT in a different location?
-
-==> Install location (leave blank to exit)
-==> "
+        printf "Cannot install CSPOT at $install_location/.cspot. Directory already exists. Would you like to install CSPOT in a different location?\n\n==> Install location (leave blank to exit)\n==> "
         read new_location
 
         if [ -z "$new_location" ]; then
@@ -16,16 +13,14 @@ check_dir_exists (){
     fi
 }
 
-echo -n "Where would you like CSPOT to be installed?
-
-==> The default location is \$HOME/.cspot. Leave blank for default.
-==> "
+printf "Where would you like CSPOT to be installed?\n\n==> The default location is \$HOME/.cspot. Leave blank for default.\n==> "
 
 read install_location
 
-
 if [ -z "$install_location" ]; then
     install_location="$HOME"
+elif [[ "$install_location" == "." ]]; then
+    install_location=`pwd`
 fi
 
 check_dir_exists "$install_location"
@@ -171,6 +166,16 @@ mv "$TMP_FILE" "$INPUT_FILE"
 INPUT_FILE="src/caplets/woofc-keychain.c"
 TMP_FILE="$(mktemp)"
 sed '/#include "woofc-caplets.h"/a #include "woofc-keychain.h"' "$INPUT_FILE" > "$TMP_FILE"
+mv "$TMP_FILE" "$INPUT_FILE"
+
+INPUT_FILE="src/include/debug.h"
+TMP_FILE="$(mktemp)"
+sed "s|//#define QUIET|#define QUIET|" "$INPUT_FILE" > "$TMP_FILE"
+mv "$TMP_FILE" "$INPUT_FILE"
+
+INPUT_FILE="src/include/debug.h"
+TMP_FILE="$(mktemp)"
+sed "s|#define DEBUG|// #define DEBUG|" "$INPUT_FILE" > "$TMP_FILE"
 mv "$TMP_FILE" "$INPUT_FILE"
 # ---------------------- change lines in the middle of a file -----------------------------
 

@@ -1,27 +1,6 @@
 #!/bin/bash
 source ~/.bashrc
 
-echo -n "This script has been tested on the following clusters:
-1. Purdue ANVIL
-2. Notre Dame
-3. Texas Stampede3
-
-==> Which cluster are you running on? (1-3)
-==> "
-
-read option
-
-if [ "$option" -eq 1 ]; then
-    echo "==> You selected: Purdue ANVIL"
-elif [ "$option" -eq 2 ]; then
-    echo "==> You selected: Notre Dame"
-elif [ "$option" -eq 3 ]; then
-    echo "==> You selected: Texas Stampede3"
-else
-    echo "Invalid selection. Please choose 1, 2, or 3."
-    exit 1
-fi
-
 echo "Checking if Conda is installed..."
 
 # Check if Conda is installed
@@ -66,3 +45,41 @@ fi
 
 # Install is completed
 echo "All modules are installed correctly!"
+
+# prompt user if they would like to run a test simulation
+printf "==> Would you like to run a test simulation of OpenFOAM? (y/[n])\n==> "
+read simulation
+
+lowercase="${simulation,,}"
+case "$lowercase" in
+    y | yes)
+        printf "This script has been tested on the following clusters:\n1. Purdue ANVIL\n2. Notre Dame\n3. Texas Stampede3\n\n==> Which cluster are you running on? (1-3)\n==> "
+
+        read option
+
+        cd "OpenFOAM/parallel_test/"
+
+        if [ "$option" -eq 1 ]; then
+            echo "==> You selected: Purdue ANVIL"
+            sh runme.sh 1 5 3
+        elif [ "$option" -eq 2 ]; then
+            echo "==> You selected: Notre Dame"
+            sh runme.sh 2 5 3
+        elif [ "$option" -eq 3 ]; then
+            echo "==> You selected: Texas Stampede3"
+            sh runme.sh 3 5 3
+        else
+            echo "Invalid selection. Please choose 1, 2, or 3."
+            exit 1
+        fi
+        ;;
+    n | no | "")
+        exit 0
+        ;;
+    *)
+        echo "Invalid selection. Please enter either yes or no."
+        exit 1
+        ;;
+esac
+
+echo "Successfully ran the OpenFoam job."

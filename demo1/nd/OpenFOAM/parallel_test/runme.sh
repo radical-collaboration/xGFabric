@@ -1,56 +1,67 @@
 #!/bin/bash
-if [ -z "$DISPLAY" ]; then
-    echo "No X11 environment detected (DISPLAY is not set). If you are accessing the machine via SSH, then please reconnect with the -Y flag to pass your display variables.
-EX: ssh -Y user@machine.edu"
-    exit 1
-fi
-
+# activate the environment
 source ~/.bashrc
 conda activate xgfabric
 
 
-echo -n "This script has been tested on the following clusters:
-1. Purdue ANVIL
-2. Notre Dame
-3. Texas Stampede3
-
-==> Which cluster are you running on? (1-3)
-==> "
-
-read option
-
-if [ "$option" -eq 1 ]; then
-    echo "==> You selected: Purdue ANVIL"
-elif [ "$option" -eq 2 ]; then
-    echo "==> You selected: Notre Dame"
-elif [ "$option" -eq 3 ]; then
-    echo "==> You selected: Texas Stampede3"
+# check for which machine the user is running
+option="-1"
+if [ "$1" ]; then
+    option="$1"
 else
-    echo "Invalid selection. Please choose 1, 2, or 3."
-    exit 1
+    printf "This script has been tested on the following clusters:\n1. Purdue ANVIL\n2. Notre Dame\n3. Texas Stampede3\n\n==> Which cluster are you running on? (1-3)\n==> "
+
+    read option
+
+    if [ "$option" -eq 1 ]; then
+        echo "==> You selected: Purdue ANVIL"
+    elif [ "$option" -eq 2 ]; then
+        echo "==> You selected: Notre Dame"
+    elif [ "$option" -eq 3 ]; then
+        echo "==> You selected: Texas Stampede3"
+    else
+        echo "Invalid selection. Please choose 1, 2, or 3."
+        exit 1
+    fi
 fi
 
-echo -n "How many threads do you want to run this on? (default is 5)
-==> "
+if [ "$option" -eq 1 ] || [ "$option" -eq 2 ]; then
+    if [ -z "$DISPLAY" ]; then
+        printf "No X11 environment detected (DISPLAY is not set). If you are accessing the machine via SSH, then please reconnect with the -Y flag to pass your display variables.\n\nEX: ssh -Y user@machine.edu\n"
+        exit 1
+    fi
+fi
+# check for number of threads to run the program on
+n_threads=-1
+if [ "$2" ]; then
+    n_threads="$2"
+else
+    printf "How many threads do you want to run this on? (default is 5)\n==> "
 
-read n_threads
+    read n_threads
 
-if [ -z "$n_threads" ]; then
-    n_threads=5
+    if [ -z "$n_threads" ]; then
+        n_threads=5
+    fi
+
+    echo "==> You selected: $n_threads threads"
 fi
 
-echo "==> You selected: $n_threads threads"
+# check for number of iterations the user wants to perform
+seciteration=-1
+if [ "$3" ]; then
+    seciteration="$3"
+else
+    printf "How many iterations do you want to compute? (default is 3)\n==> "
 
-echo -n "How many iterations do you want to compute? (default is 3)
-==> "
+    read seciteration
 
-read seciteration
+    if [ -z "$seciteration" ]; then
+        seciteration=3
+    fi
 
-if [ -z "$seciteration" ]; then
-    seciteration=3
+    echo "==> You selected: $seciteration iterations"
 fi
-
-echo "==> You selected: $seciteration iterations"
 
 folder_name="cups_structure"
 destination="${folder_name}_$(date '+%y-%m-%d_%H_%M_%S')"
@@ -138,30 +149,8 @@ elif [ "$option" -eq 2 ]; then
     echo ""
     echo "==================="
     echo "Job $job_id completed"
-
-    # Get final job status using qacct (if available)
-    echo "Retrieving final job status..."
-    sleep 5  # Wait for accounting data
-
-    job_accounting=$(qacct -j $job_id 2>/dev/null)
-    if [[ $? -eq 0 ]]; then
-        exit_status=$(echo "$job_accounting" | grep "^exit_status" | awk '{print $2}')
-        failed=$(echo "$job_accounting" | grep "^failed" | awk '{print $2}')
-        ru_wallclock=$(echo "$job_accounting" | grep "^ru_wallclock" | awk '{print $2}')
-        
-        echo "Exit Status: $exit_status"
-        echo "Failed Code: $failed"
-        echo "Wall Clock Time: $ru_wallclock seconds"
-        
-        if [[ "$exit_status" == "0" && "$failed" == "0" ]]; then
-            echo "Final State: COMPLETED"
-            sh render.sh $destination $option
-        else
-            echo "Final State: FAILED"
-        fi
-    else
-        echo "Could not retrieve accounting information (job may have just finished)"
-    fi
+    
+    sh render.sh $destination $option
 else
     echo "An error occured"
 fi
