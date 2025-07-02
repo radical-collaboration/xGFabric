@@ -13,7 +13,7 @@ check_dir_exists (){
     fi
 }
 
-printf "Where would you like CSPOT to be installed?\n\n==> The default location is \$HOME/.cspot. Leave blank for default.\n==> "
+printf "Where would you like CSPOT to be installed?\n\n==> The default location is \$HOME/cspot. Leave blank for default.\n==> "
 
 read install_location
 
@@ -36,8 +36,8 @@ source ~/.bashrc
 conda activate xgfabric 
 
 # clone source and update submodules
-git clone https://github.com/MAYHEM-Lab/cspot .cspot
-cd .cspot
+git clone https://github.com/MAYHEM-Lab/cspot
+cd cspot
 git checkout caplets
 git checkout 61b662a76e21b34a4e9c6ed002b017888e287310
 

@@ -3,6 +3,10 @@
 source ~/.bashrc
 conda activate xgfabric
 
+if [ ! -f "$HOME/.cspot/capabilities.yaml" ] ||  [ ! -d "$HOME/.cspot" ]; then
+    printf "Could not find the capabilities.yaml file in $HOME/.cspot.\n\nPlease do the following:\n    1. Create or copy over the capabilities.yaml file.\n    2. Run chmod 700 on the $HOME/.cspot folder.\n    3. Run chmod 600 on the capabilities.yaml file.\n"
+    exit 1
+fi
 
 # check for which machine the user is running
 option="-1"
