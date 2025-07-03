@@ -3,23 +3,24 @@ threads=$(sed -n '1p' config.ini)
 seciteration=$(sed -n '2p' config.ini)
 folder_name=$(sed -n '3p' config.ini)
 destination=$(sed -n '4p' config.ini)
-option=$(sed -n '5p' config.ini)
+cluster=$(sed -n '5p' config.ini)
+render=$(sed -n '6p' config.ini)
 
 rm config.ini
 
 source ~/.bashrc
 conda activate xgfabric
 
-if [ "$option" -eq 1 ]; then
+if [ "$cluster" -eq 1 ]; then
     module load gcc/11.2.0
     module load openmpi/4.0.6
     module load openfoam/8-20210316
     source $FOAM_ETC/bashrc
     module load paraview/5.10.1
-elif [ "$option" -eq 2 ]; then
-    module add openfoam/10.0/gcc/8.5.0
+elif [ "$cluster" -eq 2 ]; then
+    module add openfoam/10.0/gcc/8.5.0 > /dev/null 2>&1
     module add paraview/5.11.2
-elif [ "$option" -eq 3 ]; then
+elif [ "$cluster" -eq 3 ]; then
     module purge
     module load intel/23.1 impi/21.9 openfoam/8 paraview/5.12.0
     export LD_LIBRARY_PATH=/opt/intel/oneapi/mpi/2021.11/lib:$LD_LIBRARY_PATH
@@ -97,16 +98,16 @@ python3 update.py $windspeed $winddir -f $destination
 
 # 5. Run solver to perform the calculation
 cd $destination
-# For parallel version (sciped for now)
-touch "../logs/$threads_$destination"
+# For parallel version (scripted for now)
+touch "../logs/$threads-$destination"
 
-
+exit 0
 if [ "$threads" -eq 1 ]; then
-    porousSimpleFoam | tee "../logs/$threads_$destination"
+    porousSimpleFoam | tee "../logs/$threads-$destination"
 else
     decomposePar -fileHandler uncollated -force
     p_start=$(date '+%s.%N')
-    mpirun -n $threads porousSimpleFoam -parallel | tee "../logs/$threads_$destination"
+    mpirun -n $threads porousSimpleFoam -parallel | tee "../logs/$threads-$destination"
     p_stop=$(date '+%s.%N')
     p_elapsed=$(bc -l <<< "$p_stop - $p_start")
     echo "Reconstruction started"
@@ -117,6 +118,8 @@ stop=$(date '+%s.%N')
 elapsed=$(bc -l <<< "$stop - $start")
 echo "Run of $destination on $(date '+%y-%m-%d_%H_%M_%S') and $threads threads till $seciteration sec/iteration took $elapsed sec ($p_elapsed); $4" >> ../result_time
 
-foamToVTK -allPatches
+if [[ "$render" == "true" ]]; then
+    foamToVTK -allPatches
+fi
 
 cd ..

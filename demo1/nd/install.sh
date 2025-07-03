@@ -52,8 +52,8 @@ echo "All modules are installed correctly!"
 printf "==> Would you like to run a test simulation of OpenFOAM? (y/[n])\n==> "
 read simulation
 
-lowercase="${simulation,,}"
-case "$lowercase" in
+sim_lower="${simulation,,}"
+case "$sim_lower" in
     y | yes)
         if [ ! -f "$HOME/.cspot/capabilities.yaml" ] ||  [ ! -d "$HOME/.cspot" ]; then
             printf "Could not find the capabilities.yaml file in $HOME/.cspot. This file is required by CSPOT to authenticate data transfer from the UCSB cluster. If you have access to the capabilities.yaml file then please do the following:\n\n1. Create a folder named \".cspot\" in your home directory ($HOME/).\n2. Create or copy over the \"capabilities.yaml\" file and place it in the .cspot folder.\n3. Run chmod 700 on the \".cspot\" folder.\n4. Run chmod 600 on the \"capabilities.yaml\" file.\n\n\nIf you do not have access a capabilities.yaml file, then please contact Rich Wolski at rich@cs.ucsb.edu or visit his website at https://sites.cs.ucsb.edu/~rich/\n"
@@ -68,13 +68,13 @@ case "$lowercase" in
 
         if [ "$option" -eq 1 ]; then
             echo "==> You selected: Purdue ANVIL"
-            sh runme.sh 1 5 3
+            sh runme.sh -c=1 -t=5 -s=3 -r=true
         elif [ "$option" -eq 2 ]; then
             echo "==> You selected: Notre Dame"
-            sh runme.sh 2 5 3
+            sh runme.sh -c=2 -t=5 -s=3 -r=true
         elif [ "$option" -eq 3 ]; then
             echo "==> You selected: Texas Stampede3"
-            sh runme.sh 3 5 3
+            sh runme.sh -c=3 -t=5 -s=3 -r=true
         else
             echo "Invalid selection. Please choose 1, 2, or 3."
             exit 1

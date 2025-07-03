@@ -1,4 +1,105 @@
 #!/bin/bash
+print_usage () {
+    echo "Usage: ./runme.sh [OPTIONS]"
+    echo
+    echo "Options:"
+    echo "  -c=NUM,  --cluster=1|2|3         Set the cluster"
+    echo "  -t=NUM,  --threads=NUM           Set the number of threads"
+    echo "  -s=NUM,  --seciter=NUM           Set the number of iterations"
+    echo "  -r=BOOL, --render=true|false     Set render mode"
+    echo "  -h,      --help                  Show this help message and exit"
+    echo
+    echo "Example:"
+    echo "    ./runme.sh --cluster=1 --threads=8 --seciter=5 --render=True"
+    echo
+    echo "Note:"
+    echo "    If you run ths shell script with no arguments, then it will run in an interactive mode."
+}
+
+if [[ "$@" == "" ]]; then
+    # check for which machine the user is running
+    printf "This script has been tested on the following clusters:\n1. Purdue ANVIL\n2. Notre Dame\n3. Texas Stampede3\n\n==> Which cluster are you running on? (1-3)\n==> "
+    read cluster
+
+    # cluster options
+    if [ "$cluster" -eq 1 ]; then
+        echo "==> You selected: Purdue ANVIL"
+    elif [ "$cluster" -eq 2 ]; then
+        echo "==> You selected: Notre Dame"
+    elif [ "$cluster" -eq 3 ]; then
+        echo "==> You selected: Texas Stampede3"
+    else
+        echo "Invalid selection. Please choose 1, 2, or 3."
+        exit 1
+    fi
+
+    # check for number of threads to run the program on
+    printf "How many threads do you want to run this on? (default is 5)\n==> "
+    read n_threads
+    if [ -z "$n_threads" ]; then
+        n_threads=5
+    fi
+
+    echo "==> You selected: $n_threads threads"
+
+    # check for number of iterations the user wants to perform
+    printf "How many iterations do you want to compute? (default is 3)\n==> "
+    read seciteration
+
+    if [ -z "$seciteration" ]; then
+        seciteration=3
+    fi
+
+    echo "==> You selected: $seciteration iterations"
+
+    # check is user wants to render the output
+    printf "Would you like to render the output of OpenFOAM? [y]/n\n==> "
+    read render
+
+    if [[ "$render" == "" ]]; then
+        render="yes"
+    fi
+
+    echo "==> You selected: $render"
+
+else
+    for i in "$@"; do
+        case $i in
+            -c=*|--cluster=*)
+                cluster="${i#*=}"
+                shift # past argument=value
+                ;;
+            -t=*|--threads=*)
+                n_threads="${i#*=}"
+                shift # past argument=value
+                ;;
+            -s=*|--seciter=*)
+                seciteration="${i#*=}"
+                shift # past argument=value
+                ;;
+            -r=*|--render=*)
+                lower="${i#*=}"
+                render="${lower,,}"
+                shift
+                ;;
+            -h|--help)
+                print_usage
+                exit 0
+                ;;
+            -*|--*)
+                echo "Unknown option: $i"
+                print_usage
+                exit 1
+                ;;
+            *)
+                echo "Unknown option: $i"
+                print_usage
+                exit 1
+                ;;
+        esac
+    done
+fi
+
 # activate the environment
 source ~/.bashrc
 conda activate xgfabric
@@ -8,64 +109,25 @@ if [ ! -f "$HOME/.cspot/capabilities.yaml" ] ||  [ ! -d "$HOME/.cspot" ]; then
     exit 1
 fi
 
-# check for which machine the user is running
-option="-1"
-if [ "$1" ]; then
-    option="$1"
-else
-    printf "This script has been tested on the following clusters:\n1. Purdue ANVIL\n2. Notre Dame\n3. Texas Stampede3\n\n==> Which cluster are you running on? (1-3)\n==> "
-
-    read option
-
-    if [ "$option" -eq 1 ]; then
-        echo "==> You selected: Purdue ANVIL"
-    elif [ "$option" -eq 2 ]; then
-        echo "==> You selected: Notre Dame"
-    elif [ "$option" -eq 3 ]; then
-        echo "==> You selected: Texas Stampede3"
-    else
-        echo "Invalid selection. Please choose 1, 2, or 3."
+# check if user wants to render the output
+case "$render" in
+    yes|y|true|t|"")
+        render=true
+        ;;
+    no|n|false|f)
+        render=false
+        ;;
+    *)
+        echo "Unknown option $render"
         exit 1
-    fi
-fi
+        ;;
+esac
 
-if [ "$option" -eq 1 ] || [ "$option" -eq 2 ]; then
-    if [ -z "$DISPLAY" ]; then
-        printf "No X11 environment detected (DISPLAY is not set). If you are accessing the machine via SSH, then please reconnect with the -Y flag to pass your display variables.\n\nEX: ssh -Y user@machine.edu\n"
-        exit 1
-    fi
-fi
-# check for number of threads to run the program on
-n_threads=-1
-if [ "$2" ]; then
-    n_threads="$2"
-else
-    printf "How many threads do you want to run this on? (default is 5)\n==> "
-
-    read n_threads
-
-    if [ -z "$n_threads" ]; then
-        n_threads=5
-    fi
-
-    echo "==> You selected: $n_threads threads"
-fi
-
-# check for number of iterations the user wants to perform
-seciteration=-1
-if [ "$3" ]; then
-    seciteration="$3"
-else
-    printf "How many iterations do you want to compute? (default is 3)\n==> "
-
-    read seciteration
-
-    if [ -z "$seciteration" ]; then
-        seciteration=3
-    fi
-
-    echo "==> You selected: $seciteration iterations"
-fi
+# check for display environment before rendering
+[[ "$render" == "true" ]] && { [ "$cluster" -eq 1 ] || [ "$cluster" -eq 2 ]; } && [ -z "$DISPLAY" ] && {
+    printf "No X11 environment detected (DISPLAY is not set). If you are accessing the machine via SSH, then please reconnect with the -Y flag to pass your display variables.\n\nEX: ssh -Y user@machine.edu\n"
+    exit 1
+}
 
 folder_name="cups_structure"
 destination="${folder_name}_$(date '+%y-%m-%d_%H_%M_%S')"
@@ -75,12 +137,14 @@ echo $n_threads >> config.ini
 echo $seciteration >> config.ini
 echo $folder_name >> config.ini
 echo $destination >> config.ini
-echo $option >> config.ini
+echo $cluster >> config.ini
+echo $render >> config.ini
 
-if [ "$option" -eq 1 ] || [ "$option" -eq 3 ]; then
-    if [ "$option" -eq 1 ]; then
+
+if [ "$cluster" -eq 1 ] || [ "$cluster" -eq 3 ]; then
+    if [ "$cluster" -eq 1 ]; then
         job_id=$(sbatch --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh)
-    elif [ "$option" -eq 3 ]; then
+    elif [ "$cluster" -eq 3 ]; then
         job_id=$(sbatch --time="24:0:0" --nodes="1" --partition="skx" --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh | tail -n 1)
     fi
     echo "Submitted job: $job_id"
@@ -107,9 +171,11 @@ if [ "$option" -eq 1 ] || [ "$option" -eq 3 ]; then
     echo "Job $job_id completed"
 
     # generate images
-    sh render.sh $destination $option
+    if [[ "$render" == "true" ]]; then
+        sh render.sh $destination $cluster
+    fi
 
-elif [ "$option" -eq 2 ]; then
+elif [ "$cluster" -eq 2 ]; then
 
     # Submit job and capture job ID
     qsub_output=$(qsub -o "job_output_\$JOB_ID.out" "cups.sh")
@@ -154,7 +220,9 @@ elif [ "$option" -eq 2 ]; then
     echo "==================="
     echo "Job $job_id completed"
     
-    sh render.sh $destination $option
+    if [[ "$render" == "true" ]]; then
+        sh render.sh $destination $cluster
+    fi
 else
     echo "An error occured"
 fi

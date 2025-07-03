@@ -1,5 +1,6 @@
 #!/bin/bash
-destination="$1"
+HERE=`pwd`
+destination="$HERE/$1"
 option="$2"
 source ~/.bashrc
 conda activate xgfabric
