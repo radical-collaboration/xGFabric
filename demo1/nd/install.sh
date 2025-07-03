@@ -56,7 +56,7 @@ lowercase="${simulation,,}"
 case "$lowercase" in
     y | yes)
         if [ ! -f "$HOME/.cspot/capabilities.yaml" ] ||  [ ! -d "$HOME/.cspot" ]; then
-            printf "Could not find the capabilities.yaml file in $HOME/.cspot.\n\nPlease do the following:\n    1. Create or copy over the capabilities.yaml file.\n    2. Run chmod 700 on the $HOME/.cspot folder.\n    3. Run chmod 600 on the capabilities.yaml file.\n"
+            printf "Could not find the capabilities.yaml file in $HOME/.cspot. This file is required by CSPOT to authenticate data transfer from the UCSB cluster. If you have access to the capabilities.yaml file then please do the following:\n\n1. Create a folder named \".cspot\" in your home directory ($HOME/).\n2. Create or copy over the \"capabilities.yaml\" file and place it in the .cspot folder.\n3. Run chmod 700 on the \".cspot\" folder.\n4. Run chmod 600 on the \"capabilities.yaml\" file.\n\n\nIf you do not have access a capabilities.yaml file, then please contact Rich Wolski at rich@cs.ucsb.edu or visit his website at https://sites.cs.ucsb.edu/~rich/\n"
             exit 1
         fi
 
