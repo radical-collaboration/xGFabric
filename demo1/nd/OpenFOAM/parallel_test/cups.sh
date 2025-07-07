@@ -101,7 +101,6 @@ cd $destination
 # For parallel version (scripted for now)
 touch "../logs/$threads-$destination"
 
-exit 0
 if [ "$threads" -eq 1 ]; then
     porousSimpleFoam | tee "../logs/$threads-$destination"
 else

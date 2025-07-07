@@ -67,19 +67,24 @@ else
         case $i in
             -c=*|--cluster=*)
                 cluster="${i#*=}"
-                shift # past argument=value
+                shift
                 ;;
             -t=*|--threads=*)
                 n_threads="${i#*=}"
-                shift # past argument=value
+                shift
                 ;;
             -s=*|--seciter=*)
                 seciteration="${i#*=}"
-                shift # past argument=value
+                shift
                 ;;
             -r=*|--render=*)
                 lower="${i#*=}"
                 render="${lower,,}"
+                shift
+                ;;
+            -b=*|--background=*)
+                lower="${i#*=}"
+                background="${lower,,}"
                 shift
                 ;;
             -h|--help)
@@ -123,6 +128,20 @@ case "$render" in
         ;;
 esac
 
+# check if user wants to run the task in the background
+case "$background" in
+    yes|y|true|t)
+        background=true
+        ;;
+    no|n|false|f|"")
+        background=false
+        ;;
+    *)
+        echo "Unknown option $background"
+        exit 1
+        ;;
+esac
+
 # check for display environment before rendering
 [[ "$render" == "true" ]] && { [ "$cluster" -eq 1 ] || [ "$cluster" -eq 2 ]; } && [ -z "$DISPLAY" ] && {
     printf "No X11 environment detected (DISPLAY is not set). If you are accessing the machine via SSH, then please reconnect with the -Y flag to pass your display variables.\n\nEX: ssh -Y user@machine.edu\n"
@@ -147,32 +166,35 @@ if [ "$cluster" -eq 1 ] || [ "$cluster" -eq 3 ]; then
     elif [ "$cluster" -eq 3 ]; then
         job_id=$(sbatch --time="24:0:0" --nodes="1" --partition="skx" --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh | tail -n 1)
     fi
-    echo "Submitted job: $job_id"
 
-    output_file="job_output_${job_id}.out"
+    if [[ "$background" == "false" ]]; then
+        echo "Submitted job: $job_id"
 
-    # Wait for output file to be created
-    while [[ ! -f "$output_file" ]]; do
-        sleep 5
-    done
+        output_file="job_output_${job_id}.out"
 
-    # Monitor output in real-time
-    echo "=== Real-time Job Output ==="
-    tail -f "$output_file" &
-    tail_pid=$!
+        # Wait for output file to be created
+        while [[ ! -f "$output_file" ]]; do
+            sleep 5
+        done
 
-    # Wait for job completion
-    while squeue -j $job_id 2>/dev/null | grep -q $job_id; do
-        sleep 10
-    done
+        # Monitor output in real-time
+        echo "=== Real-time Job Output ==="
+        tail -f "$output_file" &
+        tail_pid=$!
 
-    # Stop tailing and show final status
-    kill $tail_pid 2>/dev/null
-    echo "Job $job_id completed"
+        # Wait for job completion
+        while squeue -j $job_id 2>/dev/null | grep -q $job_id; do
+            sleep 10
+        done
 
-    # generate images
-    if [[ "$render" == "true" ]]; then
-        sh render.sh $destination $cluster
+        # Stop tailing and show final status
+        kill $tail_pid 2>/dev/null
+        echo "Job $job_id completed"
+
+        # generate images
+        if [[ "$render" == "true" ]]; then
+            sh render.sh $destination $cluster
+        fi
     fi
 
 elif [ "$cluster" -eq 2 ]; then
@@ -194,34 +216,36 @@ elif [ "$cluster" -eq 2 ]; then
 
     echo "Submitted job: $job_id"
 
-    output_file="job_output_${job_id}.out"
+    if [[ "$background" == "false" ]]; then
+        output_file="job_output_${job_id}.out"
 
-    # Wait for output file to be created
-    echo "Waiting for output file to be created..."
-    while [[ ! -f "$output_file" ]]; do
-        sleep 5
-    done
+        # Wait for output file to be created
+        echo "Waiting for output file to be created..."
+        while [[ ! -f "$output_file" ]]; do
+            sleep 5
+        done
 
-    echo "Output file created: $output_file"
+        echo "Output file created: $output_file"
 
-    # Monitor output in real-time
-    echo "=== Real-time Job Output ==="
-    tail -f "$output_file" &
-    tail_pid=$!
+        # Monitor output in real-time
+        echo "=== Real-time Job Output ==="
+        tail -f "$output_file" &
+        tail_pid=$!
 
-    # Wait for job completion
-    while qstat -j $job_id >/dev/null 2>&1; do
-        sleep 10
-    done
+        # Wait for job completion
+        while qstat -j $job_id >/dev/null 2>&1; do
+            sleep 10
+        done
 
-    # Stop tailing and show final status
-    kill $tail_pid 2>/dev/null
-    echo ""
-    echo "==================="
-    echo "Job $job_id completed"
-    
-    if [[ "$render" == "true" ]]; then
-        sh render.sh $destination $cluster
+        # Stop tailing and show final status
+        kill $tail_pid 2>/dev/null
+        echo ""
+        echo "==================="
+        echo "Job $job_id completed"
+        
+        if [[ "$render" == "true" ]]; then
+            sh render.sh $destination $cluster
+        fi
     fi
 else
     echo "An error occured"
