@@ -12,16 +12,18 @@ source ~/.bashrc
 conda activate xgfabric
 
 if [ "$cluster" -eq 1 ]; then
+    module --force purge
     module load gcc/11.2.0
     module load openmpi/4.0.6
     module load openfoam/8-20210316
     source $FOAM_ETC/bashrc
     module load paraview/5.10.1
 elif [ "$cluster" -eq 2 ]; then
+    module --force purge
     module add openfoam/10.0/gcc/8.5.0 > /dev/null 2>&1
     module add paraview/5.11.2
 elif [ "$cluster" -eq 3 ]; then
-    module purge
+    module --force purge
     module load intel/23.1 impi/21.9 openfoam/8 paraview/5.12.0
     export LD_LIBRARY_PATH=/opt/intel/oneapi/mpi/2021.11/lib:$LD_LIBRARY_PATH
 fi
