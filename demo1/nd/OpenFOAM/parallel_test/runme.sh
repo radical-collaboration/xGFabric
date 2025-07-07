@@ -149,22 +149,19 @@ esac
 }
 
 folder_name="cups_structure"
-destination="${folder_name}_$(date '+%y-%m-%d_%H_%M_%S')"
+curr_time=$(date '+%y-%m-%d_%H_%M_%S')
+destination="${folder_name}_$curr_time"
 
-touch config.ini
-echo $n_threads >> config.ini
-echo $seciteration >> config.ini
-echo $folder_name >> config.ini
-echo $destination >> config.ini
-echo $cluster >> config.ini
-echo $render >> config.ini
-
+cp cups.sh "submit_$curr_time.sh"
+line_to_prepend="#!/bin/bash\nthreads=$n_threads\nseciteration=$seciteration\nfolder_name=$folder_name\ndestination=$destination\ncluster=$cluster\nrender=$render\n"
+file="submit_$curr_time.sh"
+sed -i "1i $line_to_prepend" "$file"
 
 if [ "$cluster" -eq 1 ] || [ "$cluster" -eq 3 ]; then
     if [ "$cluster" -eq 1 ]; then
-        job_id=$(sbatch --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh)
+        job_id=$(sbatch --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" "submit_$curr_time.sh")
     elif [ "$cluster" -eq 3 ]; then
-        job_id=$(sbatch --time="24:0:0" --nodes="1" --partition="skx" --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" cups.sh | tail -n 1)
+        job_id=$(sbatch --time="24:0:0" --nodes="1" --partition="skx" --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" "submit_$curr_time.sh" | tail -n 1)
     fi
 
     if [[ "$background" == "false" ]]; then
@@ -200,7 +197,8 @@ if [ "$cluster" -eq 1 ] || [ "$cluster" -eq 3 ]; then
 elif [ "$cluster" -eq 2 ]; then
 
     # Submit job and capture job ID
-    qsub_output=$(qsub -o "job_output_\$JOB_ID.out" "cups.sh")
+    qsub_output=$(qsub -o "job_output_\$JOB_ID.out" "submit_$curr_time.sh")
+
     if [[ $? -ne 0 ]]; then
         echo "ERROR: Failed to submit job"
         exit 1

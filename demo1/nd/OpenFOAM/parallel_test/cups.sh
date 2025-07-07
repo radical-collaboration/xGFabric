@@ -1,13 +1,3 @@
-#!/bin/bash
-threads=$(sed -n '1p' config.ini)
-seciteration=$(sed -n '2p' config.ini)
-folder_name=$(sed -n '3p' config.ini)
-destination=$(sed -n '4p' config.ini)
-cluster=$(sed -n '5p' config.ini)
-render=$(sed -n '6p' config.ini)
-
-rm config.ini
-
 source ~/.bashrc
 conda activate xgfabric
 
@@ -55,9 +45,9 @@ fi
 
 echo $destination
 
-unzip -q $folder_name
-mv $folder_name $destination
-
+unzip -q $folder_name -d $destination
+mv $destination/cups_structure/* $destination/
+rmdir $destination/cups_structure
 
 python3 replace.py spare_details/system/decomposeParDict "$destination/system/decomposeParDict" @ $threads
 python3 replace.py spare_details/system/controlDict "$destination/system/controlDict" @ $seciteration
@@ -104,20 +94,25 @@ cd $destination
 touch "../logs/$threads-$destination"
 
 if [ "$threads" -eq 1 ]; then
+    p_start=$(date '+%s.%N')
     porousSimpleFoam | tee "../logs/$threads-$destination"
+    p_stop=$(date '+%s.%N')
+    p_elapsed=$(bc -l <<< "$p_stop - $p_start")
 else
     decomposePar -fileHandler uncollated -force
+    
     p_start=$(date '+%s.%N')
     mpirun -n $threads porousSimpleFoam -parallel | tee "../logs/$threads-$destination"
     p_stop=$(date '+%s.%N')
     p_elapsed=$(bc -l <<< "$p_stop - $p_start")
+    
     echo "Reconstruction started"
     reconstructPar
 fi
 
 stop=$(date '+%s.%N')
 elapsed=$(bc -l <<< "$stop - $start")
-echo "Run of $destination on $(date '+%y-%m-%d_%H_%M_%S') and $threads threads till $seciteration sec/iteration took $elapsed sec ($p_elapsed); $4" >> ../result_time
+echo "Run of $destination on $(date '+%y-%m-%d_%H_%M_%S') and $threads threads till $seciteration sec/iteration took $elapsed sec ($p_elapsed);" >> ../result_time
 
 if [[ "$render" == "true" ]]; then
     foamToVTK -allPatches
