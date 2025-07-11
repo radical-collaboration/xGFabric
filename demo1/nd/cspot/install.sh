@@ -13,7 +13,7 @@ check_dir_exists (){
     fi
 }
 
-printf "Where would you like CSPOT to be installed?\n\n==> The default location is \$HOME/cspot. Leave blank for default.\n==> "
+printf "Where would you like CSPOT to be installed?\n\n==> The default location is \$HOME/cspot. Leave blank for default or put \".\" (with no quotation marks) for the current directory.\n==> "
 
 read install_location
 

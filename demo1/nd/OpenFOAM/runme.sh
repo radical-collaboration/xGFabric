@@ -3,14 +3,15 @@ print_usage () {
     echo "Usage: ./runme.sh [OPTIONS]"
     echo
     echo "Options:"
-    echo "  -c=NUM,  --cluster=1|2|3         Set the cluster"
-    echo "  -t=NUM,  --threads=NUM           Set the number of threads"
-    echo "  -s=NUM,  --seciter=NUM           Set the number of iterations"
-    echo "  -r=BOOL, --render=true|false     Set render mode"
-    echo "  -h,      --help                  Show this help message and exit"
+    echo "  -c=NUM,  --cluster=1|2|3            Set the cluster"
+    echo "  -t=NUM,  --threads=NUM              Set the number of threads"
+    echo "  -s=NUM,  --seciter=NUM              Set the number of iterations"
+    echo "  -r=BOOL, --render=TRUE|false        Set render mode"
+    echo "  -b=BOOL, --background=true|FALSE    Submit job in the background"
+    echo "  -h,      --help                     Show this help message and exit"
     echo
     echo "Example:"
-    echo "    ./runme.sh --cluster=1 --threads=8 --seciter=5 --render=True"
+    echo "    ./runme.sh --cluster=1 --threads=8 --seciter=5 --render=True --background=False"
     echo
     echo "Note:"
     echo "    If you run ths shell script with no arguments, then it will run in an interactive mode."

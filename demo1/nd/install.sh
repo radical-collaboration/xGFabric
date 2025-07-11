@@ -64,7 +64,7 @@ case "$sim_lower" in
 
         read option
 
-        cd "OpenFOAM/parallel_test/"
+        cd "OpenFOAM/"
 
         if [ "$option" -eq 1 ]; then
             echo "==> You selected: Purdue ANVIL"

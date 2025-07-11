@@ -1,4 +1,4 @@
-rm -rf cups_structure_*
+rm -rvf cups_structure_*
 rm *.sh.*
 rm slurm-*.out
 rm job_output_*.out
