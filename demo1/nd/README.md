@@ -86,8 +86,8 @@ The `senspot-get` command requires the user to authenticate their request before
 
     1. Create a folder named .cspot in your home directory ($HOME/).
     2. Create or copy over the capabilities.yaml file and place it in the .cspot folder.
-    3. Run `chmod 700` on the .cspot folder.
-    4. Run `chmod 600` on the capabilities.yaml file.
+    3. Run 'chmod 700' on the .cspot folder.
+    4. Run 'chmod 600' on the capabilities.yaml file.
 
 If you do not have access a capabilities.yaml file, then please contact Rich Wolski at rich@cs.ucsb.edu or visit his website at https://sites.cs.ucsb.edu/~rich/ to find his contact information.
 
