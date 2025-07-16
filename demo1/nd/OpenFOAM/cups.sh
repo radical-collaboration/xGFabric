@@ -40,7 +40,7 @@ if [ -z "$windspeed" ]; then
 fi
 
 if [ -z "$winddir" ]; then
-    windspeed="NW"
+    winddir="N"
 fi
 
 echo $destination
