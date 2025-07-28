@@ -1,0 +1,89 @@
+Run of cups_structure_25-07-25_18_37_30 on 25-07-25_19_27_46 and 1 threads till 2 sec/iteration took 3003.270428471 sec (2996.395064889);
+Run of cups_structure_25-07-25_18_37_36 on 25-07-25_19_14_05 and 2 threads till 2 sec/iteration took 2177.596041388 sec (2122.156631516);
+Run of cups_structure_25-07-25_18_37_41 on 25-07-25_18_55_45 and 4 threads till 2 sec/iteration took 1073.385517903 sec (1005.384267835);
+Run of cups_structure_25-07-25_18_37_47 on 25-07-25_18_51_17 and 8 threads till 2 sec/iteration took 799.570125779 sec (736.656957960);
+Run of cups_structure_25-07-25_18_37_52 on 25-07-25_18_49_15 and 16 threads till 2 sec/iteration took 671.501194769 sec (578.892128937);
+Run of cups_structure_25-07-25_20_01_00 on 25-07-25_20_15_33 and 24 threads till 2 sec/iteration took 462.946667221 sec (388.761641411);
+Run of cups_structure_25-07-25_18_37_58 on 25-07-25_18_46_16 and 32 threads till 2 sec/iteration took 488.110381496 sec (388.642344586);
+Run of cups_structure_25-07-25_18_38_03 on 25-07-25_19_18_09 and 64 threads till 2 sec/iteration took 507.767112064 sec (281.056122762);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-25_22_23_07 on 25-07-25_23_32_20 and 1 threads till 2 sec/iteration took 3754.283853280 sec (3744.819031281);
+Run of cups_structure_25-07-25_22_23_13 on 25-07-25_23_19_23 and 2 threads till 2 sec/iteration took 2956.818286712 sec (2889.994896141);
+Run of cups_structure_25-07-25_22_23_19 on 25-07-25_22_49_47 and 4 threads till 2 sec/iteration took 1070.684456264 sec (997.854071233);
+Run of cups_structure_25-07-25_22_23_24 on 25-07-25_22_43_59 and 8 threads till 2 sec/iteration took 843.709825179 sec (778.079774267);
+Run of cups_structure_25-07-25_22_23_30 on 25-07-25_22_39_28 and 16 threads till 2 sec/iteration took 585.005403563 sec (488.126062542);
+Run of cups_structure_25-07-25_22_23_46 on 25-07-25_22_44_21 and 24 threads till 2 sec/iteration took 879.235256325 sec (793.013432812);
+Run of cups_structure_25-07-25_22_23_35 on 25-07-25_22_38_29 and 32 threads till 2 sec/iteration took 473.333866875 sec (373.647964666);
+Run of cups_structure_25-07-25_22_23_41 on 25-07-25_22_37_07 and 64 threads till 2 sec/iteration took 397.254884607 sec (287.728946156);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-26_00_29_35 on 25-07-26_01_40_32 and 1 threads till 2 sec/iteration took 3717.067875095 sec (3709.281951688);
+Run of cups_structure_25-07-26_00_29_41 on 25-07-26_01_08_37 and 2 threads till 2 sec/iteration took 1900.920329794 sec (1838.723043089);
+Run of cups_structure_25-07-26_00_29_47 on 25-07-26_01_04_07 and 4 threads till 2 sec/iteration took 1647.772193707 sec (1576.776417609);
+Run of cups_structure_25-07-26_00_29_53 on 25-07-26_00_49_47 and 8 threads till 2 sec/iteration took 776.449758279 sec (696.115771701);
+Run of cups_structure_25-07-26_00_29_59 on 25-07-26_00_46_06 and 16 threads till 2 sec/iteration took 586.504827522 sec (488.782681642);
+Run of cups_structure_25-07-26_00_30_16 on 25-07-26_00_44_35 and 24 threads till 2 sec/iteration took 495.307539056 sec (385.456194652);
+Run of cups_structure_25-07-26_00_30_04 on 25-07-26_00_49_06 and 32 threads till 2 sec/iteration took 491.915377923 sec (364.568024234);
+Run of cups_structure_25-07-26_00_30_10 on 25-07-26_01_00_21 and 64 threads till 2 sec/iteration took 429.838009007 sec (300.471292173);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-26_12_30_11 on 25-07-26_13_32_41 and 1 threads till 2 sec/iteration took 3343.975298435 sec (3336.048457565);
+Run of cups_structure_25-07-26_12_30_17 on 25-07-26_13_12_21 and 2 threads till 2 sec/iteration took 2103.596192011 sec (2040.327140933);
+Run of cups_structure_25-07-26_12_30_22 on 25-07-26_13_03_46 and 4 threads till 2 sec/iteration took 1635.662750318 sec (1576.557872188);
+Run of cups_structure_25-07-26_12_30_28 on 25-07-26_12_54_58 and 8 threads till 2 sec/iteration took 1055.420752183 sec (975.865356185);
+Run of cups_structure_25-07-26_12_30_33 on 25-07-26_12_47_40 and 16 threads till 2 sec/iteration took 629.655975629 sec (542.855023992);
+Run of cups_structure_25-07-26_12_30_50 on 25-07-26_12_48_38 and 24 threads till 2 sec/iteration took 700.697854392 sec (606.008246194);
+Run of cups_structure_25-07-26_12_30_39 on 25-07-26_12_46_09 and 32 threads till 2 sec/iteration took 514.523956842 sec (404.773575224);
+Run of cups_structure_25-07-26_12_30_45 on 25-07-26_12_43_55 and 64 threads till 2 sec/iteration took 396.706821304 sec (279.612415721);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-26_13_35_11 on 25-07-26_14_41_35 and 1 threads till 2 sec/iteration took 3571.882281990 sec (3564.276179998);
+Run of cups_structure_25-07-26_13_35_16 on 25-07-26_14_20_46 and 2 threads till 2 sec/iteration took 2330.185374501 sec (2281.571467053);
+Run of cups_structure_25-07-26_13_35_22 on 25-07-26_14_11_23 and 4 threads till 2 sec/iteration took 1748.388191730 sec (1678.828019148);
+Run of cups_structure_25-07-26_13_35_29 on 25-07-26_13_56_22 and 8 threads till 2 sec/iteration took 846.155491326 sec (762.946540068);
+Run of cups_structure_25-07-26_13_35_35 on 25-07-26_13_51_43 and 16 threads till 2 sec/iteration took 613.142979383 sec (538.794110894);
+Run of cups_structure_25-07-26_13_35_52 on 25-07-26_13_52_40 and 24 threads till 2 sec/iteration took 594.003321412 sec (487.255553678);
+Run of cups_structure_25-07-26_13_35_41 on 25-07-26_13_49_27 and 32 threads till 2 sec/iteration took 475.985095933 sec (394.037849429);
+Run of cups_structure_25-07-26_13_35_46 on 25-07-26_13_48_23 and 64 threads till 2 sec/iteration took 390.604271843 sec (281.775797212);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-26_14_42_40 on 25-07-26_15_41_25 and 1 threads till 2 sec/iteration took 3134.509697565 sec (3127.218644979);
+Run of cups_structure_25-07-26_14_42_46 on 25-07-26_15_30_52 and 2 threads till 2 sec/iteration took 2469.610185152 sec (2407.299390849);
+Run of cups_structure_25-07-26_14_42_51 on 25-07-26_15_24_50 and 4 threads till 2 sec/iteration took 2028.330309631 sec (1942.225049006);
+Run of cups_structure_25-07-26_14_42_57 on 25-07-26_15_13_32 and 8 threads till 2 sec/iteration took 864.206590486 sec (798.394517316);
+Run of cups_structure_25-07-26_14_43_03 on 25-07-26_14_58_53 and 16 threads till 2 sec/iteration took 582.542379317 sec (501.361803263);
+Run of cups_structure_25-07-26_14_43_21 on 25-07-26_15_00_18 and 24 threads till 2 sec/iteration took 615.246730097 sec (527.268586264);
+Run of cups_structure_25-07-26_14_43_09 on 25-07-26_14_58_18 and 32 threads till 2 sec/iteration took 508.704041658 sec (407.847870672);
+Run of cups_structure_25-07-26_14_43_15 on 25-07-26_14_56_18 and 64 threads till 2 sec/iteration took 390.328919414 sec (292.123833751);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-26_16_02_10 on 25-07-26_17_10_41 and 1 threads till 2 sec/iteration took 3154.470315346 sec (3146.569433507);
+Run of cups_structure_25-07-26_16_02_16 on 25-07-26_16_35_10 and 2 threads till 2 sec/iteration took 1586.820516983 sec (1538.827399766);
+Run of cups_structure_25-07-26_16_02_23 on 25-07-26_16_31_15 and 4 threads till 2 sec/iteration took 1057.047881777 sec (989.882553986);
+Run of cups_structure_25-07-26_16_02_28 on 25-07-26_16_24_07 and 8 threads till 2 sec/iteration took 935.332776722 sec (871.634234385);
+Run of cups_structure_25-07-26_16_02_34 on 25-07-26_16_22_16 and 16 threads till 2 sec/iteration took 822.925030651 sec (738.672525768);
+Run of cups_structure_25-07-26_16_02_51 on 25-07-26_16_20_56 and 24 threads till 2 sec/iteration took 713.501737734 sec (626.730729536);
+Run of cups_structure_25-07-26_16_02_40 on 25-07-26_16_18_50 and 32 threads till 2 sec/iteration took 546.512387969 sec (312.224933544);
+Run of cups_structure_25-07-26_16_02_45 on 25-07-26_16_15_37 and 64 threads till 2 sec/iteration took 404.171667419 sec (286.746847053);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-26_17_25_48 on 25-07-26_18_36_03 and 1 threads till 2 sec/iteration took 3832.272397638 sec (3825.591818762);
+Run of cups_structure_25-07-26_17_25_54 on 25-07-26_18_10_55 and 2 threads till 2 sec/iteration took 2304.821350297 sec (2246.307664697);
+Run of cups_structure_25-07-26_17_25_59 on 25-07-26_17_58_50 and 4 threads till 2 sec/iteration took 1542.035834573 sec (1468.169176526);
+Run of cups_structure_25-07-26_17_26_05 on 25-07-26_17_47_49 and 8 threads till 2 sec/iteration took 912.822718650 sec (827.576340119);
+Run of cups_structure_25-07-26_17_26_11 on 25-07-26_17_43_38 and 16 threads till 2 sec/iteration took 664.803631411 sec (562.199593594);
+Run of cups_structure_25-07-26_17_26_27 on 25-07-26_17_43_39 and 24 threads till 2 sec/iteration took 600.095189759 sec (485.791091207);
+Run of cups_structure_25-07-26_17_26_16 on 25-07-26_17_45_03 and 32 threads till 2 sec/iteration took 602.202661050 sec (470.814398581);
+Run of cups_structure_25-07-26_17_26_22 on 25-07-26_17_42_44 and 64 threads till 2 sec/iteration took 429.712622399 sec (289.224290754);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-26_18_49_36 on 25-07-26_19_56_21 and 1 threads till 2 sec/iteration took 3542.079442125 sec (3534.631324757);
+Run of cups_structure_25-07-26_18_49_42 on 25-07-26_19_24_53 and 2 threads till 2 sec/iteration took 1725.796622726 sec (1664.329009725);
+Run of cups_structure_25-07-26_18_49_47 on 25-07-26_19_28_07 and 4 threads till 2 sec/iteration took 1897.772025547 sec (1826.181963594);
+Run of cups_structure_25-07-26_18_49_53 on 25-07-26_19_14_12 and 8 threads till 2 sec/iteration took 1053.642004148 sec (969.943495549);
+Run of cups_structure_25-07-26_18_49_58 on 25-07-26_19_08_44 and 16 threads till 2 sec/iteration took 652.986760418 sec (544.621906493);
+Run of cups_structure_25-07-26_18_50_16 on 25-07-26_19_05_49 and 24 threads till 2 sec/iteration took 504.486609052 sec (374.559935329);
+Run of cups_structure_25-07-26_18_50_04 on 25-07-26_19_04_31 and 32 threads till 2 sec/iteration took 507.116437907 sec (389.772739433);
+Run of cups_structure_25-07-26_18_50_10 on 25-07-26_19_04_25 and 64 threads till 2 sec/iteration took 448.121576747 sec (283.788846878);
+----------------------------------------------------------------------------------------------------------------------------------------
+Run of cups_structure_25-07-26_20_19_52 on 25-07-26_21_25_27 and 1 threads till 2 sec/iteration took 3529.882318122 sec (3523.236122817);
+Run of cups_structure_25-07-26_20_19_58 on 25-07-26_20_58_55 and 2 threads till 2 sec/iteration took 1946.191310842 sec (1892.520312145);
+Run of cups_structure_25-07-26_20_20_04 on 25-07-26_20_53_17 and 4 threads till 2 sec/iteration took 1631.243938656 sec (1573.159944588);
+Run of cups_structure_25-07-26_20_20_10 on 25-07-26_20_40_05 and 8 threads till 2 sec/iteration took 839.712997187 sec (762.435249946);
+Run of cups_structure_25-07-26_20_20_16 on 25-07-26_20_37_07 and 16 threads till 2 sec/iteration took 612.275770138 sec (523.477746017);
+Run of cups_structure_25-07-26_20_20_33 on 25-07-26_20_38_52 and 24 threads till 2 sec/iteration took 577.520673913 sec (467.295097407);
+Run of cups_structure_25-07-26_20_20_21 on 25-07-26_20_36_02 and 32 threads till 2 sec/iteration took 452.695474447 sec (330.200659121);
+Run of cups_structure_25-07-26_20_20_27 on 25-07-26_20_33_24 and 64 threads till 2 sec/iteration took 409.432189019 sec (287.288149616);

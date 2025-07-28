@@ -1,4 +1,3 @@
-OpenFOAM/damBreak/
 OpenFOAM/logs/
 OpenFOAM/result_time
 OpenFOAM/cups_structure.zip
@@ -9,3 +8,4 @@ service/INPUT/*
 service/OUTPUT/*
 service/launch.sh.*
 service/rp.session.*
+OpenFOAM/graphing/venv/
