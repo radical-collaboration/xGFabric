@@ -10,7 +10,6 @@ done
 
 # activate the environment
 source ~/.bashrc
-conda activate xgfabric
 
 folder_name="cups_structure"
 curr_time=$(date '+%y-%m-%d_%H_%M_%S')
