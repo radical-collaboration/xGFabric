@@ -115,7 +115,7 @@ elapsed=$(bc -l <<< "$stop - $start")
 echo "Run of $destination on $(date '+%y-%m-%d_%H_%M_%S') and $threads threads till $seciteration sec/iteration took $elapsed sec ($p_elapsed);" >> ../result_time
 
 if [[ "$render" == "true" ]]; then
-    foamToVTK -allPatches
+    foamToVTK -latestTime
 fi
 
 cd ..
