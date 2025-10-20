@@ -30,6 +30,7 @@ dependencies:
  - yaml=0.2.5
  - zeromq=4.3.5
  - pip:
+    - ipykernel==7.0.1
     - matplotlib==3.10.7
     - numpy==2.3.4
     - pandas==2.3.3
