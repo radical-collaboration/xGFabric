@@ -28,3 +28,10 @@ dependencies:
  - wget=1.21.4
  - yaml=0.2.5
  - zeromq=4.3.5
+ - pip:
+    - pandas
+    - numpy
+    - matplotlib
+    - seaborn
+    - scikit-learn
+    - statsmodels
