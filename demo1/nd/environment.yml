@@ -19,6 +19,7 @@ dependencies:
  - numpy=2.2.5
  - openssl=3.5.0
  - pillow=10.3.0
+ - pip=25.2
  - pkgconfig=1.5.5
  - python=3.12.3
  - radical.pilot=1.92.0
@@ -29,9 +30,9 @@ dependencies:
  - yaml=0.2.5
  - zeromq=4.3.5
  - pip:
-    - pandas
-    - numpy
-    - matplotlib
-    - seaborn
-    - scikit-learn
-    - statsmodels
+    - matplotlib=3.10.7
+    - numpy=2.3.4
+    - pandas=2.3.3
+    - scikit-learn=1.7.2
+    - seaborn=0.13.2
+    - statsmodels=0.14.5
