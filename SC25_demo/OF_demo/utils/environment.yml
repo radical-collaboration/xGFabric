@@ -1,0 +1,30 @@
+name: xgfabric
+channels:
+ - conda-forge
+dependencies:
+ - cmake=3.19.1
+ - cupy=13.4.1
+ - gcc_linux-64=14.2.0
+ - gxx_linux-64=14.2.0
+ - h5py=3.13.0
+ - libcurl=8.8.0
+ - libmicrohttpd=1.0.1
+ - libopenssl-static=3.5.0
+ - libpcap=1.10.4
+ - libsystemd=256.9
+ - lz4=4.3.3
+ - mpi4py=4.0.3
+ - ninja=1.10.2
+ - nss=3.100
+ - numpy=2.2.5
+ - openssl=3.5.0
+ - pillow=10.3.0
+ - pkgconfig=1.5.5
+ - python=3.12.3
+ - radical.pilot=1.92.0
+ - radical.utils=1.91.1
+ - sysroot_linux-64=2.17
+ - unzip=6.0
+ - wget=1.21.4
+ - yaml=0.2.5
+ - zeromq=4.3.5
