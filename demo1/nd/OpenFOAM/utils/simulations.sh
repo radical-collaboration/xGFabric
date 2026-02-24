@@ -11,3 +11,5 @@ while true; do
 
     threads=$((threads * 2))
 done
+
+./runme.sh --cluster=2 --threads=8 --seciter=5 --render=False --background=False

@@ -1,9 +1,12 @@
 #!/bin/bash
+WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+UTILS_DIR="${WORK_DIR}/utils"
+
 print_usage () {
     echo "Usage: ./runme.sh [OPTIONS]"
     echo
     echo "Options:"
-    echo "  -c=NUM,  --cluster=1|2|3            Set the cluster"
+    echo "  -c=NUM,  --cluster=1|2|3|4          Set the cluster"
     echo "  -t=NUM,  --threads=NUM              Set the number of threads"
     echo "  -s=NUM,  --seciter=NUM              Set the number of iterations"
     echo "  -r=BOOL, --render=TRUE|false        Set render mode"
@@ -19,7 +22,7 @@ print_usage () {
 
 if [[ "$@" == "" ]]; then
     # check for which machine the user is running
-    printf "This script has been tested on the following clusters:\n1. Purdue ANVIL\n2. Notre Dame\n3. Texas Stampede3\n\n==> Which cluster are you running on? (1-3)\n==> "
+    printf "This script has been tested on the following clusters:\n1. Purdue ANVIL\n2. Notre Dame\n3. Texas Stampede3\n4. NERSC\n\n==> Which cluster are you running on? (1-4)\n==> "
     read cluster
 
     # cluster options
@@ -29,8 +32,10 @@ if [[ "$@" == "" ]]; then
         echo "==> You selected: Notre Dame"
     elif [ "$cluster" -eq 3 ]; then
         echo "==> You selected: Texas Stampede3"
+    elif [ "$cluster" -eq 4 ]; then
+        echo "==> You selected: NERSC"
     else
-        echo "Invalid selection. Please choose 1, 2, or 3."
+        echo "Invalid selection. Please choose 1, 2, 3, or 4."
         exit 1
     fi
 
@@ -107,13 +112,7 @@ else
 fi
 
 # activate the environment
-source ~/.bashrc
-conda activate xgfabric
-
-if [ ! -f "$HOME/.cspot/capabilities.yaml" ] ||  [ ! -d "$HOME/.cspot" ]; then
-    printf "Could not find the capabilities.yaml file in $HOME/.cspot.\n\nPlease do the following:\n    1. Create or copy over the capabilities.yaml file.\n    2. Run chmod 700 on the $HOME/.cspot folder.\n    3. Run chmod 600 on the capabilities.yaml file.\n"
-    exit 1
-fi
+sh $UTILS_DIR/env_setup.sh
 
 # check if user wants to render the output
 case "$render" in
@@ -143,19 +142,16 @@ case "$background" in
         ;;
 esac
 
-# check for display environment before rendering
-[[ "$render" == "true" ]] && { [ "$cluster" -eq 1 ] || [ "$cluster" -eq 2 ]; } && [ -z "$DISPLAY" ] && {
-    printf "No X11 environment detected (DISPLAY is not set). If you are accessing the machine via SSH, then please reconnect with the -Y flag to pass your display variables.\n\nEX: ssh -Y user@machine.edu\n"
-    exit 1
-}
 
 folder_name="cups_structure"
 curr_time=$(date '+%y-%m-%d_%H_%M_%S')
-destination="${folder_name}_$curr_time"
+output_folder="output/${curr_time}"
+mkdir -p "$output_folder"
+destination="$output_folder/${folder_name}_$curr_time"
+file="$output_folder/submit_$curr_time.sh"
 
-cp cups.sh "submit_$curr_time.sh"
-line_to_prepend="threads=$n_threads\nseciteration=$seciteration\nfolder_name=$folder_name\ndestination=$destination\ncluster=$cluster\nrender=$render\n"
-file="submit_$curr_time.sh"
+cp "$UTILS_DIR/cups.sh" "$file"
+line_to_prepend="threads=$n_threads\nseciteration=$seciteration\nfolder_name=$folder_name\ndestination=$destination\ncluster=$cluster\nrender=$render\nWORK_DIR=$WORK_DIR\nUTILS_DIR=$UTILS_DIR\n"
 sed -i "1i $line_to_prepend" "$file"
 
 if [ "$cluster" -eq 1 ] || [ "$cluster" -eq 3 ]; then
@@ -163,15 +159,15 @@ if [ "$cluster" -eq 1 ] || [ "$cluster" -eq 3 ]; then
     sed -i "1i $new_line" "$file"
 
     if [ "$cluster" -eq 1 ]; then
-        job_id=$(sbatch --ntasks="$n_threads" --mem="16GB" --time="24:0:0" --parsable --output="job_output_%j.out" "submit_$curr_time.sh")
+        job_id=$(sbatch --ntasks="$n_threads" --mem="16GB" --time="24:0:0" --parsable --output="$output_folder/job_output_%j.out" "$file")
     elif [ "$cluster" -eq 3 ]; then
-        job_id=$(sbatch --time="24:0:0" --nodes="1" --partition="skx" --ntasks="$n_threads" --mem="16GB" --parsable --output="job_output_%j.out" "submit_$curr_time.sh" | tail -n 1)
+        job_id=$(sbatch --time="24:0:0" --nodes="1" --partition="skx" --ntasks="$n_threads" --mem="16GB" --parsable --output="$output_folder/job_output_%j.out" "$file" | tail -n 1)
     fi
 
     if [[ "$background" == "false" ]]; then
         echo "Submitted job: $job_id"
 
-        output_file="job_output_${job_id}.out"
+        output_file="$output_folder/job_output_${job_id}.out"
 
         # Wait for output file to be created
         while [[ ! -f "$output_file" ]]; do
@@ -194,18 +190,16 @@ if [ "$cluster" -eq 1 ] || [ "$cluster" -eq 3 ]; then
 
         # generate images
         if [[ "$render" == "true" ]]; then
-            sh render.sh $destination $cluster
+            sh $UTILS_DIR/render.sh $destination $cluster
         fi
     fi
 
 elif [ "$cluster" -eq 2 ]; then
-
-
     new_line="#!/bin/bash\n#$ -pe smp $n_threads\n#$ -q long"
     sed -i "1i $new_line" "$file"
 
     # Submit job and capture job ID
-    qsub_output=$(qsub -o "job_output_\$JOB_ID.out" "$file")
+    qsub_output=$(qsub -o "$output_folder/job_output_\$JOB_ID.out" "$file")
 
     if [[ $? -ne 0 ]]; then
         echo "ERROR: Failed to submit job"
@@ -223,7 +217,7 @@ elif [ "$cluster" -eq 2 ]; then
     echo "Submitted job: $job_id"
 
     if [[ "$background" == "false" ]]; then
-        output_file="job_output_${job_id}.out"
+        output_file="$output_folder/job_output_${job_id}.out"
 
         # Wait for output file to be created
         echo "Waiting for output file to be created..."
@@ -250,7 +244,44 @@ elif [ "$cluster" -eq 2 ]; then
         echo "Job $job_id completed"
         
         if [[ "$render" == "true" ]]; then
-            sh render.sh $destination $cluster
+            sh $UTILS_DIR/render.sh $destination $cluster
+        fi
+    fi
+elif [ "$cluster" -eq 4 ]; then
+    new_line="#!/bin/bash"
+    sed -i "1i $new_line" "$file"
+
+    acc=$(sacctmgr show user "$USER" | awk 'NR==3 {print $2}')
+
+    job_id=$(sbatch --time="2:0:0" --ntasks-per-node=$n_threads --nodes=1 --ntasks=$n_threads --constraint=cpu --qos=debug --account="$acc" --mem=16GB --parsable --output="$output_folder/job_output_%j.out" "$file" | tail -n 1)
+
+    if [[ "$background" == "false" ]]; then
+        echo "Submitted job: $job_id"
+
+        output_file="$output_folder/job_output_${job_id}.out"
+
+        # Wait for output file to be created
+        while [[ ! -f "$output_file" ]]; do
+            sleep 5
+        done
+
+        # Monitor output in real-time
+        echo "=== Real-time Job Output ==="
+        tail -f "$output_file" &
+        tail_pid=$!
+
+        # Wait for job completion
+        while squeue -j $job_id 2>/dev/null | grep -q $job_id; do
+            sleep 10
+        done
+
+        # Stop tailing and show final status
+        kill $tail_pid 2>/dev/null
+        echo "Job $job_id completed"
+
+        # generate images
+        if [[ "$render" == "true" ]]; then
+            sh $UTILS_DIR/render.sh $destination $cluster
         fi
     fi
 else
