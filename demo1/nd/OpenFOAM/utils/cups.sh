@@ -18,17 +18,16 @@ elif [ "$cluster" -eq 3 ]; then
     module load intel/23.1 impi/21.9 openfoam/8 paraview/5.12.0
     export LD_LIBRARY_PATH=/opt/intel/oneapi/mpi/2021.11/lib:$LD_LIBRARY_PATH
 elif [ "$cluster" -eq 4 ]; then
-
     module load spack
     . /global/common/software/nersc9/spack/1.1.0/share/spack/setup-env.sh
-    module load gcc/12.2.0
-    module load cmake/3.30.2
-    module load openmpi/4.1.5 || { module load spack && spack load openmpi@4.1.5; } || true
+    module load openmpi/4.1.5 || { spack load openmpi@4.1.5; } || true
     module load conda
     module load paraview || true  # paraview may not be needed at runtime
     spack load openmpi@4.1.5
-    export OPENFOAM_ROOT=/global/common/software/m5290/openfoam
+    group_num=$(groups | awk -F" " '{print $2}')
+    export OPENFOAM_ROOT="/global/common/software/$group_num/openfoam"
     source "$OPENFOAM_ROOT/OpenFOAM-dev/etc/bashrc" || true  # non-fatal: OF env may already be set
+    export LD_LIBRARY_PATH=$(spack location -i openmpi@4.1.5)/lib:$LD_LIBRARY_PATH
 
     if ! command -v icoFoam -help &> /dev/null; then
         echo "OpenFOAM is not available."
@@ -36,9 +35,42 @@ elif [ "$cluster" -eq 4 ]; then
             echo "OpenFOAM found..."
             echo "Adding OpenFOAM to PATH"
         else
-            echo "OpenFOAM has not been compiled."
-            echo "Starting compilation. This could take upwards of 2 hours..."
-            spack install openfoam
+            echo "OpenFOAM was not found."
+            printf "Do you wish to compile OpenFOAM from scratch? This could take upwards of 2 hours. [y]/n\n==> "
+            read compile
+            compile="${compile,,}"
+            if [[ "$compile" == "" ]]; then
+                compile="yes"
+            fi
+
+            case $compile in
+                y|yes)
+                    echo "Compiling..."
+                    ;;
+                n|no)
+                    echo "Exiting..."
+                    exit 0
+                    ;;
+                *)
+                    echo "Unknown option: $compile"
+                    echo "Exiting..."
+                    exit 1
+                    ;;
+            esac
+            module load gcc
+            module load cmake
+            spack install openmpi@4.1.5
+            spack load openmpi@4.1.5
+            export OPENFOAM_ROOT="/global/common/software/$group_num/openfoam"
+            mkdir -p $OPENFOAM_ROOT
+            cd $OPENFOAM_ROOT
+            git clone https://github.com/OpenFOAM/OpenFOAM-dev.git -b version-11
+            git clone https://github.com/OpenFOAM/ThirdParty-dev.git -b version-11
+            cd $OPENFOAM_ROOT/ThirdParty-dev
+            ./Allwmake -j
+            cd $OPENFOAM_ROOT/OpenFOAM-dev
+            ./Allwmake -j
+            source $OPENFOAM_ROOT/OpenFOAM-dev/etc/bashrc
         fi
         spack load openfoam
     fi   
