@@ -20,7 +20,6 @@ elif [ "$cluster" -eq 3 ]; then
 elif [ "$cluster" -eq 4 ]; then
     module load spack
     . /global/common/software/nersc9/spack/1.1.0/share/spack/setup-env.sh
-    module load openmpi/4.1.5 || { spack load openmpi@4.1.5; } || true
     module load conda
     module load paraview || true  # paraview may not be needed at runtime
     spack load openmpi@4.1.5
@@ -171,11 +170,7 @@ else
     decomposePar -fileHandler uncollated -force    
     p_start=$(date '+%s.%N')
     
-    if [ "$cluster" -eq 4 ]; then
-        srun --mpi=pmi2 -n $threads porousSimpleFoam -parallel
-    else
-        mpirun -n $threads porousSimpleFoam -parallel
-    fi
+    mpirun -n $threads porousSimpleFoam -parallel
 
     p_stop=$(date '+%s.%N')
     p_elapsed=$(bc -l <<< "$p_stop - $p_start")

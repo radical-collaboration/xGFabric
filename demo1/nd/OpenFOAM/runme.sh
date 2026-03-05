@@ -253,7 +253,7 @@ elif [ "$cluster" -eq 4 ]; then
 
     acc=$(sacctmgr show user "$USER" | awk 'NR==3 {print $2}')
 
-    job_id=$(sbatch --time="2:0:0" --ntasks-per-node=$n_threads --nodes=1 --ntasks=$n_threads --constraint=cpu --qos=debug --account="$acc" --mem=16GB --parsable --output="$output_folder/job_output_%j.out" "$file" | tail -n 1)
+    job_id=$(sbatch --time="2:0:0" --ntasks-per-node=$n_threads --nodes=1 --ntasks=$n_threads --constraint=cpu --qos=regular --account="$acc" --mem=16GB --parsable --output="$output_folder/job_output_%j.out" "$file" | tail -n 1)
 
     if [[ "$background" == "false" ]]; then
         echo "Submitted job: $job_id"
