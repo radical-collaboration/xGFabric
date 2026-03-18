@@ -59,6 +59,8 @@ elif [ "$option" -eq 3 ]; then
     rm stampede3_png.sh
     rm "$output_file"
 
+elif [ "$option" -eq 4 ]; then
+    pvpython --force-offscreen-rendering "$UTILS_DIR/render_foam.py" "$destination"
 fi
 
 echo "Script completed successfully!"
