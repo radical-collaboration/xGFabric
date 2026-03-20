@@ -39,7 +39,7 @@ conda activate xgfabric
 git clone https://github.com/MAYHEM-Lab/cspot
 cd cspot
 git checkout caplets
-git checkout 61b662a76e21b34a4e9c6ed002b017888e287310
+git checkout 64c62f81dfd11caa48752fdb9fd714e856a555c1
 
 git submodule update --init --recursive
 mv deps/libzmq/CMakeLists.txt deps/libzmq/CMakeLists.orig.txt
@@ -158,6 +158,11 @@ TMP_FILE="$(mktemp)"
 sed '/#include "woofc-caplets.h"/a #include "woofc-keychain.h"' "$INPUT_FILE" > "$TMP_FILE"
 mv "$TMP_FILE" "$INPUT_FILE"
 
+INPUT_FILE="apps/senspot/include/senspot.h"
+TMP_FILE="$(mktemp)"
+sed 's|unsigned int creation_time;|time_t creation_time;|g' "$INPUT_FILE" > "$TMP_FILE"
+mv "$TMP_FILE" "$INPUT_FILE"
+
 INPUT_FILE="src/net/cmq/client.cpp"
 TMP_FILE="$(mktemp)"
 sed '/#include "woofc-caplets.h"/a #include "woofc-keychain.h"' "$INPUT_FILE" > "$TMP_FILE"
@@ -181,8 +186,13 @@ mv "$TMP_FILE" "$INPUT_FILE"
 
 
 # strip debug info off of static library files. This was required for Rocky Linux v8.10 (Purdue's ANVIL system)
-conda_loc=`echo $CONDA_PREFIX`
-strip --strip-debug $conda_loc/lib/gcc/x86_64-conda-linux-gnu/14.2.0/lib*.a
+host=$(hostname)
+case "$host" in
+    *purdue.edu)
+    conda_loc=`echo $CONDA_PREFIX`
+    strip --strip-debug $conda_loc/lib/gcc/x86_64-conda-linux-gnu/14.2.0/lib*.a
+    ;;
+esac
 
 # create the build folder
 mkdir build
