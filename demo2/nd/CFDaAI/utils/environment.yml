@@ -1,0 +1,29 @@
+name: cfdai_intheloop
+channels:
+ - conda-forge
+ - defaults
+dependencies:
+ - python=3.12
+ - cmake
+ - gcc_linux-64
+ - gxx_linux-64
+ - h5py
+ - libcurl
+ - ninja
+ - numpy
+ - openssl
+ - pandas
+ - pillow
+ - unzip
+ - wget
+ - yaml
+ - zeromq
+ - scikit-learn
+ - matplotlib
+ - jupyter
+ - ipykernel
+ - pip
+ - pip:
+   - meshio
+   - tensorflow
+   - keras

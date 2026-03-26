@@ -20,7 +20,7 @@ if ! conda --help &> /dev/null; then
     exit 1
 fi
 
-# Check wheter the xGFabric conda environment has been created
+# Check whether the xGFabric conda environment has been created
 if ! conda env list | grep -q "xgfabric"; then
     echo "creating fabric environment"
     conda env create -f environment.yml

@@ -1,5 +1,5 @@
 #!/bin/python3
-import asyncio, os, re, subprocess, time
+import asyncio, os, re, subprocess, time, sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional
@@ -37,14 +37,14 @@ class JobCoordinator:
         last_job = self.active_jobs[self.last_job_id]
         
         # Condition 1: Has the prior job started running?
-        if last_job.status == 'submitted':
+        if last_job.status == 'started' or last_job.status == 'submitted':
             # print(f"[Log] Cannot submit new job. Current job is still in queue.")
             return False
 
         # Condition 2: Have N minutes elapsed?
         time_elapsed = time.time() - last_job.submission_time
         if time_elapsed < self.wait_time_seconds:
-            time_left = self.wait_time_seconds - time_elapsed
+            # time_left = self.wait_time_seconds - time_elapsed
             # print("[Log] Cannot submit new job. Not enough time has past. ", end="")
             # print(f"{time_left:.0f} seconds remaining.")
             return False
@@ -60,7 +60,7 @@ class JobCoordinator:
         )
         self.active_jobs[job_id] = new_job
         self.last_job_id = job_id
-        print(f"[Action] Job {job_id} submitted.")
+        print(f"[Action] Job {job_id} launched.")
 
 async def monitor_logs(log_file_path: str, coordinator: JobCoordinator):
     """Asynchronously reads log files as they are written (like 'tail -f')."""
@@ -79,7 +79,7 @@ async def monitor_logs(log_file_path: str, coordinator: JobCoordinator):
                 await asyncio.sleep(1)
                 continue
             
-            match = re.search(r'Job (\w+):\s*(submitted|started|exited)', line)
+            match = re.search(r'Job (\w+):\s*(started|submitted|running|exited)', line)
             if match:
                 job_id, status = match.groups()
                 coordinator.process_log_update(job_id, status)
@@ -92,9 +92,15 @@ async def job_submission_loop(coordinator: JobCoordinator):
     while True:
         if coordinator.can_submit_new_job():
             job_id = f"{job_counter}"
-
             print("[Action] Submitting new job...")
-            subprocess.run(["sh", "utils/launch.sh", "-t=16", f"-j={job_id}", f"-l={coordinator.log_file_path}"])
+
+            shell_args = sys.argv[1:]
+            shell_args.extend(['--job_number', job_id])
+            shell_args.extend(['--coord_log_file', coordinator.log_file_path])
+
+            subprocess.run(["sh", "cfdaai.sh"] + shell_args)
+
+            exit(0)
             coordinator.submit_job(job_id)
             job_counter += 1
 
@@ -104,7 +110,7 @@ async def job_submission_loop(coordinator: JobCoordinator):
 async def main():
     # Initialize coordinator
     curr_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
-    log_file = f"logs/simulation_logs_{curr_time}.txt"
+    log_file = f"jobs_logs/simulation_logs_{curr_time}.out"
     coordinator = JobCoordinator(5, log_file)
     
     # asyncio.gather runs both the log monitor and submission loop concurrently

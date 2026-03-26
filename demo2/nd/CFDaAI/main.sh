@@ -1,16 +1,19 @@
 #!/bin/bash
 WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UTILS_DIR="${WORK_DIR}/utils"
+ENV_DIR="${WORK_DIR}/env"
 
 # setup the environment
-source $UTILS_DIR/env_setup.sh
-
-# make sure that these folders exist
-mkdir -p "logs"
-mkdir -p "scripts"
+source $ENV_DIR/env_coordinator.sh
 
 # activate environment
 conda activate xgfabric
 
 # launch the coordinator
-python3 $UTILS_DIR/coordinator.py
+python3 $UTILS_DIR/coordinator.py \
+    --mode full \
+    --system nd \
+    --skip-simulations \
+    --threads 32 \
+    --iterations 1
+    # --skip-training \
