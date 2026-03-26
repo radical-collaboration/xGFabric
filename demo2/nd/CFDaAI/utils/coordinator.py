@@ -4,6 +4,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional
 
+def log_info(input: str):
+    print(f"[INFO] {datetime.now().strftime('%H:%M:%S')} {input}")
+
+def log_action(input: str):
+    print(f"[ACTION] {datetime.now().strftime('%H:%M:%S')} {input}")
+
+def log_update(input: str):
+    print(f"[UPDATE] {datetime.now().strftime('%H:%M:%S')} {input}")
+
 @dataclass
 class Job:
     job_id: str
@@ -60,14 +69,14 @@ class JobCoordinator:
         )
         self.active_jobs[job_id] = new_job
         self.last_job_id = job_id
-        print(f"[Action] Job {job_id} launched.")
+        log_action(f"Job {job_id} launched.")
 
 async def monitor_logs(log_file_path: str, coordinator: JobCoordinator):
     """Asynchronously reads log files as they are written (like 'tail -f')."""
     if not os.path.exists(log_file_path):
         open(log_file_path, 'a').close()
 
-    print(f"[Log] Monitoring logs at: {log_file_path}...")
+    log_info(f"Monitoring logs at: {log_file_path}...")
     
     with open(log_file_path, 'r') as f:
         f.seek(0, 2)  # Jump to the end of the file so we only read new logs
@@ -83,7 +92,7 @@ async def monitor_logs(log_file_path: str, coordinator: JobCoordinator):
             if match:
                 job_id, status = match.groups()
                 coordinator.process_log_update(job_id, status)
-                print(f"[Log] Job {job_id} updated to: {status}")
+                log_update(f"Job {job_id} updated to: {status}")
 
 async def job_submission_loop(coordinator: JobCoordinator):
     """Periodically checks if a new job can be submitted."""
@@ -92,15 +101,18 @@ async def job_submission_loop(coordinator: JobCoordinator):
     while True:
         if coordinator.can_submit_new_job():
             job_id = f"{job_counter}"
-            print("[Action] Submitting new job...")
+            log_action("Submitting new job...")
 
             shell_args = sys.argv[1:]
             shell_args.extend(['--job_number', job_id])
             shell_args.extend(['--coord_log_file', coordinator.log_file_path])
 
-            subprocess.run(["sh", "cfdaai.sh"] + shell_args)
+            subprocess.Popen(
+                ["sh", "cfdaai.sh"] + shell_args,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
 
-            exit(0)
             coordinator.submit_job(job_id)
             job_counter += 1
 
@@ -124,4 +136,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nCoordinator shut down safely.")
+        log_info("\nCoordinator shut down safely.")

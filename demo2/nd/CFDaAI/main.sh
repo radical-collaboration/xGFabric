@@ -13,7 +13,5 @@ conda activate xgfabric
 python3 $UTILS_DIR/coordinator.py \
     --mode full \
     --system nd \
-    --skip-simulations \
     --threads 32 \
     --iterations 1
-    # --skip-training \

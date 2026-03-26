@@ -392,7 +392,7 @@ _run_pcr_uge() {
     # Step 3: Submit array job
     local uge_script="${WORK_DIR}/uge/pcr_train_uge.sh"
     
-    pcr_job_id=$(qsub \
+    job_id=$(qsub \
         -terse \
         -pe smp $SIMULATION_THREADS \
         -q long \
@@ -400,9 +400,10 @@ _run_pcr_uge() {
         "$uge_script" "$partitions_dir" "$output_dir" \
         | awk '{print $3}')
 
+
     
-    log_info "Submitted PCR job array: ${pcr_job_id}"
-    export pcr_job_id
+    JOB_IDS["pcr_train"]="$job_id"
+    log_info "Submitted PCR job array: ${job_id}"
 }
 
 _run_pcr_distributed() {
