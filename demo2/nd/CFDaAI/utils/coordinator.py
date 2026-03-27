@@ -14,15 +14,27 @@ input_flags              = "--mode full --system nd --threads 32 --iterations 1"
 # global variables
 workflow_counter = 1
 start_time       = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
+log_location = f"logs/run_{start_time}"
+workflow_status_file = f"{log_location}/coordinator/workflow_status_log.csv"
+coordinator_output = f"{log_location}/coordinator/coordinator_output.log"
 
 def log_info(input: str):
-    print(f"[INFO] {datetime.now().strftime('%H:%M:%S')} {input}")
+    log_string = f"[INFO] {datetime.now().strftime('%H:%M:%S')} {input}"
+    print(log_string)
+    with open(coordinator_output, 'a') as file:
+        file.write(log_string + "\n")
 
 def log_action(input: str):
-    print(f"[ACTION] {datetime.now().strftime('%H:%M:%S')} {input}")
+    log_string = f"[ACTION] {datetime.now().strftime('%H:%M:%S')} {input}"
+    print(log_string)
+    with open(coordinator_output, 'a') as file:
+        file.write(log_string + "\n")
 
 def log_update(input: str):
-    print(f"[UPDATE] {datetime.now().strftime('%H:%M:%S')} {input}")
+    log_string = f"[UPDATE] {datetime.now().strftime('%H:%M:%S')} {input}"
+    print(log_string)
+    with open(coordinator_output, 'a') as file:
+        file.write(log_string + "\n")
 
 @dataclass
 class Workflow:
@@ -88,10 +100,6 @@ class WorkflowCoordinator:
 
 async def monitor_logs(log_file_path: str, coordinator: WorkflowCoordinator):
     """Asynchronously reads log files as they are written (like 'tail -f')."""
-    if not os.path.exists(log_file_path):
-        with open(log_file_path, 'w') as file:
-            file.write("workflow_id,status,unix_time\n")
-
     log_info(f"Monitoring logs at: {log_file_path}")
 
     with open(log_file_path, 'r') as f:
@@ -151,14 +159,19 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
         # Wait N seconds before checking the conditions again
         await asyncio.sleep(time_check_workflows)
 
-
 async def main():
     # ensure main log folder
-    log_location = f"logs/run_{start_time}"
     os.makedirs(f"{log_location}/coordinator")
     os.makedirs(f"{log_location}/workflows")
 
-    workflow_status_file = f"{log_location}/coordinator/workflow_status_log.csv"
+    # create the workflow status file
+    if not os.path.exists(workflow_status_file):
+        with open(workflow_status_file, 'w') as file:
+            file.write("workflow_id,status,unix_time\n")
+
+    # create the log for the coordinator
+    if not os.path.exists(coordinator_output):
+        open(coordinator_output, 'a').close()
 
     # Initialize coordinator
     coordinator = WorkflowCoordinator(time_between_workflows, workflow_status_file)
@@ -175,6 +188,6 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        log_info("\nCoordinator shut down safely.")
+        log_info("Coordinator shut down safely.")
     except SystemExit:
-        log_info("\nCoordinator has finished.")
+        log_info("Coordinator has finished.")

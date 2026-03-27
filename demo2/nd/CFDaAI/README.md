@@ -69,12 +69,21 @@ intheloop/
 │   ├── train_pcr_parallel.sh
 │   └── ...
 │
-└── logs/
+├── logs/
+│   └── run_<date>/
+│       ├── coordinator/
+│       │   └── workflow_status_log.csv
+│       │
+│       └── workflows/
+│           └── workflow_<id>/
+│               ├── simulations/
+│               └── training/
+└── results/
     └── run_<date>/
-        ├── coordinator/
-        └── workflows/
-            ├── simulations/
-            └── training/
+        └── workflow_<id>
+            ├── data/
+            ├── params/
+            └── simulations/
 ```
 
 ## System Detection
