@@ -74,6 +74,11 @@ fi
 
 # Use scratch directory within experiment for working directory (same pscratch filesystem)
 # This avoids read-only filesystem issues and keeps work scoped to experiment
+if [[ "${SYSTEM_TYPE}" == "nd" ]]; then
+    HERE=`pwd`
+    up_dir=$(dirname "$HERE")
+    output_results_dir="$up_dir/$output_results_dir"
+fi
 output_parent="$(dirname "$output_results_dir")"
 working_dir="${output_parent}/.scratch_${destination}"
 mkdir -p "$working_dir" || {

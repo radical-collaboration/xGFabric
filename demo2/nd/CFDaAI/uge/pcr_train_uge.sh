@@ -1,7 +1,5 @@
 #!/bin/bash
 #$ -N pcr_train
-#$ -o "jobs_logs/pcr_$JOB_ID.out"
-#$ -e "jobs_logs/pcr_$JOB_ID.err"
 #
 # pcr_train_uge.sh - UGE job for PCR training partition
 #

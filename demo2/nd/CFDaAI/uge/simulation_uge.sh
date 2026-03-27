@@ -1,8 +1,6 @@
 #!/bin/bash
 #$ -N cfd_sim_array
 #$ -V
-#$ -o jobs_logs/$JOB_NAME_$JOB_ID_$TASK_ID.out
-#$ -e jobs_logs/$JOB_NAME_$JOB_ID_$TASK_ID.err
 #
 # simulation_uge.sh - UGE job array for CFD simulations
 #
@@ -24,7 +22,7 @@ OUTPUT_DIR="$2"
 TASK_ID="${SGE_TASK_ID:-1}"
 
 if [ "$TASK_ID" == "1" ]; then
-    echo "Job $JOB_NUMBER: running" >> "$COORD_LOG_FILE"
+    echo "Workflow $WORKFLOW_NUMBER,running,$(date '+%s.%N')" >> "$STATUS_FILE"
 fi
 
 ################################################################################

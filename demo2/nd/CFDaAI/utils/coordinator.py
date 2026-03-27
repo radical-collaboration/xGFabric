@@ -4,6 +4,17 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional
 
+# config
+max_concurrent_workflows = 5      # total number of workflows that can run concurrently
+max_number_of_workflows  = None   # total number of workflows that will be submitted
+time_between_workflows   = 10     # minimum time (in seconds) between workflow submissions.
+time_check_workflows     = 1      # how often the program should check if it can submit new workflows (in seconds)
+input_flags              = "--mode full --system nd --threads 32 --iterations 1"
+
+# global variables
+workflow_counter = 1
+start_time       = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
+
 def log_info(input: str):
     print(f"[INFO] {datetime.now().strftime('%H:%M:%S')} {input}")
 
@@ -14,98 +25,119 @@ def log_update(input: str):
     print(f"[UPDATE] {datetime.now().strftime('%H:%M:%S')} {input}")
 
 @dataclass
-class Job:
-    job_id: str
+class Workflow:
+    workflow_id: str
     status: str  # 'submitted', 'started', 'exited'
     submission_time: float
 
-class JobCoordinator:
-    def __init__(self, wait_time_minutes: float, log_file_path: str):
-        self.active_jobs: Dict[str, Job] = {}
+class WorkflowCoordinator:
+    def __init__(self, wait_time_seconds: float, log_file_path: str):
+        self.active_workflows: Dict[str, Workflow] = {}
         self.log_file_path = log_file_path
-        self.last_job_id: Optional[str] = None
-        self.wait_time_seconds = wait_time_minutes * 60
+        self.last_workflow_id: Optional[str] = None
+        self.wait_time_seconds = wait_time_seconds
 
-    def process_log_update(self, job_id: str, new_status: str):
-        """Updates job status in O(1) time when logs are consumed."""
-        if job_id in self.active_jobs:
-            self.active_jobs[job_id].status = new_status
-            
-            # If the job exited, remove it to free up memory
+    def process_log_update(self, workflow_id: str, new_status: str):
+        """Updates workflow status in O(1) time when logs are consumed."""
+        if workflow_id in self.active_workflows:
+            self.active_workflows[workflow_id].status = new_status
+
+            # If the workflow exited, remove it to free up memory
             if new_status == 'exited':
-                del self.active_jobs[job_id]
-                # If the last submitted job just exited, clear the pointer
-                if self.last_job_id == job_id:
-                    self.last_job_id = None
+                del self.active_workflows[workflow_id]
+                # If the last submitted workflow just exited, clear the pointer
+                if self.last_workflow_id == workflow_id:
+                    self.last_workflow_id = None
 
-    def can_submit_new_job(self) -> bool:
-        """Checks prior job started AND N minutes elapsed."""
-        # If no jobs have been submitted yet, or the last one exited
-        if self.last_job_id is None or self.last_job_id not in self.active_jobs:
+    def can_submit_new_workflow(self) -> bool:
+        """Checks prior workflow started AND N seconds elapsed."""
+        # If no workflows have been submitted yet, or the last one exited
+        if self.last_workflow_id is None or self.last_workflow_id not in self.active_workflows:
             return True
-        last_job = self.active_jobs[self.last_job_id]
-        
-        # Condition 1: Has the prior job started running?
-        if last_job.status == 'started' or last_job.status == 'submitted':
-            # print(f"[Log] Cannot submit new job. Current job is still in queue.")
+        last_workflow = self.active_workflows[self.last_workflow_id]
+
+        # Condition 1: Has the prior workflow started running?
+        if last_workflow.status == 'started' or last_workflow.status == 'submitted':
+            # print(f"[Log] Cannot submit new workflow. Current workflow is still in queue.")
             return False
 
-        # Condition 2: Have N minutes elapsed?
-        time_elapsed = time.time() - last_job.submission_time
+        # Condition 2: Have N seconds elapsed?
+        time_elapsed = time.time() - last_workflow.submission_time
         if time_elapsed < self.wait_time_seconds:
             # time_left = self.wait_time_seconds - time_elapsed
-            # print("[Log] Cannot submit new job. Not enough time has past. ", end="")
+            # print("[Log] Cannot submit new workflow. Not enough time has past. ", end="")
             # print(f"{time_left:.0f} seconds remaining.")
+            return False
+
+        # Condition 3: Too many concurrent workflows?
+        if len(self.active_workflows) >= max_concurrent_workflows:
             return False
 
         return True
 
-    def submit_job(self, job_id: str):
-        """Adds a new job to the tracking dictionary."""
-        new_job = Job(
-            job_id=job_id,
+    def submit_workflow(self, workflow_id: str):
+        """Adds a new workflow to the tracking dictionary."""
+        new_workflow = Workflow(
+            workflow_id=workflow_id,
             status='submitted',
             submission_time=time.time()
         )
-        self.active_jobs[job_id] = new_job
-        self.last_job_id = job_id
-        log_action(f"Job {job_id} launched.")
+        self.active_workflows[workflow_id] = new_workflow
+        self.last_workflow_id = workflow_id
+        log_action(f"Workflow {workflow_id} launched.")
 
-async def monitor_logs(log_file_path: str, coordinator: JobCoordinator):
+async def monitor_logs(log_file_path: str, coordinator: WorkflowCoordinator):
     """Asynchronously reads log files as they are written (like 'tail -f')."""
     if not os.path.exists(log_file_path):
-        open(log_file_path, 'a').close()
+        with open(log_file_path, 'w') as file:
+            file.write("workflow_id,status,unix_time\n")
 
-    log_info(f"Monitoring logs at: {log_file_path}...")
-    
+    log_info(f"Monitoring logs at: {log_file_path}")
+
     with open(log_file_path, 'r') as f:
         f.seek(0, 2)  # Jump to the end of the file so we only read new logs
-        
+
         while True:
             line = f.readline()
             if not line:
                 # If no new line, yield control back to the event loop for 1 second
                 await asyncio.sleep(1)
                 continue
-            
-            match = re.search(r'Job (\w+):\s*(started|submitted|running|exited)', line)
+
+            match = re.search(r'Workflow (\w+),\s*(started|submitted|running|exited)', line)
             if match:
-                job_id, status = match.groups()
-                coordinator.process_log_update(job_id, status)
-                log_update(f"Job {job_id} updated to: {status}")
+                workflow_id, status = match.groups()
+                coordinator.process_log_update(workflow_id, status)
+                log_update(f"Workflow {workflow_id} updated to: {status}")
 
-async def job_submission_loop(coordinator: JobCoordinator):
-    """Periodically checks if a new job can be submitted."""
-    job_counter = 1
-    
+async def workflow_submission_loop(coordinator: WorkflowCoordinator):
+    """Periodically checks if a new workflow can be submitted."""
+    global workflow_counter
+    logged_max_reached = False
+
     while True:
-        if coordinator.can_submit_new_job():
-            job_id = f"{job_counter}"
-            log_action("Submitting new job...")
+        if (max_number_of_workflows is not None) and (workflow_counter > max_number_of_workflows):
+            if len(coordinator.active_workflows) == 0:
+                log_info("Maximum number of workflows reached and all jobs finished. Shutting down.")
+                sys.exit(0)
+            else:
+                if not logged_max_reached:
+                    log_info(f"Maximum workflows submitted. Waiting for {len(coordinator.active_workflows)} active job(s) to finish...")
+                    logged_max_reached = True
+                await asyncio.sleep(time_check_workflows)
+                continue
 
-            shell_args = sys.argv[1:]
-            shell_args.extend(['--job_number', job_id])
-            shell_args.extend(['--coord_log_file', coordinator.log_file_path])
+        if coordinator.can_submit_new_workflow():
+            workflow_id = f"{workflow_counter}"
+            log_action("Submitting new workflow...")
+
+            shell_args = input_flags.split(" ")
+            shell_args.extend(['--workflow_number', workflow_id])
+            shell_args.extend(['--coord_run_name', f"run_{start_time}"])
+
+            os.mkdir(f"logs/run_{start_time}/workflows/{workflow_id}")
+            os.mkdir(f"logs/run_{start_time}/workflows/{workflow_id}/simulations")
+            os.mkdir(f"logs/run_{start_time}/workflows/{workflow_id}/training")
 
             subprocess.Popen(
                 ["sh", "cfdaai.sh"] + shell_args,
@@ -113,22 +145,29 @@ async def job_submission_loop(coordinator: JobCoordinator):
                 stderr=subprocess.DEVNULL
             )
 
-            coordinator.submit_job(job_id)
-            job_counter += 1
+            coordinator.submit_workflow(workflow_id)
+            workflow_counter += 1
 
-        # Wait 10 seconds before checking the conditions again
-        await asyncio.sleep(10)
+        # Wait N seconds before checking the conditions again
+        await asyncio.sleep(time_check_workflows)
+
 
 async def main():
+    # ensure main log folder
+    log_location = f"logs/run_{start_time}"
+    os.makedirs(f"{log_location}/coordinator")
+    os.makedirs(f"{log_location}/workflows")
+
+    workflow_status_file = f"{log_location}/coordinator/workflow_status_log.csv"
+
     # Initialize coordinator
-    curr_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
-    log_file = f"jobs_logs/simulation_logs_{curr_time}.out"
-    coordinator = JobCoordinator(5, log_file)
-    
+    coordinator = WorkflowCoordinator(time_between_workflows, workflow_status_file)
+
     # asyncio.gather runs both the log monitor and submission loop concurrently
     await asyncio.gather(
-        monitor_logs(log_file, coordinator),
-        job_submission_loop(coordinator)
+        monitor_logs(workflow_status_file, coordinator),
+        workflow_submission_loop(coordinator),
+        return_exceptions=True
     )
 
 if __name__ == "__main__":
@@ -137,3 +176,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         log_info("\nCoordinator shut down safely.")
+    except SystemExit:
+        log_info("\nCoordinator has finished.")

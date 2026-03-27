@@ -10,8 +10,4 @@ source $ENV_DIR/env_coordinator.sh
 conda activate xgfabric
 
 # launch the coordinator
-python3 $UTILS_DIR/coordinator.py \
-    --mode full \
-    --system nd \
-    --threads 32 \
-    --iterations 1
+python3 $UTILS_DIR/coordinator.py

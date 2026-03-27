@@ -1,7 +1,5 @@
 #!/bin/bash
 #$ -N fno_train
-#$ -o "jobs_logs/fno_$JOB_ID.out"
-#$ -e "jobs_logs/fno_$JOB_ID.err"
 #
 # fno_train_uge.sh - UGE job for FNO training on CPU
 #

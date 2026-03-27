@@ -14,7 +14,7 @@
 #   --iterations <n>     Maximum iterations (default: from config)
 #   --threads <n>        Number of threads for compute jobs (default: 32)
 #   --config <file>      Configuration file (default: config.sh)
-#   --job_number         Identification number for the coordinator
+#   --workflow_number    Workflow identification number for the coordinator
 #   --coord_log_file     Where the coordinator is checking for start/stop
 #   --dry-run            Show what would be done without executing
 #   --resume             Auto-skip phases if results already exist
@@ -85,12 +85,12 @@ while [[ $# -gt 0 ]]; do
             CONFIG_FILE="$2"
             shift 2
             ;;
-        --job_number)
-            export JOB_NUMBER="$2"
+        --workflow_number)
+            export WORKFLOW_NUMBER="$2"
             shift 2
             ;;
-        --coord_log_file)
-            export COORD_LOG_FILE="$2"
+        --coord_run_name)
+            export COORD_RUN_NAME="$2"
             shift 2
             ;;
         --dry-run)
@@ -202,6 +202,9 @@ if [[ "${SYSTEM_TYPE:-}" == "nersc" ]]; then
     RESULTS_DIR="${RESULTS_DIR:-${USER_PSCRATCH}}"
     LOGS_DIR="${LOGS_DIR:-${USER_PSCRATCH}/pipeline_logs}"
     export SLURM_LOGS_DIR="${USER_HOME}/jobs_logs"
+elif [[ "${SYSTEM_TYPE:-}" == "nd" ]]; then
+    RESULTS_DIR="results/${COORD_RUN_NAME}/workflow_${WORKFLOW_NUMBER}"
+    LOGS_DIR="logs/${COORD_RUN_NAME}"
 else
     RESULTS_DIR="${RESULTS_DIR:-${SCRATCH_DIR:-/local/foam/cases}/results}"
     LOGS_DIR="${LOGS_DIR:-${WORK_DIR}/jobs_logs}"
@@ -215,11 +218,12 @@ ensure_dir "$LOGS_DIR"
 [[ "${SYSTEM_TYPE:-}" == "nersc" ]] && ensure_dir "$SLURM_LOGS_DIR"
 
 # Start logging
-LOG_FILE="${LOGS_DIR}/pipeline_$(date +%Y%m%d_%H%M%S).log"
-LATENCY_LOG="${LOGS_DIR}/latency_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="${LOGS_DIR}/workflows/${WORKFLOW_NUMBER}/pipeline_$(date +%Y%m%d_%H%M%S).log"
+LATENCY_LOG="${LOGS_DIR}/workflows/${WORKFLOW_NUMBER}/latency_$(date +%Y%m%d_%H%M%S).log"
+export STATUS_FILE="${LOGS_DIR}/coordinator/workflow_status_log.csv"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-echo "Job $JOB_NUMBER: started" >> "$COORD_LOG_FILE"
+echo "Workflow $WORKFLOW_NUMBER,started,$(date '+%s.%N')" >> "$STATUS_FILE"
 
 # Latency tracking functions
 declare -A phase_start_time
@@ -247,7 +251,7 @@ track_phase_end() {
 log_section "CFDaAI In-the-Loop Pipeline"
 log_info "System: ${SYSTEM_TYPE}"
 log_info "Mode: ${MODE}"
-log_info "Max iterations: ${MAX_ITERATIONS}"
+log_info "Workflow number: ${WORKFLOW_NUMBER}"
 log_info "Models: ${TRAIN_MODELS}"
 log_info "Results: ${RESULTS_DIR}"
 log_info "Log: ${LOG_FILE}"
@@ -358,8 +362,8 @@ _validate_sensor_cutoff() {
 
 run_simulation_phase() {
     local iteration="$1"
-    local sim_output="${RESULTS_DIR}/iteration_${iteration}/simulations"
-    local param_dir="${RESULTS_DIR}/iteration_${iteration}/params"
+    local sim_output="${RESULTS_DIR}/simulations"
+    local param_dir="${RESULTS_DIR}/params"
     
     log_subsection "Simulations - Iteration ${iteration}"
     
@@ -367,7 +371,7 @@ run_simulation_phase() {
     ensure_dir "$param_dir"
     
     # Generate simulation parameters from sensor data
-    local data_dir="${RESULTS_DIR}/iteration_${iteration}/data"
+    local data_dir="${RESULTS_DIR}/data"
     if [[ -n "$USE_DATA_DIR" ]]; then
         data_dir="$USE_DATA_DIR"
     fi
@@ -411,9 +415,9 @@ run_simulation_phase() {
 
 run_training_phase() {
     local iteration="$1"
-    local sim_output="${2:-${RESULTS_DIR}/iteration_${iteration}/simulations}"
-    local data_output="${3:-${RESULTS_DIR}/iteration_${iteration}/data}"
-    local model_output="${RESULTS_DIR}/iteration_${iteration}/models"
+    local sim_output="${2:-${RESULTS_DIR}/simulations}"
+    local data_output="${3:-${RESULTS_DIR}/data}"
+    local model_output="${RESULTS_DIR}/models"
     
     log_subsection "Training - Iteration ${iteration}"
     
@@ -448,9 +452,9 @@ run_training_phase() {
 
 run_evaluation_phase() {
     local iteration="$1"
-    local model_output="${RESULTS_DIR}/iteration_${iteration}/models"
-    local data_dir="${USE_SENSOR_DIR:-${RESULTS_DIR}/iteration_${iteration}/data}"
-    local eval_output="${RESULTS_DIR}/iteration_${iteration}/evaluation"
+    local model_output="${RESULTS_DIR}/models"
+    local data_dir="${USE_SENSOR_DIR:-${RESULTS_DIR}/data}"
+    local eval_output="${RESULTS_DIR}/evaluation"
     
     log_subsection "Evaluation - Iteration ${iteration}"
     
@@ -492,18 +496,18 @@ check_convergence() {
 ################################################################################
 
 run_full_pipeline() {
-    timer_start "pipeline_total"
-    
     for iteration in $(seq 1 "$MAX_ITERATIONS"); do
-        log_section "Iteration ${iteration}/${MAX_ITERATIONS}"
-        timer_start "iteration_${iteration}"
+        timer_start "pipeline_total"
+
+        log_section "Starting pipeline"
+        timer_start "workflow_${WORKFLOW_NUMBER}"
         
-        local iter_dir="${RESULTS_DIR}/iteration_${iteration}"
-        local data_dir="${iter_dir}/data"
-        local sim_dir="${iter_dir}/simulations"
-        local model_dir="${iter_dir}/models"
-        local eval_dir="${iter_dir}/evaluation"
-        ensure_dir "$iter_dir"
+        local workflow_dir="${RESULTS_DIR}"
+        local data_dir="${workflow_dir}/data"
+        local sim_dir="${workflow_dir}/simulations"
+        local model_dir="${workflow_dir}/models"
+        local eval_dir="${workflow_dir}/evaluation"
+        ensure_dir "$workflow_dir"
         
         # Handle external data/sim directories
         if [[ -n "$USE_DATA_DIR" ]]; then
@@ -521,7 +525,7 @@ run_full_pipeline() {
         elif [[ "$DRY_RUN" == "true" ]]; then
             log_info "[DRY RUN] Would fetch sensor data"
         else
-            fetch_sensor_data "${iter_dir}/data" "${DATA_CUTOFF_DATE:-}"
+            fetch_sensor_data "${workflow_dir}/data" "${DATA_CUTOFF_DATE:-}"
         fi
         timer_end "data_acquisition"
         
@@ -575,7 +579,7 @@ run_full_pipeline() {
         fi
         timer_end "evaluation"
         
-        timer_end "iteration_${iteration}"
+        timer_end "workflow_${WORKFLOW_NUMBER}"
         
         # Check convergence
         if check_convergence "$iteration"; then
@@ -705,4 +709,4 @@ case "$MODE" in
 esac
 
 log_info "Done."
-echo "Job $JOB_NUMBER: exited" >> "$COORD_LOG_FILE"
+echo "Workflow $WORKFLOW_NUMBER,exited,$(date '+%s.%N')" >> "$STATUS_FILE"

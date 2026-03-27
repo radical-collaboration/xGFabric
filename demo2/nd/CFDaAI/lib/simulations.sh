@@ -136,16 +136,18 @@ _run_simulations_nd() {
     export SIMULATION_THREADS="$SIMULATION_THREADS"
 
     job_id=$(qsub -terse \
-             -pe smp $SIMULATION_THREADS \
-             -q long \
-             -t 1-${max_array_idx} \
-             -tc ${max_concurrent} \
-             -V \
-             "${WORK_DIR}/uge/simulation_uge.sh" "$params_dir" "$output_dir")
+        -pe smp $SIMULATION_THREADS \
+        -q long \
+        -t 1-${max_array_idx} \
+        -tc ${max_concurrent} \
+        -o "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/simulations/\$JOB_NAME_\$JOB_ID_\$TASK_ID.out" \
+        -e "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/simulations/\$JOB_NAME_\$JOB_ID_\$TASK_ID.err" \
+        "${WORK_DIR}/uge/simulation_uge.sh" "$params_dir" "$output_dir"
+    )
     
     if [[ $? -eq 0 ]]; then
         JOB_IDS["simulation"]="$job_id"
-        echo "Job $JOB_NUMBER: submitted" >> "$COORD_LOG_FILE"
+        echo "Workflow $WORKFLOW_NUMBER,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
         log_info "Submitted simulation array job: ${job_id}"
         log_info "  Array range: 1-${max_array_idx}"
         log_info "  Max concurrent: ${max_concurrent}"

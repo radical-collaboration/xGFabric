@@ -1,7 +1,5 @@
 #!/bin/bash
 #$ -N pinn_train
-#$ -o "jobs_logs/pinn_$JOB_ID.out"
-#$ -e "jobs_logs/pinn_$JOB_ID.err"
 #
 # pinn_train_uge.sh - UGE job for PINN training on CPU
 #

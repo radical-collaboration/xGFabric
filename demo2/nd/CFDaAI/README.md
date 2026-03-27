@@ -69,7 +69,12 @@ intheloop/
 │   ├── train_pcr_parallel.sh
 │   └── ...
 │
-└── jobs_logs/              # SLURM job outputs
+└── logs/
+    └── run_<date>/
+        ├── coordinator/
+        └── workflows/
+            ├── simulations/
+            └── training/
 ```
 
 ## System Detection

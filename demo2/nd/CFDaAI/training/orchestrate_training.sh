@@ -397,13 +397,14 @@ _run_pcr_uge() {
         -pe smp $SIMULATION_THREADS \
         -q long \
         -t "1-$num_partitions" \
+        -o "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.out" \
+        -e "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.err" \
         "$uge_script" "$partitions_dir" "$output_dir" \
-        | awk '{print $3}')
-
-
+        | awk '{print $3}'
+    )
     
-    JOB_IDS["pcr_train"]="$job_id"
     log_info "Submitted PCR job array: ${job_id}"
+    JOB_IDS["pcr_train"]="$job_id"
 }
 
 _run_pcr_distributed() {
@@ -708,8 +709,11 @@ _run_pinn_uge() {
         -pe smp $SIMULATION_THREADS \
         -q gpu \
         -l gpu_card=1 \
+        -o "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.out" \
+        -e "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.err" \
         "$uge_script" "$data_dir" "$output_dir" "$script" "$extra_args" \
-        | awk '{print $3}')
+        | awk '{print $3}'
+    )
 
     log_info "Submitted PINN training job: ${job_id}"
     JOB_IDS["pinn_train"]="$job_id"
@@ -806,15 +810,14 @@ _run_fno_uge() {
         -pe smp $SIMULATION_THREADS \
         -q gpu \
         -l gpu_card=1 \
+        -o "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.out" \
+        -e "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.err" \
         "$uge_script" "$data_dir" "$output_dir" "$script" "$extra_args" \
-        | awk '{print $3}')
+        | awk '{print $3}'
+    )
 
-    # output=$(echo "$job_id" | awk '{print $3}')
-    # echo "$output"
     log_info "Submitted FNO training job: ${job_id}"
-    if [[ $? -eq 0 ]]; then
-        JOB_IDS["fno_train"]="$job_id"
-    fi
+    JOB_IDS["fno_train"]="$job_id"
 }
 
 _run_fno_local() {

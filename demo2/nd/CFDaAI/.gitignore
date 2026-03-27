@@ -33,5 +33,6 @@ steps/run_training_steps
 results
 results/*
 !lib
-jobs_logs/*
+jobs_logs
+logs
 

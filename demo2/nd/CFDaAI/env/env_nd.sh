@@ -113,10 +113,6 @@ fi
 # Set MPI runner for SGE environment
 export MPI_RUNNER="qsub"
 
-# Job logs directory
-export JOBS_LOG_DIR="../jobs_logs"
-mkdir -p "$JOBS_LOG_DIR" 2>/dev/null || true
-
 ################################################################################
 # Verify Setup
 ################################################################################
