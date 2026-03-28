@@ -223,7 +223,7 @@ LATENCY_LOG="${LOGS_DIR}/workflows/${WORKFLOW_NUMBER}/latency_$(date +%Y%m%d_%H%
 export STATUS_FILE="${LOGS_DIR}/coordinator/workflow_status_log.csv"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-echo "Workflow $WORKFLOW_NUMBER,started,$(date '+%s.%N')" >> "$STATUS_FILE"
+echo "workflow_$WORKFLOW_NUMBER,workflow,started,$(date '+%s.%N')" >> "$STATUS_FILE"
 
 # Latency tracking functions
 declare -A phase_start_time
@@ -709,4 +709,4 @@ case "$MODE" in
 esac
 
 log_info "Done."
-echo "Workflow $WORKFLOW_NUMBER,exited,$(date '+%s.%N')" >> "$STATUS_FILE"
+echo "workflow_$WORKFLOW_NUMBER,workflow,exited,$(date '+%s.%N')" >> "$STATUS_FILE"

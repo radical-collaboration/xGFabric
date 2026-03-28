@@ -404,6 +404,7 @@ _run_pcr_uge() {
     )
     
     log_info "Submitted PCR job array: ${job_id}"
+    echo "workflow_$WORKFLOW_NUMBER,pcr_train,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
     JOB_IDS["pcr_train"]="$job_id"
 }
 
@@ -716,6 +717,7 @@ _run_pinn_uge() {
     )
 
     log_info "Submitted PINN training job: ${job_id}"
+    echo "workflow_$WORKFLOW_NUMBER,pinn_train,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
     JOB_IDS["pinn_train"]="$job_id"
 }
 
@@ -817,6 +819,7 @@ _run_fno_uge() {
     )
 
     log_info "Submitted FNO training job: ${job_id}"
+    echo "workflow_$WORKFLOW_NUMBER,fno_train,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
     JOB_IDS["fno_train"]="$job_id"
 }
 

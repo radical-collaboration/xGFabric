@@ -147,7 +147,7 @@ _run_simulations_nd() {
     
     if [[ $? -eq 0 ]]; then
         JOB_IDS["simulation"]="$job_id"
-        echo "Workflow $WORKFLOW_NUMBER,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
+        echo "workflow_$WORKFLOW_NUMBER,openfoam_array,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
         log_info "Submitted simulation array job: ${job_id}"
         log_info "  Array range: 1-${max_array_idx}"
         log_info "  Max concurrent: ${max_concurrent}"

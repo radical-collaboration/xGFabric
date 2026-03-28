@@ -9,6 +9,8 @@
 # Don't exit on error during module loading
 # set -x
 
+echo "workflow_$WORKFLOW_NUMBER,pinn_train,running,$(date '+%s.%N')" >> "$STATUS_FILE"
+
 ################################################################################
 # Configuration
 ################################################################################

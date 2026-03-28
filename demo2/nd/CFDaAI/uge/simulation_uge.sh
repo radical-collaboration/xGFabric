@@ -21,9 +21,7 @@ OUTPUT_DIR="$2"
 # UGE array index
 TASK_ID="${SGE_TASK_ID:-1}"
 
-if [ "$TASK_ID" == "1" ]; then
-    echo "Workflow $WORKFLOW_NUMBER,running,$(date '+%s.%N')" >> "$STATUS_FILE"
-fi
+echo "workflow_$WORKFLOW_NUMBER,openfoam_${TASK_ID},running,$(date '+%s.%N')" >> "$STATUS_FILE"
 
 ################################################################################
 # Get Parameter File

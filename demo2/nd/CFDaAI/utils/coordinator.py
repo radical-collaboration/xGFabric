@@ -112,11 +112,12 @@ async def monitor_logs(log_file_path: str, coordinator: WorkflowCoordinator):
                 await asyncio.sleep(1)
                 continue
 
-            match = re.search(r'Workflow (\w+),\s*(started|submitted|running|exited)', line)
-            if match:
-                workflow_id, status = match.groups()
-                coordinator.process_log_update(workflow_id, status)
-                log_update(f"Workflow {workflow_id} updated to: {status}")
+            line = line.split(",")
+            workflow_id = line[0].split("_")[1]
+            curr_job = line[1]
+            status = line[2]
+            coordinator.process_log_update(workflow_id, status)
+            log_update(f"Workflow {workflow_id} ==> {curr_job} ==> {status}")
 
 async def workflow_submission_loop(coordinator: WorkflowCoordinator):
     """Periodically checks if a new workflow can be submitted."""
