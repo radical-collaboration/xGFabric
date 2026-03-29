@@ -561,7 +561,7 @@ run_full_pipeline() {
             # Wait for all training jobs to complete before evaluation
             if [[ "$SYSTEM_TYPE" == "nersc" ]] || [[ "$SYSTEM_TYPE" == "nd" ]]; then
                 log_info "Waiting for training jobs to complete..."
-                wait_for_tasks pcr_train,pinn_train,fno_train,
+                wait_for_tasks pcr_train,pinn_train,fno_train
             fi
         fi
         stop_ram_monitor "PCR Training"

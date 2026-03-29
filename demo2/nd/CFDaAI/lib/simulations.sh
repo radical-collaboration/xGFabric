@@ -135,7 +135,8 @@ _run_simulations_nd() {
 
     export SIMULATION_THREADS="$SIMULATION_THREADS"
 
-    job_id=$(qsub -terse \
+    job_id=$(qsub \
+        -terse \
         -pe smp $SIMULATION_THREADS \
         -q long \
         -t 1-${max_array_idx} \

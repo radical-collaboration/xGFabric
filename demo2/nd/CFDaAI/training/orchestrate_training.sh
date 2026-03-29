@@ -399,10 +399,9 @@ _run_pcr_uge() {
         -t "1-$num_partitions" \
         -o "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.out" \
         -e "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.err" \
-        "$uge_script" "$partitions_dir" "$output_dir" \
-        | awk '{print $3}'
+        "$uge_script" "$partitions_dir" "$output_dir"
     )
-    
+
     log_info "Submitted PCR job array: ${job_id}"
     echo "workflow_$WORKFLOW_NUMBER,pcr_train,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
     JOB_IDS["pcr_train"]="$job_id"
