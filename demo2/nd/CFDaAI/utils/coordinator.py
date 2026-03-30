@@ -1,22 +1,22 @@
 #!/bin/python3
-import asyncio, os, re, subprocess, time, sys
+import asyncio, os, subprocess, time, sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional
 
 # config
-max_concurrent_workflows = 5      # total number of workflows that can run concurrently
+max_concurrent_workflows = None   # total number of workflows that can run concurrently
 max_number_of_workflows  = None   # total number of workflows that will be submitted
-time_between_workflows   = 10     # minimum time (in seconds) between workflow submissions.
-time_check_workflows     = 1      # how often the program should check if it can submit new workflows (in seconds)
+time_between_workflows   = 300    # minimum time (in seconds) between workflow submissions.
+time_check_workflows     = 10     # how often the program should check if it can submit new workflows (in seconds)
 input_flags              = "--mode full --system nd --threads 32 --iterations 1"
 
 # global variables
-workflow_counter = 1
-start_time       = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
-log_location = f"logs/run_{start_time}"
+workflow_counter     = 1
+start_time           = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
+log_location         = f"logs/run_{start_time}"
 workflow_status_file = f"{log_location}/coordinator/workflow_status_log.csv"
-coordinator_output = f"{log_location}/coordinator/coordinator_output.log"
+coordinator_output   = f"{log_location}/coordinator/coordinator_output.log"
 
 def log_info(input: str):
     log_string = f"[INFO] {datetime.now().strftime('%H:%M:%S')} {input}"
@@ -82,8 +82,9 @@ class WorkflowCoordinator:
             return False
 
         # Condition 3: Too many concurrent workflows?
-        if len(self.active_workflows) >= max_concurrent_workflows:
-            return False
+        if max_concurrent_workflows:
+            if len(self.active_workflows) >= max_concurrent_workflows:
+                return False
 
         return True
 
@@ -125,7 +126,7 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
     logged_max_reached = False
 
     while True:
-        if (max_number_of_workflows is not None) and (workflow_counter > max_number_of_workflows):
+        if (max_number_of_workflows) and (workflow_counter > max_number_of_workflows):
             if len(coordinator.active_workflows) == 0:
                 log_info("Maximum number of workflows reached and all jobs finished. Shutting down.")
                 sys.exit(0)
@@ -168,7 +169,7 @@ async def main():
     # create the workflow status file
     if not os.path.exists(workflow_status_file):
         with open(workflow_status_file, 'w') as file:
-            file.write("workflow_id,status,unix_time\n")
+            file.write("workflow_id,task,status,unix_time\n")
 
     # create the log for the coordinator
     if not os.path.exists(coordinator_output):

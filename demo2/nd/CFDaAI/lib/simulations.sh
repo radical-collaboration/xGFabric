@@ -129,7 +129,7 @@ _run_simulations_nd() {
     fi
 
     local max_array_idx=$((num_sims))
-    local max_concurrent="${MAX_CONCURRENT_SIMS:-10}"
+    local max_concurrent="${MAX_CONCURRENT_SIMS:-72}"
     
     local job_id
 
