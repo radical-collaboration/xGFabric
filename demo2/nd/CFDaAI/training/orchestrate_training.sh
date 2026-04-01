@@ -78,6 +78,12 @@ archive_and_send_model() {
     
     # Determine which files to archive based on model type
     local files_to_archive=()
+
+    if [[ "${SYSTEM_TYPE}" == "nd" ]]; then
+        HERE=`pwd`
+        output_dir="$HERE/$output_dir"
+        archive_path="$HERE/$archive_path"
+    fi
     
     case "$model_type" in
         pcr)
@@ -115,7 +121,7 @@ archive_and_send_model() {
         relative_files+=("$rel_path")
     done
     
-    if tar -czf "$archive_path" "${relative_files[@]}" 2>/dev/null; then
+    if tar -czf "$archive_path" "${relative_files[@]}"; then
         local archive_size=$(du -h "$archive_path" | cut -f1)
         log_info "✓ Created archive: ${archive_name} (${archive_size})"
     else
@@ -192,24 +198,6 @@ run_training() {
     esac
     
     timer_end "training_${model_type}"
-    
-    # Archive and send model if training succeeded.
-    # In hybrid mode, NERSC-dispatched models are archived+sent by the SLURM job
-    # on NERSC itself — skip the local send to avoid a redundant UCSB-side upload.
-    if [[ $training_result -eq 0 ]]; then
-        local iteration="unknown"
-        if [[ "$output_dir" =~ iteration_([0-9]+) ]]; then
-            iteration="${BASH_REMATCH[1]}"
-        fi
-
-        if [[ "$SYSTEM_TYPE" == "hybrid" && "$(get_module_system "$model_type")" == "nersc" ]]; then
-            log_info "Hybrid NERSC job: senspot archiving handled remotely, skipping local send"
-        else
-            archive_and_send_model "$model_type" "$output_dir" "$iteration"
-        fi
-    else
-        log_warn "Training failed - skipping model archiving/sending"
-    fi
     
     return $training_result
 }

@@ -32,6 +32,8 @@ if [ "$SYSTEM_TYPE" == "nd" ]; then
     module --force purge
     module add openfoam/10.0/gcc/11.5.0 > /dev/null 2>&1
     module add paraview/5.11.2
+elif [ "$SYSTEM_TYPE" == "nersc" ]; then
+    source env/env_nersc.sh
 elif [ -n "$FOAM_BASH" ]; then
     source $FOAM_BASH
 elif [ -n "$FOAM_ETC" ]; then

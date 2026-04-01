@@ -145,10 +145,10 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
             shell_args.extend(['--workflow_number', workflow_id])
             shell_args.extend(['--coord_run_name', f"run_{start_time}"])
 
-            os.mkdir(f"logs/run_{start_time}/workflows/{workflow_id}")
-            os.mkdir(f"logs/run_{start_time}/workflows/{workflow_id}/simulations")
-            os.mkdir(f"logs/run_{start_time}/workflows/{workflow_id}/training")
-
+            os.makedirs(f"{log_location}/workflows/{workflow_id}", exist_ok=True)
+            os.makedirs(f"{log_location}/workflows/{workflow_id}/simulations", exist_ok=True)
+            os.makedirs(f"{log_location}/workflows/{workflow_id}/training", exist_ok=True)
+            
             subprocess.Popen(
                 ["sh", "cfdaai.sh"] + shell_args,
                 stdout=subprocess.DEVNULL,
@@ -163,8 +163,8 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
 
 async def main():
     # ensure main log folder
-    os.makedirs(f"{log_location}/coordinator")
-    os.makedirs(f"{log_location}/workflows")
+    os.makedirs(f"{log_location}/coordinator", exist_ok=True)
+    os.makedirs(f"{log_location}/workflows", exist_ok=True)
 
     # create the workflow status file
     if not os.path.exists(workflow_status_file):

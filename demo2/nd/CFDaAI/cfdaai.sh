@@ -564,6 +564,17 @@ run_full_pipeline() {
                 wait_for_tasks pcr_train,pinn_train,fno_train
             fi
         fi
+
+        # Archive and send model if training succeeded.
+        # In hybrid mode, NERSC-dispatched models are archived+sent by the SLURM job
+        # on NERSC itself — skip the local send to avoid a redundant UCSB-side upload.
+        if [[ "$SYSTEM_TYPE" == "hybrid" && "$(get_module_system "$TRAIN_MODELS")" == "nersc" ]]; then
+            log_info "Hybrid NERSC job: senspot archiving handled remotely, skipping local send"
+        else
+            for model in $TRAIN_MODELS; do
+                archive_and_send_model "$model" "$model_dir/$model" "$iteration"
+            done
+        fi
         stop_ram_monitor "PCR Training"
         timer_end "training"
         
