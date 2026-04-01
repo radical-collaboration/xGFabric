@@ -39,7 +39,7 @@ conda activate xgfabric
 git clone https://github.com/MAYHEM-Lab/cspot
 cd cspot
 git checkout caplets
-git checkout 090d686ab6a924cfb096e02e91290e7b0fc6f3fd
+git checkout f3884aeeee1e3d166fc98dd309a380961fc01902
 
 git submodule update --init --recursive
 mv deps/libzmq/CMakeLists.txt deps/libzmq/CMakeLists.orig.txt
@@ -234,3 +234,4 @@ fi
 
 echo "Finished installing CSPOT"
 source ~/.bashrc
+
