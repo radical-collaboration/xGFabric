@@ -82,8 +82,8 @@ _run_simulations_slurm() {
     # Pass params_dir and output_dir as positional $1/$2 to simulation_slurm.sh
     job_id=$(sbatch --parsable \
              --array="0-${max_array_idx}%${max_concurrent}" \
-             --output="${SLURM_LOGS_DIR}/cfd_sim_array_%A_%a.out" \
-             --error="${SLURM_LOGS_DIR}/cfd_sim_array_%A_%a.err" \
+             --output="${SLURM_LOGS_DIR}/workflows/$WORKFLOW_NUMBER/simulations/cfd_sim_array_%A_%a.out" \
+             --error="${SLURM_LOGS_DIR}/workflows/$WORKFLOW_NUMBER/simulations/cfd_sim_array_%A_%a.err" \
              --export=ALL \
              "${WORK_DIR}/slurm/simulation_slurm.sh" \
              "$params_dir" "$output_dir")

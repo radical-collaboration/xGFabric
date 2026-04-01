@@ -199,9 +199,9 @@ CONVERGENCE_THRESHOLD="${CONVERGENCE_THRESHOLD:-0.01}"
 # User CLI --models takes precedence, then env/config, default to pcr
 TRAIN_MODELS="${USER_TRAIN_MODELS:-${TRAIN_MODELS:-pcr}}"
 if [[ "${SYSTEM_TYPE:-}" == "nersc" ]]; then
-    RESULTS_DIR="${RESULTS_DIR:-${USER_PSCRATCH}}"
-    LOGS_DIR="${LOGS_DIR:-${USER_PSCRATCH}/pipeline_logs}"
-    export SLURM_LOGS_DIR="${USER_HOME}/jobs_logs"
+    RESULTS_DIR="results/${COORD_RUN_NAME}/workflow_${WORKFLOW_NUMBER}"
+    LOGS_DIR="logs/${COORD_RUN_NAME}"
+    export SLURM_LOGS_DIR="logs/${COORD_RUN_NAME}"  # NERSC path, created remotely
 elif [[ "${SYSTEM_TYPE:-}" == "nd" ]]; then
     RESULTS_DIR="results/${COORD_RUN_NAME}/workflow_${WORKFLOW_NUMBER}"
     LOGS_DIR="logs/${COORD_RUN_NAME}"

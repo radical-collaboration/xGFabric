@@ -150,7 +150,7 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
             os.makedirs(f"{log_location}/workflows/{workflow_id}/training", exist_ok=True)
             
             subprocess.Popen(
-                ["sh", "cfdaai.sh"] + shell_args,
+                ["./cfdaai.sh"] + shell_args,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )

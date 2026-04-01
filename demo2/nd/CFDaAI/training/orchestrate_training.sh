@@ -304,8 +304,8 @@ _run_pcr_slurm() {
     
     local job_id=$(sbatch \
         --array="0-$((num_partitions-1))" \
-        --output="${SLURM_LOGS_DIR}/pcr_%A_%a.out" \
-        --error="${SLURM_LOGS_DIR}/pcr_%A_%a.err" \
+        --output="${SLURM_LOGS_DIR}/workflows/$WORKFLOW_NUMBER/training/pcr_%A_%a.out" \
+        --error="${SLURM_LOGS_DIR}/workflows/$WORKFLOW_NUMBER/training/pcr_%A_%a.err" \
         "$slurm_script" "$data_dir" "$output_dir" "$partitions_file" \
         | awk '{print $4}')
     
@@ -676,8 +676,8 @@ _run_pinn_slurm() {
     local slurm_script="${WORK_DIR}/slurm/pinn_train_slurm.sh"
     
     local job_id=$(sbatch \
-        --output="${SLURM_LOGS_DIR}/pinn_%j.out" \
-        --error="${SLURM_LOGS_DIR}/pinn_%j.err" \
+        --output="${SLURM_LOGS_DIR}/workflows/$WORKFLOW_NUMBER/training/pinn_%j.out" \
+        --error="${SLURM_LOGS_DIR}/workflows/$WORKFLOW_NUMBER/training/pinn_%j.err" \
         "$slurm_script" "$data_dir" "$output_dir" "$script" "$extra_args" \
         | awk '{print $4}')
     
@@ -776,8 +776,8 @@ _run_fno_slurm() {
     mkdir -p "$output_dir"
     
     local job_id=$(sbatch \
-        --output="${SLURM_LOGS_DIR}/fno_%j.out" \
-        --error="${SLURM_LOGS_DIR}/fno_%j.err" \
+        --output="${SLURM_LOGS_DIR}/workflows/$WORKFLOW_NUMBER/training/fno_%j.out" \
+        --error="${SLURM_LOGS_DIR}/workflows/$WORKFLOW_NUMBER/training/fno_%j.err" \
         "$slurm_script" "$data_dir" "$output_dir" "$script" "$extra_args" \
         | awk '{print $4}')
     
