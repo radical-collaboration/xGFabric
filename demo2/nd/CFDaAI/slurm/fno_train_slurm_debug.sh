@@ -34,7 +34,7 @@ echo "======================================================="
 
 module load conda || true
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate cfdai_intheloop
+conda activate cfdaai
 
 set -e
 export TF_CPP_MIN_LOG_LEVEL=2

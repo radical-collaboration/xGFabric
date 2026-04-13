@@ -76,7 +76,7 @@ SIM_SLURM_NODES=1
 TRAIN_MODELS="pcr pinn fno"
 
 # PCR grid configuration
-PCR_GRID_CONFIG="${WORK_DIR}/grid_config.json"
+PCR_GRID_CONFIG="${WORK_DIR}/training/pcr/grid_config.json"
 
 # NERSC SLURM settings for training
 TRAIN_SLURM_QOS="regular"
@@ -101,27 +101,8 @@ UCSB_REMOTE_WORK_DIR="/path/to/remote/intheloop"
 # Output Configuration
 ################################################################################
 
-# Base directory for results
-RESULTS_DIR="${WORK_DIR}/results"
-
-# Job logs directory
-LOGS_DIR="${WORK_DIR}/jobs_logs"
-
 # Keep intermediate files after completion
 KEEP_INTERMEDIATE=false
-
-################################################################################
-# Iteration Control
-################################################################################
-
-# Maximum number of iterations
-MAX_ITERATIONS=100
-
-# Convergence threshold (RMSE)
-CONVERGENCE_THRESHOLD=0.01
-
-# Time between data checks (seconds)
-DATA_CHECK_INTERVAL=300
 
 ################################################################################
 # Model Archiving and CSPOT Sending
@@ -168,7 +149,6 @@ NERSC_USER="YOUR_NERSC_USERNAME"
 NERSC_SSH_KEY="${WORK_DIR}/nersc"
 NERSC_REMOTE_WORK_DIR="/global/homes/X/YOUR_NERSC_USERNAME/intheloop"
 NERSC_SCRATCH_DIR="/pscratch/sd/X/YOUR_NERSC_USERNAME"
-NERSC_LOGS_DIR="/global/homes/X/YOUR_NERSC_USERNAME/jobs_logs"
 # Read-only system installation containing training Python scripts
 NERSC_TRAIN_WORK_DIR="/global/homes/X/YOUR_NERSC_USERNAME/common/kurl_system/intheloop"
 
@@ -178,7 +158,6 @@ RACELAB_SSH_HOST="rw-gpu1.cs.ucsb.edu"
 RACELAB_USER="YOUR_RACELAB_USERNAME"
 RACELAB_SSH_KEY="${WORK_DIR}/racelabgpu"
 RACELAB_REMOTE_WORK_DIR="/home/YOUR_RACELAB_USERNAME/intheloop_hybrid"
-RACELAB_LOGS_DIR="/home/YOUR_RACELAB_USERNAME/jobs_logs"
 
 # Per-module system routing for hybrid mode.
 # "ucsb"    = run locally on UCSB cluster (SSH-distributed or local)

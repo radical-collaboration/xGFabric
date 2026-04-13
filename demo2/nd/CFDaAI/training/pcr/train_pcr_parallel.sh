@@ -25,7 +25,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="$SCRIPT_DIR"
 
 # Load grid configuration from grid_config.json
-source "${SCRIPT_DIR}/read_grid_config.sh"
+source "${SCRIPT_DIR}/training/pcr/read_grid_config.sh"
 
 # Activate conda environment (required for Python scripts)
 # Don't source bashrc - it may have 'return' for non-interactive shells
@@ -41,7 +41,7 @@ for conda_path in \
     fi
 done
 if command -v conda &> /dev/null; then
-    conda activate cfdai_intheloop 2>/dev/null || conda activate base 2>/dev/null || true
+    conda activate cfdaai 2>/dev/null || conda activate base 2>/dev/null || true
 fi
 
 # SSH Configuration
@@ -202,7 +202,7 @@ launch_training_on_machine() {
                 fi
             done
             
-            conda activate cfdai_intheloop 2>/dev/null || conda activate base 2>/dev/null || true
+            conda activate cfdaai 2>/dev/null || conda activate base 2>/dev/null || true
             
             cd '$remote_work_dir'
             python3 train_pcr_chunk.py 'pcr_data/$data_file_name' 'pcr_output/machine_$machine_id'

@@ -44,7 +44,7 @@ if [[ "$CONDA_INITIALIZED" != "true" ]]; then
 fi
 
 # Activate environment
-CONDA_ENV="${CONDA_ENV:-cfdai_intheloop}"
+CONDA_ENV="${CONDA_ENV:-cfdaai}"
 ENV_FILE="${WORK_DIR}/utils/environment.yml"
 
 # Check if environment exists

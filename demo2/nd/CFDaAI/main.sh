@@ -7,7 +7,7 @@ ENV_DIR="${WORK_DIR}/env"
 source $ENV_DIR/env_coordinator.sh
 
 # activate environment
-conda activate xgfabric
+conda activate cfdaai
 
 # launch the coordinator
 python3 $UTILS_DIR/coordinator.py

@@ -102,8 +102,8 @@ fi
 
 if command -v conda &> /dev/null; then
     eval "$(conda shell.bash hook)" 2>/dev/null || true
-    # Try meshio_env first (common on remote machines), then cfdai_intheloop
-    conda activate meshio_env 2>/dev/null || conda activate cfdai_intheloop 2>/dev/null || true
+    # Try meshio_env first (common on remote machines), then cfdaai
+    conda activate meshio_env 2>/dev/null || conda activate cfdaai 2>/dev/null || true
 fi
 
 # Convert VTK to CSV

@@ -28,7 +28,7 @@ log_time_end() {
 WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Load grid configuration from grid_config.json
-source "${WORK_DIR}/read_grid_config.sh"
+source "${WORK_DIR}/training/pcr/read_grid_config.sh"
 
 ################################################################################
 # Usage and Argument Parsing
@@ -135,7 +135,7 @@ log_info "--- Environment Setup ---"
 source ~/.bashrc 2>/dev/null || true
 
 # Conda environment setup
-CONDA_ENV_NAME="cfdai_intheloop"
+CONDA_ENV_NAME="cfdaai"
 CONDA_ENV_FILE="${WORK_DIR}/utils/environment.yml"
 
 log_info "Checking for conda environment: ${CONDA_ENV_NAME}"

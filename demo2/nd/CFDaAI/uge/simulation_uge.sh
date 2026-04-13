@@ -17,11 +17,9 @@ set -euo pipefail
 
 params_dir="$1"
 OUTPUT_DIR="$2"
+TASK_ID="$3"
 
-# UGE array index
-TASK_ID="${SGE_TASK_ID:-1}"
-
-echo "workflow_$WORKFLOW_NUMBER,openfoam_${TASK_ID},running,$(date '+%s.%N')" >> "$STATUS_FILE"
+bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "running" "${STATUS_FILE}"
 
 ################################################################################
 # Get Parameter File
@@ -43,3 +41,5 @@ echo "Task ${TASK_ID}: Processing ${PARAM_FILE}"
 ################################################################################
 
 exec "tasks/simulation_task.sh" "$PARAM_FILE" "$OUTPUT_DIR"
+
+bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "completed" "${STATUS_FILE}"

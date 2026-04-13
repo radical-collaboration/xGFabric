@@ -17,7 +17,6 @@ export RACELAB_SSH_HOST="${RACELAB_SSH_HOST:-rw-gpu1.cs.ucsb.edu}"
 export RACELAB_USER="${RACELAB_USER:-liubov_kurafeeva}"
 export RACELAB_SSH_KEY="${RACELAB_SSH_KEY:-${WORK_DIR}/racelabgpu}"
 export RACELAB_REMOTE_WORK_DIR="${RACELAB_REMOTE_WORK_DIR:-/home/liubov_kurafeeva/intheloop_hybrid}"
-export RACELAB_LOGS_DIR="${RACELAB_LOGS_DIR:-/home/liubov_kurafeeva/jobs_logs}"
 
 if [[ ! -f "$RACELAB_SSH_KEY" ]]; then
     log_warn "Racelab SSH key not found: ${RACELAB_SSH_KEY}"

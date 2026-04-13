@@ -47,7 +47,7 @@ echo "======================================================="
 
 module load conda || true
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate cfdai_intheloop
+conda activate cfdaai
 
 # Now enable exit on error
 set -e

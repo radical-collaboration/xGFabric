@@ -49,6 +49,7 @@ def load_grid_config():
         os.getcwd(),
         script_dir,
         os.path.dirname(script_dir),  # training/
+        os.path.dirname(f"{script_dir}/training/pcr/"),  # training/
         os.path.dirname(os.path.dirname(script_dir)),  # intheloop/
         os.path.dirname(os.path.dirname(os.path.dirname(script_dir))),  # one more level
     ]

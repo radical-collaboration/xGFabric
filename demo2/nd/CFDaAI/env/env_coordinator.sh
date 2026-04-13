@@ -20,14 +20,14 @@ if ! conda --help &> /dev/null; then
     exit 1
 fi
 
-# Check whether the xGFabric conda environment has been created
-if ! conda env list | grep -q "xgfabric"; then
+# Check whether the cfdaai conda environment has been created
+if ! conda env list | grep -q "cfdaai"; then
     echo "creating fabric environment"
-    conda env create -f environment.yml
+    conda env create -f utils/environment.yml
 fi
 
 # Check if CSPOT is installed
 if ! which senspot-get &> /dev/null; then
-    echo "CSPOT is not installed or not in PATH. Installing..."
-    sh cspot_install.sh
+    echo "CSPOT is not installed or not in PATH."
+    exit 1
 fi

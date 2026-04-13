@@ -1,0 +1,40 @@
+# ============================================================
+# CFDaAI Pipeline - Makeflow
+# ============================================================
+
+export WORK_DIR
+export WORKFLOW_NUMBER
+export WORKFLOW_LOCATION
+export RESULTS_DIR
+export LOGS_DIR
+export SIMULATION_THREADS
+
+# ============================================================
+# Phase 1: Data Acquisition
+# ============================================================
+$(WORKFLOW_LOCATION)/pipeline.0:
+	./utils/get_data.sh > $(WORKFLOW_LOCATION)/pipeline.0
+
+# ============================================================
+# Phase 2: Simulations
+# ============================================================
+$(WORKFLOW_LOCATION)/pipeline.1: $(WORKFLOW_LOCATION)/pipeline.0
+	./utils/run_simulations.sh > $(WORKFLOW_LOCATION)/pipeline.1
+
+# ============================================================
+# Phase 3: Training
+# ============================================================
+$(WORKFLOW_LOCATION)/pipeline.2: $(WORKFLOW_LOCATION)/pipeline.1
+	./utils/run_training.sh > $(WORKFLOW_LOCATION)/pipeline.2
+
+# ============================================================
+# Phase 4: Evaluation
+# ============================================================
+$(WORKFLOW_LOCATION)/pipeline.3: $(WORKFLOW_LOCATION)/pipeline.2
+	./utils/evaluation.sh > $(WORKFLOW_LOCATION)/pipeline.3
+
+# ============================================================
+# Combine outputs
+# ============================================================
+$(WORKFLOW_LOCATION)/full_pipeline.log: $(WORKFLOW_LOCATION)/pipeline.0 $(WORKFLOW_LOCATION)/pipeline.1 $(WORKFLOW_LOCATION)/pipeline.2 $(WORKFLOW_LOCATION)/pipeline.3
+	cat $(WORKFLOW_LOCATION)/pipeline.0 $(WORKFLOW_LOCATION)/pipeline.1 $(WORKFLOW_LOCATION)/pipeline.2 $(WORKFLOW_LOCATION)/pipeline.3 > $(WORKFLOW_LOCATION)/full_pipeline.log

@@ -57,7 +57,7 @@ fi
 source "$(conda info --base)/etc/profile.d/conda.sh"
 
 # Activate environment
-CONDA_ENV="${CONDA_ENV:-cfdai_intheloop}"
+CONDA_ENV="${CONDA_ENV:-cfdaai}"
 ENV_FILE="${WORK_DIR}/utils/environment.yml"
 
 if conda env list | grep -q "^${CONDA_ENV}[[:space:]]"; then

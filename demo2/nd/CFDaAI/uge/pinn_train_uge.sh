@@ -9,7 +9,7 @@
 # Don't exit on error during module loading
 # set -x
 
-echo "workflow_$WORKFLOW_NUMBER,pinn_train,running,$(date '+%s.%N')" >> "$STATUS_FILE"
+bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "pinn_train" "running" "${STATUS_FILE}"
 
 ################################################################################
 # Configuration
@@ -37,7 +37,7 @@ echo "======================================================="
 ################################################################################
 module load cuda 2>/dev/null || true
 module load cudnn 2>/dev/null || true
-conda activate cfdai_intheloop
+conda activate cfdaai
 
 # Now enable exit on error
 set -e

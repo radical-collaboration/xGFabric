@@ -1,4 +1,4 @@
-name: cfdai_intheloop
+name: cfdaai
 channels:
  - conda-forge
  - defaults
@@ -22,9 +22,11 @@ dependencies:
  - matplotlib
  - jupyter
  - ipykernel
+ - ndcctools
  - pip
  - pip:
    - meshio
    - tensorflow
    - keras
    - tqdm
+   - numpy

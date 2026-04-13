@@ -63,7 +63,7 @@ fi
 source "$(conda info --base)/etc/profile.d/conda.sh"
 
 # Activate environment
-CONDA_ENV="${CONDA_ENV:-cfdai_intheloop}"
+CONDA_ENV="${CONDA_ENV:-cfdaai}"
 ENV_FILE="${WORK_DIR}/utils/environment.yml"
 
 if conda env list | grep -q "^${CONDA_ENV}[[:space:]]"; then
@@ -118,10 +118,6 @@ fi
 
 # Set MPI runner for SLURM environment
 export MPI_RUNNER="srun"
-
-# Job logs directory
-export JOBS_LOG_DIR="${JOBS_LOG_DIR:-/global/homes/${USER:0:1}/${USER}/jobs_logs}"
-mkdir -p "$JOBS_LOG_DIR" 2>/dev/null || true
 
 ################################################################################
 # Verify Setup

@@ -11,7 +11,7 @@
 # Don't exit on error during module loading
 # set -x
 
-echo "workflow_$WORKFLOW_NUMBER,pcr_train,running,$(date '+%s.%N')" >> "$STATUS_FILE"
+bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "pcr_train" "running" "${STATUS_FILE}"
 
 ################################################################################
 # Configuration
@@ -24,13 +24,8 @@ WORK_DIR="$(pwd)"
 PARTITIONS_DIR="${1:?Partitions directory required}"
 OUTPUT_DIR="${2:?Output directory required}"
 
-# UGE array index
-TASK_ID="${SGE_TASK_ID:-1}"
-new_id=$((TASK_ID-1))
-PARTITION_ID="${new_id:-1}"
-
 echo "======================================================="
-echo "UGE job ${JOB_ID} PCR Training - Partition ${PARTITION_ID}"
+echo "UGE job ${JOB_ID} PCR Training"
 echo "Partitions dir : ${PARTITIONS_DIR}"
 echo "Output dir     : ${OUTPUT_DIR}"
 echo "Node           : $(hostname)  started at $(date)"
@@ -40,9 +35,7 @@ echo "======================================================="
 # Environment - Simple: just conda
 ################################################################################
 
-module load conda || true
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate cfdai_intheloop
+conda activate cfdaai
 
 # Now enable exit on error
 set -e
@@ -61,7 +54,7 @@ if [[ ! -f "$TRAIN_SCRIPT" ]]; then
 fi
 
 # Find the pre-prepared data file for this partition
-DATA_FILE="${PARTITIONS_DIR}/machine_${PARTITION_ID}_data.pkl"
+DATA_FILE="${PARTITIONS_DIR}/machine_0_data.pkl"
 
 if [[ ! -f "$DATA_FILE" ]]; then
     echo "ERROR: Data file not found: ${DATA_FILE}"
@@ -77,5 +70,5 @@ mkdir -p "$OUTPUT_DIR"
 python3 "$TRAIN_SCRIPT" "$DATA_FILE" "$OUTPUT_DIR"
 
 echo "======================================================="
-echo "Job ${JOB_ID} Partition ${PARTITION_ID} finished at $(date)"
+echo "Job ${JOB_ID} Partition 0 finished at $(date)"
 echo "======================================================="

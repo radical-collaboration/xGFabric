@@ -46,11 +46,10 @@ check_senspot_file_send() {
 }
 
 # Archive and send model files after training
-# Args: model_type output_dir iteration
+# Args: model_type output_dir
 archive_and_send_model() {
     local model_type="$1"
     local output_dir="$2"
-    local iteration="${3:-unknown}"
     
     # Skip if SENSPOT_SEND_MODELS is explicitly disabled
     if [[ "${SENSPOT_SEND_MODELS:-true}" != "true" ]]; then
@@ -71,9 +70,9 @@ archive_and_send_model() {
     local archive_dir="${output_dir}/archives"
     ensure_dir "$archive_dir"
     
-    # Generate archive filename with timestamp and iteration
+    # Generate archive filename with timestamp
     local timestamp=$(date +%Y%m%d_%H%M%S)
-    local archive_name="${model_type}_iter${iteration}_${timestamp}.tar.gz"
+    local archive_name="${model_type}_${timestamp}.tar.gz"
     local archive_path="${archive_dir}/${archive_name}"
     
     # Determine which files to archive based on model type
@@ -214,7 +213,7 @@ _run_pcr_training() {
     log_info "Preparing PCR training..."
     
     # PCR uses grid-based distributed training
-    local grid_config="${WORK_DIR}/grid_config.json"
+    local grid_config="${WORK_DIR}/training/pcr/grid_config.json"
     
     require_file "$grid_config" "Grid configuration"
     
@@ -321,7 +320,7 @@ _run_pcr_uge() {
     log_info "Submitting PCR training to UGE..."
     
     # Get sensor data directory from environment (set by main.sh)
-    local sensor_dir="${SENSOR_DATA_DIR:-}"
+    local sensor_dir="${SENSOR_DATA_DIR:-${RESULTS_DIR}/data}"
     if [[ -z "$sensor_dir" || ! -d "$sensor_dir" ]]; then
         log_error "SENSOR_DATA_DIR not set or directory not found"
         log_error "PCR training requires sensor data. Use --use-sensor <dir>"
@@ -380,19 +379,8 @@ _run_pcr_uge() {
     # Step 3: Submit array job
     local uge_script="${WORK_DIR}/uge/pcr_train_uge.sh"
     
-    job_id=$(qsub \
-        -terse \
-        -pe smp $SIMULATION_THREADS \
-        -q long \
-        -t "1-$num_partitions" \
-        -o "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.out" \
-        -e "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.err" \
-        "$uge_script" "$partitions_dir" "$output_dir"
-    )
-
-    log_info "Submitted PCR job array: ${job_id}"
-    echo "workflow_$WORKFLOW_NUMBER,pcr_train,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
-    JOB_IDS["pcr_train"]="$job_id"
+    sh "$uge_script" "$partitions_dir" "$output_dir"
+    bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "pcr_train" "completed" "${STATUS_FILE}"
 }
 
 _run_pcr_distributed() {
@@ -513,7 +501,7 @@ _run_pcr_distributed() {
             # Run training remotely with conda environment activated
             ssh -i "${WORK_DIR}/id_rsa" "$machine_ip" "
                 source ~/miniforge3/etc/profile.d/conda.sh 2>/dev/null || source ~/miniconda3/etc/profile.d/conda.sh 2>/dev/null
-                conda activate cfdai_intheloop
+                conda activate cfdaai
                 cd ${remote_work_dir}
                 python3 train.py ${remote_data_file} ${remote_output_dir}
             " 2>&1 | sed "s/^/[${machine_name}] /"
@@ -641,10 +629,6 @@ _run_pinn_training() {
     
     log_info "Preparing PINN training..."
     
-    if [[ "$HAS_GPU" != "true" ]]; then
-        log_warn "No GPU detected - PINN training may be slow"
-    fi
-    
     local pinn_script="${WORK_DIR}/training/pinn/train_pinn.py"
     
     case "$SYSTEM_TYPE" in
@@ -693,19 +677,8 @@ _run_pinn_uge() {
     
     local uge_script="${WORK_DIR}/uge/pinn_train_uge.sh"
     
-    job_id=$(qsub \
-        -pe smp $SIMULATION_THREADS \
-        -q gpu \
-        -l gpu_card=1 \
-        -o "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.out" \
-        -e "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.err" \
-        "$uge_script" "$data_dir" "$output_dir" "$script" "$extra_args" \
-        | awk '{print $3}'
-    )
-
-    log_info "Submitted PINN training job: ${job_id}"
-    echo "workflow_$WORKFLOW_NUMBER,pinn_train,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
-    JOB_IDS["pinn_train"]="$job_id"
+    sh "$uge_script" "$data_dir" "$output_dir" "$script" "$extra_args"
+    bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "pinn_train" "completed" "${STATUS_FILE}"
 }
 
 _run_pinn_local() {
@@ -738,10 +711,6 @@ _run_fno_training() {
     local extra_args="$3"
     
     log_info "Preparing FNO training..."
-    
-    if [[ "$HAS_GPU" != "true" ]]; then
-        log_warn "No GPU detected - FNO training will be slow on CPU"
-    fi
     
     local fno_script="${WORK_DIR}/training/fno/train_fno.py"
     
@@ -795,19 +764,8 @@ _run_fno_uge() {
     
     mkdir -p "$output_dir"
     
-    job_id=$(qsub \
-        -pe smp $SIMULATION_THREADS \
-        -q gpu \
-        -l gpu_card=1 \
-        -o "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.out" \
-        -e "logs/$COORD_RUN_NAME/workflows/$WORKFLOW_NUMBER/training/\$JOB_NAME_\$JOB_ID.err" \
-        "$uge_script" "$data_dir" "$output_dir" "$script" "$extra_args" \
-        | awk '{print $3}'
-    )
-
-    log_info "Submitted FNO training job: ${job_id}"
-    echo "workflow_$WORKFLOW_NUMBER,fno_train,submitted,$(date '+%s.%N')" >> "$STATUS_FILE"
-    JOB_IDS["fno_train"]="$job_id"
+    sh "$uge_script" "$data_dir" "$output_dir" "$script" "$extra_args"
+    bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "fno_train" "completed" "${STATUS_FILE}"
 }
 
 _run_fno_local() {
@@ -993,8 +951,8 @@ _wait_nersc_slurm_job() {
         local log_path
         log_path=$(ssh -i "$ssh_key" -q -o BatchMode=yes -o StrictHostKeyChecking=no \
             "${user}@${host}" \
-            "ls -t ${NERSC_LOGS_DIR:-/global/homes/k/kurl/jobs_logs}/hybrid_*_${job_id}.out \
-                   ${NERSC_LOGS_DIR:-/global/homes/k/kurl/jobs_logs}/*_${job_id}.out 2>/dev/null | head -1" \
+            "ls -t ${LOGS_DIR}/hybrid_*_${job_id}.out \
+                   ${LOGS_DIR}/*_${job_id}.out 2>/dev/null | head -1" \
             2>/dev/null || true)
         if [[ -n "$log_path" ]]; then
             log_error "  [log tail] ${log_path} (last 40 lines):"
@@ -1026,28 +984,23 @@ _nersc_prepare_and_submit() {
     local user="${NERSC_USER:-kurl}"
     local host="${NERSC_SSH_HOST:-perlmutter.nersc.gov}"
     local remote_work="${NERSC_REMOTE_WORK_DIR:-/global/homes/k/kurl/intheloop}"
-    local logs_dir="${NERSC_LOGS_DIR:-/global/homes/k/kurl/jobs_logs}"
     local remote_base="${NERSC_SCRATCH_DIR:-/pscratch/sd/k/kurl}/intheloop_hybrid"
-
-    local iter_tag
-    iter_tag=$(echo "$data_dir" | grep -oP 'iteration_\d+' | tail -1 || true)
-    [[ -z "$iter_tag" ]] && iter_tag="run_$(date +%Y%m%d_%H%M%S)"
 
     # 1. Sync data to NERSC scratch (skip if caller already synced)
     if [[ -n "$remote_data_dir" ]]; then
         log_info "  Data in:  ${remote_data_dir} (pre-synced, skipping transfer)"
     else
         log_info "  Data in:  ${data_dir}"
-        log_info "            → ${user}@${host}:${remote_base}/${model}_data_${iter_tag}"
+        log_info "            → ${user}@${host}:${remote_base}/${model}_data"
         timer_start "${model}_sync_data_to_nersc"
-        remote_data_dir=$(_sync_data_to_nersc "$data_dir" "${model}_data_${iter_tag}") || {
+        remote_data_dir=$(_sync_data_to_nersc "$data_dir" "${model}_data") || {
             timer_end "${model}_sync_data_to_nersc"; return 1
         }
         timer_end "${model}_sync_data_to_nersc"
     fi
 
     # 2. Prepare remote output dir
-    local remote_output_dir="${remote_base}/${model}_output_${iter_tag}"
+    local remote_output_dir="${remote_base}/${model}_output"
     ssh -i "$ssh_key" -q -o BatchMode=yes -o StrictHostKeyChecking=no \
         "${user}@${host}" "mkdir -p '${remote_output_dir}'" || return 1
 
@@ -1069,8 +1022,8 @@ _nersc_prepare_and_submit() {
         "${user}@${host}" \
         "sbatch \
             --job-name='hybrid_${model}' \
-            --output='${logs_dir}/hybrid_${model}_%j.out' \
-            --error='${logs_dir}/hybrid_${model}_%j.err' \
+            --output='${LOGS_DIR}/hybrid_${model}_%j.out' \
+            --error='${LOGS_DIR}/hybrid_${model}_%j.err' \
             ${qos_override} \
             --export=ALL,WORK_DIR='${remote_work}',NERSC_TRAIN_WORK_DIR='${NERSC_TRAIN_WORK_DIR:-/global/homes/k/kurl/common/kurl_system/intheloop}',SENSPOT_SEND_MODELS='${SENSPOT_SEND_MODELS:-true}',SENSPOT_MODELS_ENDPOINT='${SENSPOT_MODELS_ENDPOINT:-woof://169.231.230.76/sharedfs/models}',SENSPOT_KEEP_ARCHIVES='${SENSPOT_KEEP_ARCHIVES:-false}' \
             '${slurm_script}' \
@@ -1089,7 +1042,7 @@ _nersc_prepare_and_submit() {
         log_error "${sbatch_out}"
         return 1
     fi
-    log_info "  [submit ✓] job_id=${job_id}  name=hybrid_${model}  logs=${logs_dir}/hybrid_${model}_${job_id}.out"
+    log_info "  [submit ✓] job_id=${job_id}  name=hybrid_${model}  logs=${LOGS_DIR}/hybrid_${model}_${job_id}.out"
 
     _record_hybrid_job_id "$model" "$job_id" "$remote_output_dir"
     echo "${job_id}:${remote_output_dir}"
@@ -1161,13 +1114,9 @@ run_training_phase_hybrid() {
     if [[ ${#nersc_models[@]} -gt 0 ]]; then
         _sync_scripts_to_nersc || return 1
 
-        local iter_tag
-        iter_tag=$(echo "$sim_output" | grep -oP 'iteration_\d+' | tail -1 || true)
-        [[ -z "$iter_tag" ]] && iter_tag="run_$(date +%Y%m%d_%H%M%S)"
-
         log_info "[hybrid] Syncing simulation data to NERSC once (shared by all NERSC models)..."
         timer_start "nersc_sync_shared_data"
-        shared_nersc_data_dir=$(_sync_data_to_nersc "$sim_output" "shared_data_${iter_tag}") || return 1
+        shared_nersc_data_dir=$(_sync_data_to_nersc "$sim_output" "shared_data") || return 1
         timer_end "nersc_sync_shared_data"
         log_info "[hybrid] Shared NERSC data at: ${shared_nersc_data_dir}"
     fi
@@ -1175,13 +1124,9 @@ run_training_phase_hybrid() {
     # Phase 0b: sync sim data to racelab once (shared across all racelab models)
     local shared_racelab_data_dir=""
     if [[ ${#racelab_models[@]} -gt 0 ]]; then
-        local iter_tag_rl
-        iter_tag_rl=$(echo "$sim_output" | grep -oP 'iteration_\d+' | tail -1 || true)
-        [[ -z "$iter_tag_rl" ]] && iter_tag_rl="run_$(date +%Y%m%d_%H%M%S)"
-
         log_info "[hybrid] Syncing simulation data to racelab once (shared by all racelab models)..."
         timer_start "racelab_sync_shared_data"
-        shared_racelab_data_dir=$(_sync_data_to_racelab "$sim_output" "shared_data_${iter_tag_rl}") || return 1
+        shared_racelab_data_dir=$(_sync_data_to_racelab "$sim_output" "shared_data") || return 1
         timer_end "racelab_sync_shared_data"
         log_info "[hybrid] Shared racelab data at: ${shared_racelab_data_dir}"
     fi
@@ -1251,11 +1196,7 @@ run_training_phase_hybrid() {
 
         # Send model to woof after collection (mandatory regardless of where training ran)
         if [[ $collect_rc -eq 0 ]]; then
-            local iteration="unknown"
-            if [[ "$local_dir" =~ iteration_([0-9]+) ]]; then
-                iteration="${BASH_REMATCH[1]}"
-            fi
-            archive_and_send_model "$model" "$local_dir" "$iteration"
+            archive_and_send_model "$model" "$local_dir"
         fi
     done
 
@@ -1326,12 +1267,7 @@ _racelab_submit() {
     local user="${RACELAB_USER:-liubov_kurafeeva}"
     local host="${RACELAB_SSH_HOST:-rw-gpu1.cs.ucsb.edu}"
     local remote_base="${RACELAB_REMOTE_WORK_DIR:-/local/home/liubov_kurafeeva/intheloop_hybrid}"
-    local logs_dir="${RACELAB_LOGS_DIR:-/local/home/liubov_kurafeeva/jobs_logs}"
     local conda_env="${RACELAB_CONDA_ENV:-cfdai_tf310}"
-
-    local iter_tag
-    iter_tag=$(echo "$data_dir" | grep -oP 'iteration_\d+' | tail -1 || true)
-    [[ -z "$iter_tag" ]] && iter_tag="run_$(date +%Y%m%d_%H%M%S)"
 
     # 1. Sync data to racelab (skip if pre-synced)
     if [[ -n "$remote_data_dir" ]]; then
@@ -1339,7 +1275,7 @@ _racelab_submit() {
     else
         log_info "  Data in:  ${data_dir}"
         timer_start "${model}_sync_data_to_racelab"
-        remote_data_dir=$(_sync_data_to_racelab "$data_dir" "${model}_data_${iter_tag}") || {
+        remote_data_dir=$(_sync_data_to_racelab "$data_dir" "${model}_data") || {
             timer_end "${model}_sync_data_to_racelab"; return 1
         }
         timer_end "${model}_sync_data_to_racelab"
@@ -1349,7 +1285,7 @@ _racelab_submit() {
     local remote_scripts="${remote_base}/scripts"
     log_info "  [sync →] training scripts → ${user}@${host}:${remote_scripts}"
     ssh -i "$ssh_key" -q -o BatchMode=yes -o StrictHostKeyChecking=no \
-        "${user}@${host}" "mkdir -p '${remote_scripts}/training/${model}' '${logs_dir}'"
+        "${user}@${host}" "mkdir -p '${remote_scripts}/training/${model}' '${LOGS_DIR}'"
     rsync -az --no-perms \
         -e "ssh -i '${ssh_key}' -q -o BatchMode=yes -o StrictHostKeyChecking=no" \
         "${WORK_DIR}/training/${model}/" "${user}@${host}:${remote_scripts}/training/${model}/" 2>&1 \
@@ -1363,7 +1299,7 @@ _racelab_submit() {
     fi
 
     # 3. Prepare remote output dir
-    local remote_output_dir="${remote_base}/${model}_output_${iter_tag}"
+    local remote_output_dir="${remote_base}/${model}_output"
     ssh -i "$ssh_key" -q -o BatchMode=yes -o StrictHostKeyChecking=no \
         "${user}@${host}" "mkdir -p '${remote_output_dir}'" || return 1
 
@@ -1371,7 +1307,7 @@ _racelab_submit() {
     # Each model has different argument conventions:
     #   pinn: positional csv_dir model_name  --output_dir DIR
     #   fno:  --data-dir DIR  --output-dir DIR
-    local log_file="${logs_dir}/racelab_${model}_${iter_tag}.log"
+    local log_file="${LOGS_DIR}/racelab_${model}.log"
     local train_script="training/${model}/train_${model}.py"
     local pythonpath="PYTHONPATH='${remote_scripts}/training/${model}:\${PYTHONPATH:-}'"
     local train_cmd
@@ -1586,3 +1522,10 @@ check_training_status() {
             ;;
     esac
 }
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    source "${WORK_DIR}/lib/common.sh"
+    source "${WORK_DIR}/data/data_source.sh"
+    source "${WORK_DIR}/env/system_config.sh"
+    run_training "$@"
+fi

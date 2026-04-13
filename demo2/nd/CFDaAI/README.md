@@ -208,8 +208,3 @@ echo "Features: GPU=$HAS_GPU CSPOT=$HAS_CSPOT MACHINES=$HAS_MACHINES"
 ```bash
 squeue -u $USER
 ```
-
-### View logs
-```bash
-tail -f jobs_logs/pipeline_*.log
-```

@@ -35,4 +35,6 @@ results/*
 !lib
 jobs_logs
 logs
-
+makeflow.failed.*/
+uge.status.*
+uge.wrapper

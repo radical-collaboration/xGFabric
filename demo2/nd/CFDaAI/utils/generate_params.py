@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Expand a simulation CSV params file into per-task JSON files for UGE arrays.
+Expand a simulation CSV params file into per-task JSON files for array job submissions.
 Writes sim_0.json, sim_1.json, ... to the params directory.
 
-Usage: generate_uge_params.py <csv_file> <params_dir>
+Usage: generate_params.py <csv_file> <params_dir>
 """
 import csv
 import json
@@ -16,7 +16,7 @@ ts = lambda: datetime.now().strftime('%H:%M:%S')
 
 def main():
     if len(sys.argv) < 3:
-        print(f"[ERROR] {ts()} Usage: generate_uge_params.py <csv_file> <params_dir>",
+        print(f"[ERROR] {ts()} Usage: generate_params.py <csv_file> <params_dir>",
               file=sys.stderr)
         sys.exit(1)
 
@@ -28,7 +28,7 @@ def main():
         for idx, row in enumerate(reader):
             ws  = row.get("wind_speed", row.get("windspeed", "")).strip()
             wd  = row.get("wind_dir",   row.get("winddir",   "0")).strip()
-            out = out_dir / f"sim_{idx+1}.json"
+            out = out_dir / f"sim_{idx}.json"
             out.write_text(json.dumps({"sim_id": str(idx),
                                        "wind_speed": ws,
                                        "wind_direction": wd}))

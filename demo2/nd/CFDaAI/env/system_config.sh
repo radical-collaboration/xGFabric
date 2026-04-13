@@ -89,13 +89,15 @@ detect_system() {
 ################################################################################
 
 detect_features() {
-    # SLURM scheduler
+    # find scheduler
     if command -v sbatch &>/dev/null; then
-        export HAS_SLURM="true"
+        export SCHEDULER="SLURM"
+    elif command -v qstat &>/dev/null; then
+        export SCHEDULER="UGE"
     else
-        export HAS_SLURM="false"
+        export SCHEDULER="None"
     fi
-    
+
     # CSPOT data system
     # Check standard paths and NERSC-specific locations
     local nersc_cspot="/global/common/software/m5290/cspot/build/bin"
@@ -129,7 +131,7 @@ detect_features() {
         export HAS_GPU="false"
     fi
     
-    log_info "Features: SLURM=${HAS_SLURM}, CSPOT=${HAS_CSPOT}, GPU=${HAS_GPU}"
+    log_info "Features: Scheduler=${SCHEDULER}, CSPOT=${HAS_CSPOT}, GPU=${HAS_GPU}"
 }
 
 ################################################################################
@@ -321,14 +323,9 @@ init_system() {
     load_environment
     
     # Source grid configuration
-    if [[ -f "${WORK_DIR}/read_grid_config.sh" ]]; then
-        source "${WORK_DIR}/read_grid_config.sh"
+    if [[ -f "${WORK_DIR}/training/pcr/read_grid_config.sh" ]]; then
+        source "${WORK_DIR}/training/pcr/read_grid_config.sh"
     fi
     
     log_info "System initialization complete"
 }
-
-# Auto-initialize if sourced directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]] || [[ "${AUTO_INIT:-true}" == "true" ]]; then
-    init_system
-fi
