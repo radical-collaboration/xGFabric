@@ -123,6 +123,8 @@ archive_and_send_model() {
     if tar -czf "$archive_path" "${relative_files[@]}"; then
         local archive_size=$(du -h "$archive_path" | cut -f1)
         log_info "✓ Created archive: ${archive_name} (${archive_size})"
+        rm -rf "${relative_files[@]}"
+        log_info "Removed related files to save space"
     else
         log_error "✗ Failed to create archive: ${archive_path}"
         popd > /dev/null

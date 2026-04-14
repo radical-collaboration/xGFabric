@@ -40,6 +40,7 @@ echo "Task ${TASK_ID}: Processing ${PARAM_FILE}"
 # Execute Simulation Task
 ################################################################################
 
-exec "tasks/simulation_task.sh" "$PARAM_FILE" "$OUTPUT_DIR"
+bash "tasks/simulation_task.sh" "$PARAM_FILE" "$OUTPUT_DIR"
 
 bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "completed" "${STATUS_FILE}"
+echo "Task ${TASK_ID}: Finished processing ${PARAM_FILE}"
