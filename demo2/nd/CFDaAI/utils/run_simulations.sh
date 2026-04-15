@@ -13,7 +13,7 @@ detect_system
 detect_features
 
 export STATUS_FILE="${LOGS_DIR}/coordinator/workflow_status_log.csv"
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "simulation_phase" "started" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "simulation_phase" "started" "${STATUS_FILE}"
 
 # Latency tracking functions
 declare -A phase_start_time
@@ -57,7 +57,7 @@ simulation_makeflow() {
 
     python3 ${WORK_DIR}/utils/make_sim_workflow.py ${num_sims} ${makeflow_file} ${SIMULATION_THREADS} ${WORK_DIR} ${param_dir} ${sim_output}
 
-    bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "openfoam_sim" "submitted" "${STATUS_FILE}"
+    python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "openfoam_sim" "submitted" "${STATUS_FILE}"
     
     makeflow -T uge ${WORKFLOW_LOCATION}/simulations/openfoam_tasks.makeflow
 }
@@ -82,4 +82,4 @@ simulation_makeflow
 
 stop_ram_monitor "OpenFOAM Simulations"
 timer_end "simulations"
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "simulation_phase" "completed" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "simulation_phase" "completed" "${STATUS_FILE}"

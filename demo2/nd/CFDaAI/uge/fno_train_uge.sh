@@ -12,7 +12,7 @@
 # Don't exit on error during module loading
 # set -x
 
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "fno_train" "running" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "fno_train" "running" "${STATUS_FILE}"
 
 ################################################################################
 # Configuration

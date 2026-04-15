@@ -382,7 +382,7 @@ _run_pcr_uge() {
     local uge_script="${WORK_DIR}/uge/pcr_train_uge.sh"
     
     sh "$uge_script" "$partitions_dir" "$output_dir"
-    bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "pcr_train" "completed" "${STATUS_FILE}"
+    python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "pcr_train" "completed" "${STATUS_FILE}"
 }
 
 _run_pcr_distributed() {
@@ -680,7 +680,7 @@ _run_pinn_uge() {
     local uge_script="${WORK_DIR}/uge/pinn_train_uge.sh"
     
     sh "$uge_script" "$data_dir" "$output_dir" "$script" "$extra_args"
-    bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "pinn_train" "completed" "${STATUS_FILE}"
+    python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "pinn_train" "completed" "${STATUS_FILE}"
 }
 
 _run_pinn_local() {
@@ -767,7 +767,7 @@ _run_fno_uge() {
     mkdir -p "$output_dir"
     
     sh "$uge_script" "$data_dir" "$output_dir" "$script" "$extra_args"
-    bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "fno_train" "completed" "${STATUS_FILE}"
+    python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "fno_train" "completed" "${STATUS_FILE}"
 }
 
 _run_fno_local() {

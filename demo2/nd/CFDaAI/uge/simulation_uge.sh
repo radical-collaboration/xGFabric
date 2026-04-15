@@ -19,7 +19,7 @@ params_dir="$1"
 OUTPUT_DIR="$2"
 TASK_ID="$3"
 
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "running" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "running" "${STATUS_FILE}"
 
 ################################################################################
 # Get Parameter File
@@ -42,5 +42,5 @@ echo "Task ${TASK_ID}: Processing ${PARAM_FILE}"
 
 bash "tasks/simulation_task.sh" "$PARAM_FILE" "$OUTPUT_DIR"
 
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "completed" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "completed" "${STATUS_FILE}"
 echo "Task ${TASK_ID}: Finished processing ${PARAM_FILE}"

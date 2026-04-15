@@ -21,7 +21,7 @@ TRAIN_MODELS="${USER_TRAIN_MODELS:-${TRAIN_MODELS:-pcr}}"
 
 # Start logging
 export STATUS_FILE="${LOGS_DIR}/coordinator/workflow_status_log.csv"
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "training_phase" "started" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "training_phase" "started" "${STATUS_FILE}"
 
 # Latency tracking functions
 declare -A phase_start_time
@@ -66,7 +66,7 @@ training_makeflow() {
     fi
     
     for model in $TRAIN_MODELS; do
-        bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "${model}_train" "submitted" "${STATUS_FILE}"
+        python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "${model}_train" "submitted" "${STATUS_FILE}"
     done
 
     makeflow -T uge "$makeflow_file"
@@ -107,4 +107,4 @@ stop_ram_monitor "Training"
 timer_end "training"
 
 log_info "Done."
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "training_phase" "completed" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "training_phase" "completed" "${STATUS_FILE}"

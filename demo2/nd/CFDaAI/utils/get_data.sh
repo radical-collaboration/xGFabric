@@ -2,7 +2,7 @@
 set -eo pipefail
 
 export STATUS_FILE="${LOGS_DIR}/coordinator/workflow_status_log.csv"
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "workflow" "started" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "workflow" "started" "${STATUS_FILE}"
 
 # Load user config if it exists
 CONFIG_FILE="${WORK_DIR}/config.sh"
@@ -29,7 +29,7 @@ ensure_dir "$RESULTS_DIR"
 ensure_dir "$LOGS_DIR"
 
 # Start logging
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "data_gathering" "started" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "data_gathering" "started" "${STATUS_FILE}"
 
 # Latency tracking functions
 declare -A phase_start_time
@@ -145,5 +145,5 @@ run_simulation_phase
 stop_ram_monitor "OpenFOAM Simulations"
 timer_end "simulations"
 
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "data_gathering" "completed" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "data_gathering" "completed" "${STATUS_FILE}"
 

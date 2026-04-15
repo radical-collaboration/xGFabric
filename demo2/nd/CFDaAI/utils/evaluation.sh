@@ -10,7 +10,7 @@ source "${WORK_DIR}/env/system_config.sh"
 source "${WORK_DIR}/lib/common.sh"
 
 export STATUS_FILE="${LOGS_DIR}/coordinator/workflow_status_log.csv"
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "evaluation_phase" "started" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "evaluation_phase" "started" "${STATUS_FILE}"
 
 # Latency tracking functions
 declare -A phase_start_time
@@ -93,5 +93,5 @@ if [[ "${AUTO_ARCHIVE:-false}" == "true" ]]; then
 fi
 
 log_info "Done."
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "evaluation_phase" "completed" "${STATUS_FILE}"
-bash ${WORK_DIR}/utils/csv_logger.sh "${WORKFLOW_NUMBER}" "workflow" "exited" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "evaluation_phase" "completed" "${STATUS_FILE}"
+python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "workflow" "exited" "${STATUS_FILE}"
