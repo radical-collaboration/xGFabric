@@ -22,8 +22,8 @@ def main():
             file.write(f"\tsh {work_dir}/uge/simulation_uge.sh {param_dir} {sim_output} {i} > $(WORKFLOW_LOCATION)/simulations/of_sim.{i}\n\n")
 
         for i in range(num_sims):
-            file.write(f"$(WORKFLOW_LOCATION)/simulations/of_sim_{i}.done: $(WORKFLOW_LOCATION)/simulations/of_sim.{i}\n")
-            file.write(f"\tpython3 $(WORK_DIR)/utils/csv_logger.py $(WORKFLOW_NUMBER) openfoam_{i} completed $(STATUS_FILE) && touch $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.done\n\n")
+            file.write(f"$(WORKFLOW_LOCATION)/simulations/of_sim.{i}.done: $(WORKFLOW_LOCATION)/simulations/of_sim.{i}\n")
+            file.write(f"\tpython3 $(WORK_DIR)/utils/csv_logger.py $(WORKFLOW_NUMBER) openfoam_{i} completed $(STATUS_FILE) && touch $(WORKFLOW_LOCATION)/simulations/of_sim.{i}.done\n\n")
 
 if __name__ == "__main__":
     main()
