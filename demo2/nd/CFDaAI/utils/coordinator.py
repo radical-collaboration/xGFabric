@@ -9,7 +9,8 @@ max_concurrent_workflows = None   # total number of workflows that can run concu
 max_number_of_workflows  = None   # total number of workflows that will be submitted
 time_between_workflows   = 5      # minimum time (in seconds) between workflow submissions.
 time_check_workflows     = 1      # how often the program should check if it can submit new workflows (in seconds)
-number_of_cores          = 32
+number_of_cores          = 32     # how many cores the simulations should run on
+print_err_files          = False  # should makeflow print the error files associated with each step of the pipeline
 
 # global variables
 workflow_counter     = 1
@@ -36,7 +37,7 @@ def log_update(input: str) -> None:
     with open(coordinator_output, 'a') as file:
         file.write(log_string + "\n")
 
-def setup_env() -> str:
+def setup_workflow() -> None:
     workflow_location = f"{log_location}/workflows/{workflow_counter}"
 
     os.makedirs(f"{workflow_location}", exist_ok=True)
@@ -55,7 +56,21 @@ def setup_env() -> str:
 
         file.write(open("utils/cfdaai.makeflow").read())
 
-    return f"{workflow_location}/cfdaai.makeflow"
+
+    if print_err_files:
+        with open(f"{workflow_location}/cfdaai.makeflow", "r") as file:
+            lines = file.readlines() 
+
+        new_lines = []
+        for line in lines:
+            if line.strip().startswith("./utils/"):
+                split_line = line.strip().split(" > ")
+                line = f"\t{split_line[0]} > {split_line[1]} 2> {split_line[1]}.err\n"
+            new_lines.append(line)
+
+        with open(f"{workflow_location}/cfdaai.makeflow", "w") as file:
+            file.writelines(new_lines)
+
 
 @dataclass
 class Workflow:
@@ -166,7 +181,8 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
         if coordinator.can_submit_new_workflow():
             log_action("Submitting new workflow...")
 
-            makeflow_location = setup_env()
+            setup_workflow()
+            makeflow_location = f"{log_location}/workflows/{workflow_counter}/cfdaai.makeflow"
 
             subprocess.Popen(
                 ["makeflow", makeflow_location],
