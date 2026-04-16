@@ -42,5 +42,4 @@ echo "Task ${TASK_ID}: Processing ${PARAM_FILE}"
 
 bash "tasks/simulation_task.sh" "$PARAM_FILE" "$OUTPUT_DIR"
 
-python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "completed" "${STATUS_FILE}"
 echo "Task ${TASK_ID}: Finished processing ${PARAM_FILE}"
