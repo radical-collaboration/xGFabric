@@ -1,13 +1,6 @@
 #!/bin/bash
-#$ -N cfd_sim_array
-#$ -V
 #
 # simulation_uge.sh - UGE job array for CFD simulations
-#
-# Submit as:
-#   qsub --array=1-N uge/simulation_uge.sh <param_dir> <output_dir>
-#
-# Where N = number of simulations - 1
 
 set -euo pipefail
 

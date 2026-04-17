@@ -52,13 +52,8 @@ def log_workflow_update(workflow_id: str, task: str, status: str, status_file: s
                     )
                 time.sleep(0.05)
 
-        # Write header on first use (file absent or empty)
-        write_header = not os.path.exists(status_file) or os.path.getsize(status_file) == 0
-
         with open(status_file, "a", newline="") as csv_file:
             writer = csv.writer(csv_file)
-            if write_header:
-                writer.writerow(["workflow_id", "task", "status", "timestamp"])
             writer.writerow([safe_workflow_id, safe_task, safe_status, timestamp])
 
     finally:
