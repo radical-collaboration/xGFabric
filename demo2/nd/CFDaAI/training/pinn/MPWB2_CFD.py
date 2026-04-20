@@ -165,8 +165,22 @@ def prepare_data_3d(data_list, max_points_per_file=5000, umag_min=0.10,
 
         log(f"  ws={ws:6.2f}  spatial={n_spatial:>8,}  after |U|>{umag_min}={n_clean:>8,} "
             f"(removed {n_spatial - n_clean:,})  sampled={len(df_f):>5,}")
+
+        if len(df_f) == 0:
+            log(f"  ws={ws:6.2f}  SKIPPED — no points survive velocity filter")
+            del df_f
+            gc.collect()
+            continue
+
         del df_f
         gc.collect()
+
+    if not raw_u:
+        raise RuntimeError(
+            "No usable data after velocity filtering across all files. "
+            "Check that CSV velocity columns match expectations and that "
+            "--umag_min is appropriate for your data units."
+        )
 
     X_coord = np.concatenate(raw_x)
     Y_coord = np.concatenate(raw_y)
@@ -272,14 +286,19 @@ def main():
         data_list = subsampled
 
     # ---- Prepare data (filter, normalise, split) ----
-    splits = prepare_data_3d(
-        data_list,
-        max_points_per_file=args.max_points_per_file,
-        umag_min=args.umag_min,
-        test_size=args.test_size,
-        val_size=args.val_size,
-        logger=logger,
-    )
+    try:
+        splits = prepare_data_3d(
+            data_list,
+            max_points_per_file=args.max_points_per_file,
+            umag_min=args.umag_min,
+            test_size=args.test_size,
+            val_size=args.val_size,
+            logger=logger,
+        )
+    except RuntimeError as exc:
+        logger.error(str(exc))
+        logger.error("Training aborted — no data to train on.")
+        return
     VEL_MAX = splits['VEL_MAX']
     WS_MAX  = splits['WS_MAX']
     X_train, Y_train = splits['train']['X'], splits['train']['Y']

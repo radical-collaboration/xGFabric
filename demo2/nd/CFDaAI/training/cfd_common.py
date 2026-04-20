@@ -118,9 +118,9 @@ def read_cfd_data(filepath_or_dir, pattern="cups_structure_ws*.csv"):
             # Supports: cups_structure_ws10_*.csv  OR  sim_N_ws_2.00_wd_Y.csv
             filename = os.path.basename(file)
             import re
-            ws_match = re.search(r'_ws_?([\d.]+)', filename)
+            ws_match = re.search(r'_ws_?(-?[\d.]+)', filename)
             if ws_match:
-                ws = float(ws_match.group(1))
+                ws = abs(float(ws_match.group(1)))
             else:
                 # Fallback: old split method
                 ws = float(filename.split("ws")[-1].split("_")[0])
@@ -128,7 +128,24 @@ def read_cfd_data(filepath_or_dir, pattern="cups_structure_ws*.csv"):
             # Read and process file
             df = pd.read_csv(file)
             df.columns = [i.replace(":", "_") for i in df.columns]
-            
+
+            # Coerce all columns to numeric, turning empty strings / bad values into NaN
+            numeric_cols = [c for c in df.columns if c not in ("file",)]
+            for col in numeric_cols:
+                if df[col].dtype == object:
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+
+            # Drop rows where any critical column is NaN
+            critical = [c for c in ("x", "y", "z", "U_0", "U_1", "U_2") if c in df.columns]
+            n_before = len(df)
+            df = df.dropna(subset=critical)
+            n_dropped = n_before - len(df)
+            if n_dropped > 0:
+                logging.warning(f"Dropped {n_dropped}/{n_before} rows with empty/invalid values in {filename}")
+            if df.empty:
+                logging.warning(f"File has no valid rows after cleaning, skipping: {filename}")
+                continue
+
             # Calculate velocity magnitude if not present
             if "U_Magnitude" not in df.columns:
                 df["U_Magnitude"] = (df["U_0"]**2 + df["U_1"]**2 + df["U_2"]**2)**0.5

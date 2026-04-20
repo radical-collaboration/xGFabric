@@ -9,8 +9,6 @@
 # Don't exit on error during module loading
 # set -x
 
-python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "pinn_train" "running" "${STATUS_FILE}"
-
 ################################################################################
 # Configuration
 ################################################################################

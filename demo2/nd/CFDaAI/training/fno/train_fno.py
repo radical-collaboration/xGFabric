@@ -66,12 +66,11 @@ ITER_MAX = args.iter_max or 999999
 REPO_ROOT       = Path(__file__).resolve().parent.parent.parent  # intheloop/
 TRAINING_DIR    = REPO_ROOT / 'training'
 
-# Simulation data directory
-if args.data_dir:
-    SIMULATIONS_DIR = Path(args.data_dir)
-else:
-    # Fallback to default
-    SIMULATIONS_DIR = Path('/global/homes/k/kurl/scratch/simulations_data')
+# Simulation data directory — required; no fallback to avoid using stale accumulated data
+if not args.data_dir:
+    print("ERROR: --data-dir is required", file=sys.stderr)
+    sys.exit(1)
+SIMULATIONS_DIR = Path(args.data_dir)
 
 # Output directory
 if args.output_dir:
@@ -241,6 +240,12 @@ for ws, csv_path in tqdm(file_pairs, desc='Loading CSVs'):
         continue
     data_list.append((ws, df_f))
     gc.collect()
+
+if not data_list:
+    log.error("No usable data after velocity filtering across all files.")
+    log.error("Check that CSV velocity columns match expectations and that UMAG_MIN_THRESHOLD is appropriate for your data units.")
+    log.error("Training aborted.")
+    sys.exit(1)
 
 all_u = np.concatenate([df['U_0'].values for _, df in data_list])
 all_v = np.concatenate([df['U_1'].values for _, df in data_list])

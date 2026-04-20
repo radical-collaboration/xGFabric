@@ -12,8 +12,6 @@ params_dir="$1"
 OUTPUT_DIR="$2"
 TASK_ID="$3"
 
-python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "openfoam_${TASK_ID}" "running" "${STATUS_FILE}"
-
 ################################################################################
 # Get Parameter File
 ################################################################################
