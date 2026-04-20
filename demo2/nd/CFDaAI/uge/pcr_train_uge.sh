@@ -1,5 +1,4 @@
 #!/bin/bash
-#$ -N pcr_train
 #
 # pcr_train_uge.sh - UGE job for PCR training partition
 #
@@ -109,7 +108,7 @@ echo "======================================================="
 echo "UGE job ${JOB_ID} PCR Training"
 echo "Partitions dir : ${partitions_dir}"
 echo "Output dir     : ${OUTPUT_DIR}"
-echo "Node           : $(hostname)  started at $(date)"
+echo "Node           : $(hostname) started at $(date)"
 echo "======================================================="
 
 TRAIN_SCRIPT="${WORK_DIR}/training/pcr/train_pcr_chunk.py"

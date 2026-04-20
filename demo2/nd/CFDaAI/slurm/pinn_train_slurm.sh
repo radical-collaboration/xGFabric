@@ -1,14 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=pinn_train
-#SBATCH --account=m5290
-#SBATCH --constraint=cpu
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --qos=regular
-#SBATCH --time=00:30:00
-#SBATCH --output=/global/homes/k/kurl/jobs_logs/%x_%j.out
-#SBATCH --error=/global/homes/k/kurl/jobs_logs/%x_%j.err
 #
 # pinn_train_slurm.sh - SLURM job for PINN training on CPU
 #
@@ -16,16 +6,11 @@
 #   sbatch slurm/pinn_train_slurm.sh <data_dir> <output_dir>
 
 # Don't exit on error during module loading
-set -x
+# set -x
 
 ################################################################################
 # Configuration
 ################################################################################
-
-# Use absolute path - SLURM copies scripts to compute nodes
-WORK_DIR="${WORK_DIR:-/global/common/software/m5290/kurl_system/intheloop}"
-# NERSC_TRAIN_WORK_DIR: read-only installation with Python training scripts
-TRAIN_WORK_DIR="${NERSC_TRAIN_WORK_DIR:-${WORK_DIR}}"
 
 # Arguments
 DATA_DIR="${1:?Data directory required}"
@@ -45,8 +30,6 @@ echo "======================================================="
 # (No spack/openmpi/OpenFOAM needed for training)
 ################################################################################
 
-module load conda || true
-source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate cfdaai
 
 # Now enable exit on error

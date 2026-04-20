@@ -1,5 +1,4 @@
 #!/bin/bash
-#$ -N pinn_train
 #
 # pinn_train_uge.sh - UGE job for PINN training on CPU
 #

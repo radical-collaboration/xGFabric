@@ -38,4 +38,6 @@ logs
 makeflow.failed.*/
 uge.status.*
 uge.wrapper
+slurm.wrapper
+slurm.status.*
 

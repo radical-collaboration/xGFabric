@@ -3,7 +3,7 @@ import asyncio, os, subprocess, time, sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Optional
-from create_makeflow import create_makeflow
+from create_makeflow import create_makeflow, detect_system
 
 start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
 
@@ -22,29 +22,29 @@ global_vars = {
     "start_time"           : start_time,
     "log_location"         : f"logs/run_{start_time}",
     "workflow_status_file" : f"logs/run_{start_time}/coordinator/workflow_status_log.csv",
-    "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log"
+    "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log",
 }
 
 def log_info(input: str) -> None:
     log_string = f"[INFO] {datetime.now().strftime('%H:%M:%S')} {input}"
     print(log_string)
-    with open(global_vars["coordinator_output"], 'a') as file:
+    with open(global_vars['coordinator_output'], 'a') as file:
         file.write(log_string + "\n")
 
 def log_action(input: str) -> None:
     log_string = f"[ACTION] {datetime.now().strftime('%H:%M:%S')} {input}"
     print(log_string)
-    with open(global_vars["coordinator_output"], 'a') as file:
+    with open(global_vars['coordinator_output'], 'a') as file:
         file.write(log_string + "\n")
 
 def log_update(input: str) -> None:
     log_string = f"[UPDATE] {datetime.now().strftime('%H:%M:%S')} {input}"
     print(log_string)
-    with open(global_vars["coordinator_output"], 'a') as file:
+    with open(global_vars['coordinator_output'], 'a') as file:
         file.write(log_string + "\n")
 
 def setup_workflow() -> None:
-    workflow_location = f"{global_vars["log_location"]}/workflows/{global_vars["workflow_counter"]}"
+    workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
 
     os.makedirs(f"{workflow_location}", exist_ok=True)
     os.makedirs(f"{workflow_location}/simulations", exist_ok=True)
@@ -55,7 +55,7 @@ def setup_workflow() -> None:
 
 @dataclass
 class Workflow:
-    workflow_id: str
+    workflow_id: int
     status: str
     current_task: str
     submission_time: float
@@ -148,7 +148,7 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
 
     while True:
         if config["max_number_of_workflows"]:
-            if global_vars["workflow_counter"] > config["max_number_of_workflows"]:
+            if global_vars['workflow_counter'] > config["max_number_of_workflows"]:
                 if len(coordinator.active_workflows) == 0:
                     log_info("Maximum number of workflows reached and all jobs finished. Shutting down.")
                     sys.exit(0)
@@ -163,44 +163,46 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
             log_action("Submitting new workflow...")
 
             setup_workflow()
-            makeflow_location = f"{global_vars["log_location"]}/workflows/{global_vars["workflow_counter"]}/cfdaai.makeflow"
+            makeflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}/cfdaai.makeflow"
+
+            system = detect_system()
 
             subprocess.run(
-                ["makeflow", "-T", "uge", makeflow_location]
+                ["makeflow", "-T", system[1], makeflow_location]
             )
 
             # subprocess.Popen(
-            #     ["makeflow", "-T", "uge", makeflow_location],
+            #     ["makeflow", "-T", batch_mode, makeflow_location],
             #     stdout=subprocess.DEVNULL,
             #     stderr=subprocess.DEVNULL
             # )
 
-            coordinator.submit_workflow(global_vars["workflow_counter"])
-            global_vars["workflow_counter"] += 1
+            coordinator.submit_workflow(global_vars['workflow_counter'])
+            global_vars['workflow_counter'] += 1
 
         # Wait N seconds before checking the conditions again
         await asyncio.sleep(config["time_check_workflows"])
 
 async def main():
     # ensure main log folder
-    os.makedirs(f"{global_vars["log_location"]}/coordinator", exist_ok=True)
-    os.makedirs(f"{global_vars["log_location"]}/workflows", exist_ok=True)
+    os.makedirs(f"{global_vars['log_location']}/coordinator", exist_ok=True)
+    os.makedirs(f"{global_vars['log_location']}/workflows", exist_ok=True)
 
     # create the workflow status file
-    if not os.path.exists(global_vars["workflow_status_file"]):
-        with open(global_vars["workflow_status_file"], 'w') as file:
+    if not os.path.exists(global_vars['workflow_status_file']):
+        with open(global_vars['workflow_status_file'], 'w') as file:
             file.write("workflow_id,task,status,unix_time\n")
 
     # create the log for the coordinator
-    if not os.path.exists(global_vars["coordinator_output"]):
-        open(global_vars["coordinator_output"], 'a').close()
+    if not os.path.exists(global_vars['coordinator_output']):
+        open(global_vars['coordinator_output'], 'a').close()
 
     # Initialize coordinator
-    coordinator = WorkflowCoordinator(config["time_between_workflows"], global_vars["workflow_status_file"])
+    coordinator = WorkflowCoordinator(config["time_between_workflows"], global_vars['workflow_status_file'])
 
     # asyncio.gather runs both the log monitor and submission loop concurrently
     await asyncio.gather(
-        monitor_logs(global_vars["workflow_status_file"], coordinator),
+        monitor_logs(global_vars['workflow_status_file'], coordinator),
         workflow_submission_loop(coordinator),
         return_exceptions=True
     )

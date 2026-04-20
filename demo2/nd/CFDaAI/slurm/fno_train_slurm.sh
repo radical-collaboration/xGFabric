@@ -1,14 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=fno_train
-#SBATCH --account=m5290
-#SBATCH --constraint=cpu
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --qos=regular
-#SBATCH --time=00:30:00
-#SBATCH --output=/global/homes/k/kurl/jobs_logs/%x_%j.out
-#SBATCH --error=/global/homes/k/kurl/jobs_logs/%x_%j.err
 #
 # fno_train_slurm.sh - SLURM job for FNO training on CPU
 #
@@ -19,15 +9,11 @@
 #   sbatch --export=ALL,ITER_MIN=200,ITER_MAX=500 slurm/fno_train_slurm.sh <data_dir> <output_dir>
 
 # Don't exit on error during module loading
-set -x
+# set -x
 
 ################################################################################
 # Configuration
 ################################################################################
-
-# Use absolute path - SLURM copies scripts to compute nodes
-WORK_DIR="${WORK_DIR:-/global/common/software/m5290/kurl_system/intheloop}"
-TRAIN_WORK_DIR="${NERSC_TRAIN_WORK_DIR:-${WORK_DIR}}"
 
 # Arguments
 DATA_DIR="${1:?Data directory required}"

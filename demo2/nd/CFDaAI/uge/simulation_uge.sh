@@ -17,7 +17,6 @@ TASK_ID="$3"
 ################################################################################
 
 # Find parameter file for this task ID
-# Get the file for this array index
 PARAM_FILE="${params_dir}/sim_${TASK_ID}.json"
 
 if [[ ! -f "$PARAM_FILE" ]]; then

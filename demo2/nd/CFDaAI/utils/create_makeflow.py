@@ -1,85 +1,120 @@
 #!/bin/python3
-import sys, os
+import sys, os, subprocess
 
 def print_phase(file, message: str) -> None:
     file.write("# ============================================================\n")
     file.write(f"# {message}\n")
     file.write("# ============================================================\n")
 
-def create_makeflow(global_vars: dict, config: dict) -> None:
-    workflow_location = f"{global_vars["log_location"]}/workflows/{global_vars["workflow_counter"]}"
-    makeflow_file = f"{workflow_location}/cfdaai.makeflow"
-    sim_options  = f"BATCH_OPTIONS=-terse -pe smp {config["number_of_cores"]} -q long"
-    pcr_options  = f"BATCH_OPTIONS=-terse -pe smp {config["number_of_cores"]} -q long -N pcr_train"
-    pinn_options = f"BATCH_OPTIONS=-terse -pe smp {config["number_of_cores"]} -q gpu -l gpu_card=1 -N pinn_train"
-    fno_options  = f"BATCH_OPTIONS=-terse -pe smp {config["number_of_cores"]} -q gpu -l gpu_card=1 -N fno_train"
+def print_prologue(file, workflow_location: str, global_vars: dict, config: dict) -> None:
+    file.write("# --- Configuration ---\n")
+    file.write("WORK_DIR=.\n")
+    file.write(f"WORKFLOW_NUMBER={global_vars['workflow_counter']}\n")
+    file.write(f"WORKFLOW_LOCATION={workflow_location}\n")
+    file.write(f"RESULTS_DIR=results/run_{global_vars['start_time']}/workflow_{global_vars['workflow_counter']}\n")
+    file.write(f"START_TIME={global_vars['start_time']}\n")
+    file.write(f"LOGS_DIR={global_vars['log_location']}\n")
+    file.write(f"SIMULATION_THREADS={config['number_of_cores']}\n")
+    file.write(f"NUM_SIMULATIONS={config['number_of_simulations']}\n")
+    file.write("export WORK_DIR\n")
+    file.write("export WORKFLOW_NUMBER\n")
+    file.write("export WORKFLOW_LOCATION\n")
+    file.write("export RESULTS_DIR\n")
+    file.write("export LOGS_DIR\n")
+    file.write("export SIMULATION_THREADS\n")
+    file.write("export NUM_SIMULATIONS\n")
+    file.write("\n")
 
+def print_simulations(file, system: tuple, config: dict) -> None:
+    for i in range(config["number_of_simulations"]):
+        if system[0] == "nersc":
+            file.write(f"BATCH_OPTIONS=--qos=regular --constraint=cpu --nodes=1 --ntasks-per-node={config['number_of_cores']} --time=00:30:00 --job-name=cfd_sim_{i}\n")
+        elif system[0] == "nd":
+            file.write(f"BATCH_OPTIONS=-terse -pe smp {config['number_of_cores']} -q long -N cfd_sim_{i}\n")
+
+        file.write(f"$(WORKFLOW_LOCATION)/simulations/of_sim.{i}: $(WORKFLOW_LOCATION)/pipeline.0\n")
+        file.write(f"\tsh $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} > $(WORKFLOW_LOCATION)/simulations/of_sim.{i} 2>&1\n")
+
+def print_training(file, system: tuple, models, config: dict) -> None:
+    nersc_batch_options = {
+        "pcr" : f"BATCH_OPTIONS=--job-name=pcr_train --qos=regular --constraint=cpu --nodes=1 --ntasks=1 --cpus-per-task={config['number_of_cores']} --time=00:05:00",
+        "pinn": f"BATCH_OPTIONS=--job-name=pinn_train --constraint=cpu --nodes=1 --ntasks=1 --cpus-per-task={config['number_of_cores']} --qos=regular --time=00:30:00",
+        "fno" : f"BATCH_OPTIONS=--job-name=fno_train --constraint=cpu --nodes=1 --ntasks=1 --cpus-per-task={config['number_of_cores']} --qos=regular --time=00:30:00",
+    }
+
+    nd_batch_options = {
+        "pcr" : f"BATCH_OPTIONS=-terse -pe smp {config['number_of_cores']} -q long -N pcr_train",
+        "pinn": f"BATCH_OPTIONS=-terse -pe smp {config['number_of_cores']} -q gpu -l gpu_card=1 -N pinn_train",
+        "fno" : f"BATCH_OPTIONS=-terse -pe smp {config['number_of_cores']} -q gpu -l gpu_card=1 -N fno_train"
+    }
+
+    for model in models:
+        if system[0] == "nersc":
+            file.write(f"{nersc_batch_options[model]}\n")
+        elif system[0] == "nd":
+            file.write(f"{nd_batch_options[model]}\n")
+
+        file.write(f"$(WORKFLOW_LOCATION)/training/{model}_train.log:")
+        for i in range(config["number_of_simulations"]):
+            file.write(f" $(WORKFLOW_LOCATION)/simulations/of_sim.{i}")
+        file.write("\n")
+        file.write(f"\tsh {system[1]}/{model}_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model} > $(WORKFLOW_LOCATION)/training/{model}_train.log 2>&1\n")
+        file.write("\n")
+
+def detect_system() -> tuple:
+    result = subprocess.run(
+        ["hostname", "-f"],
+        capture_output=True,
+        text=True
+    )
+    hostname = str(result.stdout).strip()
+
+    system = ""
+    batch = ""
+    if "nersc.gov" in hostname:
+        system = "nersc"
+        batch = "slurm"
+    elif "nd.edu" in hostname:
+        system = "nd"
+        batch = "uge"
+    else:
+        system = "ucsb"
+        batch = "slurm"
+
+    return (system, batch)
+
+def create_makeflow(global_vars: dict, config: dict) -> None:
+    workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
+    makeflow_file = f"{workflow_location}/cfdaai.makeflow"
+
+    system = detect_system()
+
+    models = []
     with open("config.sh", "r") as file:
         for line in file:
             if line.strip().startswith("TRAIN_MODELS"):
                 models = line.split("=")[1].strip().strip('"').split(" ")
 
     with open(makeflow_file, "w") as file:
-        file.write("# --- Configuration ---\n")
-        file.write("WORK_DIR=.\n")
-        file.write(f"WORKFLOW_NUMBER={global_vars["workflow_counter"]}\n")
-        file.write(f"WORKFLOW_LOCATION={workflow_location}\n")
-        file.write(f"RESULTS_DIR=results/run_{global_vars["start_time"]}/workflow_{global_vars["workflow_counter"]}\n")
-        file.write(f"START_TIME={global_vars["start_time"]}\n")
-        file.write(f"LOGS_DIR={global_vars["log_location"]}\n")
-        file.write(f"SIMULATION_THREADS={config["number_of_cores"]}\n")
-        file.write(f"NUM_SIMULATIONS={config["number_of_simulations"]}\n")
-        file.write("export WORK_DIR\n")
-        file.write("export WORKFLOW_NUMBER\n")
-        file.write("export WORKFLOW_LOCATION\n")
-        file.write("export RESULTS_DIR\n")
-        file.write("export LOGS_DIR\n")
-        file.write("export SIMULATION_THREADS\n")
-        file.write("export NUM_SIMULATIONS\n")
-        file.write("\n\n")
-       
+        print_prologue(file, workflow_location, global_vars, config)
         print_phase(file, "CFDaAI Pipeline - Makeflow")
-        file.write("\n\n")
+        file.write("\n")
 
         # phase 1
         print_phase(file, "Phase 1: Data Acquisition")
         file.write("$(WORKFLOW_LOCATION)/pipeline.0:\n")
         file.write("\tLOCAL ./utils/get_data.sh > $(WORKFLOW_LOCATION)/pipeline.0 2>&1\n")
-        file.write("\n")
-        
-
-
+        file.write("\n\n")
 
         # phase 2
         print_phase(file, "Phase 2: Simulations")
-        for i in range(config["number_of_simulations"]):
-            file.write(f"{sim_options} -N cfd_sim_{i}\n")
-            file.write(f"$(WORKFLOW_LOCATION)/simulations/of_sim.{i}: $(WORKFLOW_LOCATION)/pipeline.0\n")
-            file.write(f"\tsh $(WORK_DIR)/uge/simulation_uge.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} > $(WORKFLOW_LOCATION)/simulations/of_sim.{i} 2>&1\n")
-        file.write("\n")
-
-
+        print_simulations(file, system, config)
+        file.write("\n\n")
 
         # phase 3
         print_phase(file, "Phase 3: Training")
-        for model in models:
-            if model == "pcr":
-                file.write(f"{pcr_options}\n")
-            elif model == "pinn":
-                file.write(f"{pinn_options}\n")
-            elif model == "fno":
-                file.write(f"{fno_options}\n")
-            else:
-                print(f"Unknown model {model}")
-                sys.exit(1)
-
-            file.write(f"$(WORKFLOW_LOCATION)/training/{model}_train.log:")
-            for i in range(config["number_of_simulations"]):
-                file.write(f" $(WORKFLOW_LOCATION)/simulations/of_sim.{i}")
-            file.write("\n")
-            file.write(f"\tsh uge/{model}_train_uge.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model} > $(WORKFLOW_LOCATION)/training/{model}_train.log 2>&1\n")
-            file.write("\n")
-            
+        print_training(file, system, models, config)
+        file.write("\n\n")
 	
         # phase 4
         print_phase(file, "Phase 4: Evaluation")
@@ -91,11 +126,8 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
         file.write("\n")
 
 
-
-
 if __name__ == "__main__":
     from datetime import datetime
-    import os
     start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
     config = {
         "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
@@ -113,7 +145,7 @@ if __name__ == "__main__":
         "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log"
     }
 
-    workflow_location = f"{global_vars["log_location"]}/workflows/{global_vars["workflow_counter"]}"
+    workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
 
     os.makedirs(f"{workflow_location}", exist_ok=True)
     os.makedirs(f"{workflow_location}/simulations", exist_ok=True)
