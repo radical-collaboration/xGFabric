@@ -122,7 +122,7 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
         for model in models:
             file.write(f" $(WORKFLOW_LOCATION)/training/{model}_train.log")
         file.write("\n")
-        file.write("\t LOCAL ./utils/evaluation.sh > $(WORKFLOW_LOCATION)/pipeline.3 2>&1\n")
+        file.write("\tLOCAL ./utils/evaluation.sh > $(WORKFLOW_LOCATION)/pipeline.3 2>&1\n")
         file.write("\n")
 
 

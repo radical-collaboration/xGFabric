@@ -130,25 +130,24 @@ archive_and_send_model() {
     log_info "Found ${#files_to_archive[@]} files to archive"
     
     # Create tar archive (use relative paths within output_dir)
-    pushd "$output_dir" > /dev/null
     local relative_files=()
     for file in "${files_to_archive[@]}"; do
         # Use path relative to output_dir, not just basename
         local rel_path="${file#$output_dir/}"
         relative_files+=("$rel_path")
     done
-    
-    if tar -czf "$archive_path" "${relative_files[@]}"; then
+
+    if tar -czf "$archive_path" -C "$output_dir" "${relative_files[@]}"; then
         local archive_size=$(du -h "$archive_path" | cut -f1)
         log_info "✓ Created archive: ${archive_name} (${archive_size})"
-        rm -rf "${relative_files[@]}"
+        for csv_file in "${relative_files[@]}"; do
+            rm -rf "${csv_file}"
+        done
         log_info "Removed related files to save space"
     else
         log_error "✗ Failed to create archive: ${archive_path}"
-        popd > /dev/null
         return 1
     fi
-    popd > /dev/null
     
     # Send via senspot-file-send
     local woof_endpoint="${SENSPOT_MODELS_ENDPOINT:-woof://169.231.230.76/sharedfs/models}/${model_type}.sb.woof"

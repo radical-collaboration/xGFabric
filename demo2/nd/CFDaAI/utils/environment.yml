@@ -7,6 +7,8 @@ dependencies:
  - cmake
  - gcc_linux-64
  - gxx_linux-64
+ - gnuplot
+ - imagemagick
  - h5py
  - libcurl
  - ninja
