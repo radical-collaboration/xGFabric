@@ -28,7 +28,7 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
 def print_simulations(file, system: tuple, config: dict) -> None:
     for i in range(config["number_of_simulations"]):
         if system[0] == "nersc":
-            file.write(f"BATCH_OPTIONS=--qos=regular --constraint=cpu --nodes=1 --ntasks-per-node={config['number_of_cores']} --time=00:30:00 --job-name=cfd_sim_{i}\n")
+            file.write(f"BATCH_OPTIONS=--qos=regular --constraint=cpu --ntasks={config['number_of_cores']} --time=00:15:00 --job-name=cfd_sim_{i}\n")
         elif system[0] == "nd":
             file.write(f"BATCH_OPTIONS=-terse -pe smp {config['number_of_cores']} -q long -N cfd_sim_{i}\n")
 
@@ -36,10 +36,20 @@ def print_simulations(file, system: tuple, config: dict) -> None:
         file.write(f"\tsh $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} > $(WORKFLOW_LOCATION)/simulations/of_sim.{i} 2>&1\n")
 
 def print_training(file, system: tuple, models, config: dict) -> None:
+    nersc_group = ""
+    if system[0] == "nersc":
+        nersc_group = subprocess.run(
+            ["groups"],
+            capture_output=True,
+            text=True
+        )
+
+        nersc_group = str(nersc_group.stdout).strip().split(" ")[1]
+
     nersc_batch_options = {
-        "pcr" : f"BATCH_OPTIONS=--job-name=pcr_train --qos=regular --constraint=cpu --nodes=1 --ntasks=1 --cpus-per-task={config['number_of_cores']} --time=00:05:00",
-        "pinn": f"BATCH_OPTIONS=--job-name=pinn_train --constraint=cpu --nodes=1 --ntasks=1 --cpus-per-task={config['number_of_cores']} --qos=regular --time=00:30:00",
-        "fno" : f"BATCH_OPTIONS=--job-name=fno_train --constraint=cpu --nodes=1 --ntasks=1 --cpus-per-task={config['number_of_cores']} --qos=regular --time=00:30:00",
+        "pcr" : f"BATCH_OPTIONS=--job-name=pcr_train --qos=regular --constraint=cpu --ntasks={config['number_of_cores']} --time=00:05:00",
+        "pinn": f"BATCH_OPTIONS=--job-name=pinn_train --constraint=gpu -G 1 -A {nersc_group} --ntasks={config['number_of_cores']} --qos=regular --time=00:10:00",
+        "fno" : f"BATCH_OPTIONS=--job-name=fno_train --constraint=gpu -G 1 -A {nersc_group} --ntasks={config['number_of_cores']} --qos=regular --time=00:10:00",
     }
 
     nd_batch_options = {
@@ -58,7 +68,7 @@ def print_training(file, system: tuple, models, config: dict) -> None:
         for i in range(config["number_of_simulations"]):
             file.write(f" $(WORKFLOW_LOCATION)/simulations/of_sim.{i}")
         file.write("\n")
-        file.write(f"\tsh {system[1]}/{model}_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model} > $(WORKFLOW_LOCATION)/training/{model}_train.log 2>&1\n")
+        file.write(f"\tbash {system[1]}/{model}_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model} > $(WORKFLOW_LOCATION)/training/{model}_train.log 2>&1\n")
         file.write("\n")
 
 def detect_system() -> tuple:
@@ -69,19 +79,13 @@ def detect_system() -> tuple:
     )
     hostname = str(result.stdout).strip()
 
-    system = ""
-    batch = ""
     if "nersc.gov" in hostname:
-        system = "nersc"
-        batch = "slurm"
+        return ("nersc", "slurm")
     elif "nd.edu" in hostname:
-        system = "nd"
-        batch = "uge"
+        return ("nd", "uge")
     else:
-        system = "ucsb"
-        batch = "slurm"
-
-    return (system, batch)
+        return ("ucsb", "slurm")
+    
 
 def create_makeflow(global_vars: dict, config: dict) -> None:
     workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"

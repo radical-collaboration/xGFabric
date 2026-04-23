@@ -19,7 +19,7 @@ TASK_ID="$3"
 # Find parameter file for this task ID
 PARAM_FILE="${params_dir}/sim_${TASK_ID}.json"
 
-if [[ ! -f "$PARAM_FILES" ]]; then
+if [[ ! -f "$PARAM_FILE" ]]; then
     echo "ERROR: Parameter file not found for task ${TASK_ID}"
     exit 1
 fi

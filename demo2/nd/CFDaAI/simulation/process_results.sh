@@ -56,11 +56,28 @@ if [ -z "$LATEST_TIME" ]; then
     exit 1
 fi
 
+if [ "$SYSTEM_TYPE" == "nd" ]; then
+    module --force purge
+    module add openfoam/10.0/gcc/11.5.0 > /dev/null 2>&1
+    module add paraview/5.11.2
+elif [ "$SYSTEM_TYPE" == "nersc" ]; then
+    module --force purge
+    module load spack
+    . /global/common/software/nersc9/spack/1.1.0/share/spack/setup-env.sh
+    module load conda
+    module load paraview || true  # paraview may not be needed at runtime
+    spack load openmpi@4.1.5
+    group_num=$(groups | awk -F" " '{print $2}')
+    export OPENFOAM_ROOT="/global/common/software/$group_num/openfoam"
+    source "$OPENFOAM_ROOT/OpenFOAM-dev/etc/bashrc" || true  # non-fatal: OF env may already be set
+    export LD_LIBRARY_PATH=$(spack location -i openmpi@4.1.5)/lib:$LD_LIBRARY_PATH
+fi
+
 # Export to VTK format
 VTK_START=$(date '+%s')
 echo "[TIMER] VTK export started at $(date '+%Y-%m-%d %H:%M:%S')"
 echo "Exporting results to VTK format..."
-if foamToVTK -latestTime >> log 2>&1; then
+if foamToVTK -latestTime; then
     MAIN_VTK=$(find ./VTK -maxdepth 1 -name "*.vtk" -type f | sort -n | tail -1)
     if [ -z "$MAIN_VTK" ]; then
         echo "ERROR: VTK export ran but no VTK file found"

@@ -167,15 +167,11 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
 
             system = detect_system()
 
-            subprocess.run(
-                ["makeflow", "-T", system[1], makeflow_location]
+            subprocess.Popen(
+                ["makeflow", "-T", system[1], makeflow_location],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
-
-            # subprocess.Popen(
-            #     ["makeflow", "-T", batch_mode, makeflow_location],
-            #     stdout=subprocess.DEVNULL,
-            #     stderr=subprocess.DEVNULL
-            # )
 
             coordinator.submit_workflow(global_vars['workflow_counter'])
             global_vars['workflow_counter'] += 1
