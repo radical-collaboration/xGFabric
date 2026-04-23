@@ -39,7 +39,7 @@ conda activate xgfabric
 git clone https://github.com/MAYHEM-Lab/cspot
 cd cspot
 git checkout caplets
-git checkout f3884aeeee1e3d166fc98dd309a380961fc01902
+git checkout ca488991d107723bb2bdfeeb305e45844caf429e
 
 git submodule update --init --recursive
 mv deps/libzmq/CMakeLists.txt deps/libzmq/CMakeLists.orig.txt
