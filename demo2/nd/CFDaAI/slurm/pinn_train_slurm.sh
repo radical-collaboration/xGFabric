@@ -56,7 +56,7 @@ cd "$TRAIN_WORK_DIR"
 
 srun -n 1 python3 "$TRAIN_SCRIPT" \
     "$DATA_DIR" \
-    "pinn_model" \
+    "pinn" \
     --output_dir "$OUTPUT_DIR" \
     --subsample 20 \
     --epochs 5 \

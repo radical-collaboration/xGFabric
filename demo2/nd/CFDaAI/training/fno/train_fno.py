@@ -148,7 +148,6 @@ log.info(f'Training: epochs={EPOCHS}  batch={BATCH}  lr={LR}  patience={PATIENCE
 # Regex patterns for different file naming conventions
 _WS_SINGLE_RE = re.compile(r'cups_structure_ws(\d+)_')  # single-file: cups_structure_ws10_*.csv
 _WS_FOLDER_RE = re.compile(r'cups_structure_ws(\d+)_')  # folder mode: cups_structure_ws10_*/
-_WS_NEW_RE    = re.compile(r'sim_\d+_ws_(-?[\d.]+)_wd_')  # new format: sim_0_ws_2.00_wd_0.csv
 _ITER_RE      = re.compile(r'_(\d+)\.csv$')             # iteration files: *_1500.csv
 
 file_pairs: list[tuple[float, Path]] = []
@@ -156,7 +155,7 @@ file_pairs: list[tuple[float, Path]] = []
 # Check if data dir contains CSV files directly (single-file format)
 # or subdirectories (multi-iteration format)
 csv_files_in_dir = list(SIMULATIONS_DIR.glob('cups_structure_ws*.csv'))
-csv_files_new    = list(SIMULATIONS_DIR.glob('sim_*_ws_*.csv'))
+csv_files_new    = list(SIMULATIONS_DIR.glob('sim_*.csv'))
 subdirs_in_dir   = [d for d in SIMULATIONS_DIR.iterdir() if d.is_dir() and _WS_FOLDER_RE.match(d.name)]
 
 if csv_files_in_dir:
@@ -172,14 +171,19 @@ if csv_files_in_dir:
     log.info(f'Found {len(file_pairs)} CSV files')
 
 elif csv_files_new:
-    # NEW FORMAT: sim_N_ws_X.XX_wd_Y.csv
-    log.info('Detected new naming format (sim_N_ws_X.XX_wd_Y.csv)')
+    # NEW FORMAT: sim_N.csv
+    log.info('Detected new naming format (sim_N.csv)')
     
+    params_file = str(SIMULATIONS_DIR).split("simulations")[0]
+    params_file += "params/sim_params.csv"
+    with open(params_file, 'r') as param_file:
+        lines = param_file.readlines()
+
     for csv_path in sorted(csv_files_new):
-        m = _WS_NEW_RE.search(csv_path.name)
-        if m:
-            ws = float(m.group(1))
-            file_pairs.append((ws, csv_path))
+        filename = os.path.basename(csv_path)
+        sim_number = int(re.search(r'\d+', filename).group())
+        ws = float(lines[sim_number + 1].split(",")[0])
+        file_pairs.append((ws, csv_path))
     
     log.info(f'Found {len(file_pairs)} CSV files')
     

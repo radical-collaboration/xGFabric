@@ -13,7 +13,7 @@ from datetime import datetime
 
 
 def convert(input_file, out):
-    out.write('dt,windspeed,windavg,winddir\n')
+    out.write('dt,windspeed_ms,windavg_ms,winddir\n')
     count = 0
     with open(input_file, 'r') as f:
         for line in f:
@@ -29,8 +29,8 @@ def convert(input_file, out):
                     continue
                 timestamp_str = meta_part.split()[0]
                 dt = datetime.fromtimestamp(float(timestamp_str)).isoformat()
-                windspeed = float(fields[3])
-                windavg   = float(fields[4])
+                windspeed = float(fields[3]) * 0.44704  # mph -> m/s
+                windavg   = float(fields[4]) * 0.44704  # mph -> m/s
                 winddir   = float(fields[5])
                 out.write(f'{dt},{windspeed},{windavg},{winddir}\n')
                 count += 1

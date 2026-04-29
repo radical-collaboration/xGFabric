@@ -45,10 +45,6 @@ def main():
 
         wind_speeds = pd.to_numeric(df[ws_col], errors='coerce').dropna()
 
-        if wind_speeds.max() > 50:  # Likely in mph
-            wind_speeds = wind_speeds * 0.44704
-            print(f"[INFO] {ts()} Converted wind speeds from mph to m/s", file=sys.stderr)
-
         if wd_col:
             wind_dirs = pd.to_numeric(df[wd_col], errors='coerce').fillna(0)
         else:

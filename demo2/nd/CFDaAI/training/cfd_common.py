@@ -7,6 +7,7 @@ used by both PINN and FNO training pipelines.
 import logging
 import glob
 import os
+import re
 import pandas as pd
 
 # -----------------------------
@@ -100,9 +101,9 @@ def read_cfd_data(filepath_or_dir, pattern="cups_structure_ws*.csv"):
         # Try primary pattern, then fallback to new naming convention
         files = sorted(glob.glob(os.path.join(filepath_or_dir, pattern)))
         if not files:
-            files = sorted(glob.glob(os.path.join(filepath_or_dir, 'sim_*_ws_*.csv')))
+            files = sorted(glob.glob(os.path.join(filepath_or_dir, 'sim_*.csv')))
             if files:
-                logging.info(f"Found {len(files)} files matching new naming pattern 'sim_*_ws_*.csv'")
+                logging.info(f"Found {len(files)} files matching new naming pattern 'sim_*.csv'")
         else:
             logging.info(f"Found {len(files)} files matching pattern '{pattern}'")
         if not files:
@@ -111,19 +112,19 @@ def read_cfd_data(filepath_or_dir, pattern="cups_structure_ws*.csv"):
         # If single file
         logging.info(f"Reading single file: {filepath_or_dir}")
         files = [filepath_or_dir]
-    
+
+    params_file = str(filepath_or_dir).split("simulations")[0]
+    params_file += "params/sim_params.csv"
+    with open(params_file, 'r') as param_file:
+        lines = param_file.readlines()
+
     for file in files:
         try:
             # Extract wind speed from filename
             # Supports: cups_structure_ws10_*.csv  OR  sim_N_ws_2.00_wd_Y.csv
             filename = os.path.basename(file)
-            import re
-            ws_match = re.search(r'_ws_?(-?[\d.]+)', filename)
-            if ws_match:
-                ws = abs(float(ws_match.group(1)))
-            else:
-                # Fallback: old split method
-                ws = float(filename.split("ws")[-1].split("_")[0])
+            sim_number = int(re.search(r'\d+', filename).group())       
+            ws = float(lines[sim_number + 1].split(",")[0])
             
             # Read and process file
             df = pd.read_csv(file)

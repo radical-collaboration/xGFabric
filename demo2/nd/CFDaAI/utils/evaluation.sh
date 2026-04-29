@@ -90,73 +90,34 @@ archive_and_send_model() {
     
     log_subsection "Archiving and sending ${model_type} model"
     
-    # Create archive directory
-    local archive_dir="${output_dir}/archives"
-    ensure_dir "$archive_dir"
-    
-    # Generate archive filename with timestamp
-    local timestamp=$(date +%Y%m%d_%H%M%S)
-    local archive_name="${model_type}_${timestamp}.tar.gz"
-    local archive_path="${archive_dir}/${archive_name}"
-    
-    # Determine which files to archive based on model type
-    local files_to_archive=()
-    
     case "$model_type" in
         pcr)
-            # PCR: CSV coefficient files and summary JSON
-            mapfile -t files_to_archive < <(find "$output_dir" -type f \( -name 'pcr_coefficients_*.csv' -o -name 'training_summary.json' \) 2>/dev/null)
+            archive_name="pcr_$(date +%Y%m%d_%H%M%S).tar.gz"
+            cp "${output_dir}/archives/pcr.tar.gz" "${output_dir}/archives/${archive_name}"
             ;;
         pinn)
-            # PINN: h5 weights and JSON metadata files (check subdirectories for experiment_* dirs)
-            mapfile -t files_to_archive < <(find "$output_dir" -type f \( -name '*.weights.h5' -o -name '*.normalization.json' -o -name '*.model_meta.json' -o -name '*.run.json' \) 2>/dev/null)
+            archive_name="pinn_$(date +%Y%m%d_%H%M%S).tar.gz"
+            cp "${output_dir}/archives/pinn.tar.gz" "${output_dir}/archives/${archive_name}"
             ;;
         fno)
-            # FNO: h5 weights and JSON metadata files
-            mapfile -t files_to_archive < <(find "$output_dir" -type f \( -name 'model.weights.h5' -o -name 'model_meta.json' -o -name 'test_metrics.json' -o -name 'normalization.json' \) 2>/dev/null)
+            archive_name="fno_$(date +%Y%m%d_%H%M%S).tar.gz"
+            cp "${output_dir}/archives/fno.tar.gz" "${output_dir}/archives/${archive_name}"
             ;;
         *)
             log_error "Unknown model type for archiving: ${model_type}"
             return 1
             ;;
     esac
-    
-    # Check if we found any files
-    if [[ ${#files_to_archive[@]} -eq 0 ]]; then
-        log_warn "No model files found to archive in: ${output_dir}"
-        return 0
-    fi
-    
-    log_info "Found ${#files_to_archive[@]} files to archive"
-    
-    # Create tar archive (use relative paths within output_dir)
-    local relative_files=()
-    for file in "${files_to_archive[@]}"; do
-        # Use path relative to output_dir, not just basename
-        local rel_path="${file#$output_dir/}"
-        relative_files+=("$rel_path")
-    done
-
-    if tar -czf "$archive_path" -C "$output_dir" "${relative_files[@]}"; then
-        local archive_size=$(du -h "$archive_path" | cut -f1)
-        log_info "✓ Created archive: ${archive_name} (${archive_size})"
-        for csv_file in "${relative_files[@]}"; do
-            rm -rf "${csv_file}"
-        done
-        log_info "Removed related files to save space"
-    else
-        log_error "✗ Failed to create archive: ${archive_path}"
-        return 1
-    fi
-    
     # Send via senspot-file-send
-    local woof_endpoint="${SENSPOT_MODELS_ENDPOINT:-woof://169.231.230.76/sharedfs/models}/${model_type}.sb.woof"
-    local send_log="${archive_dir}/send_${model_type}_${timestamp}.log"
+    local woof_endpoint="${SENSPOT_MODELS_ENDPOINT:-woof://169.231.230.76/sharedfs/models}/${model_type}.nd.woof"
+    local archive_dir="${output_dir}/archives"
+    local archive_path="${archive_dir}/${archive_name}"
+    local send_log="${archive_dir}/send_${model_type}.log"
     
     log_info "Sending to: ${woof_endpoint}"
     
     # Send with verbose output redirected to log only (not console)
-    if senspot-file-send -f "$archive_path" -W "$woof_endpoint" -V > "$send_log" 2>&1; then
+    if ./senspot/senspot-file-send -f "$archive_path" -W "$woof_endpoint" -V > "$send_log" 2>&1; then
         # Extract transfer rate from log for summary
         local transfer_rate=$(grep -oP '\d+\.\d+ megabytes / second' "$send_log" | head -1 || echo "")
         if [[ -n "$transfer_rate" ]]; then

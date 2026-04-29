@@ -7,7 +7,6 @@ from create_makeflow import create_makeflow, detect_system
 
 start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
 
-# config
 config = {
     "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
     "max_number_of_workflows"  : 1,   # total number of workflows that will be submitted
@@ -15,6 +14,7 @@ config = {
     "time_check_workflows"     : 1,      # how often the program should check if it can submit new workflows (in seconds)
     "number_of_cores"          : 32,     # how many cores the simulations should run on
     "number_of_simulations"    : 10,     # how many OpenFOAM simulations per workflow
+    "workqueue_mode"           : True     # 
 }
 
 global_vars = {
@@ -167,11 +167,21 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator):
 
             system = detect_system()
 
-            subprocess.Popen(
-                ["makeflow", "-T", system[1], makeflow_location],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+            args = []
+            if config['workqueue_mode']:
+                args = ["makeflow", "-T", "wq", "-N", "xgfabric", makeflow_location, "-d", "all", "-o", "makeflow.debug"]
+            else:
+                args = ["makeflow", "-T", system[1], makeflow_location, "-d", "all", "-o", "makeflow.debug"]
+
+            subprocess.run(
+                args
             )
+
+            # subprocess.Popen(
+            #     args,
+            #     stdout=subprocess.DEVNULL,
+            #     stderr=subprocess.DEVNULL
+            # )
 
             coordinator.submit_workflow(global_vars['workflow_counter'])
             global_vars['workflow_counter'] += 1

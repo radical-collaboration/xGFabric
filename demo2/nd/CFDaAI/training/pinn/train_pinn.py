@@ -25,7 +25,7 @@ def find_cfd_csv_files(directory):
     #   Old: cups_structure_ws<N>_*.csv
     #   New: sim_<N>_ws_<X.XX>_wd_<Y>.csv
     csv_files = glob.glob(os.path.join(directory, 'cups_structure_ws*.csv'))
-    csv_files += glob.glob(os.path.join(directory, 'sim_*_ws_*.csv'))
+    csv_files += glob.glob(os.path.join(directory, 'sim_*.csv'))
     return sorted(set(csv_files))
 
 
@@ -36,7 +36,7 @@ def validate_input(csv_dir):
     
     csv_files = find_cfd_csv_files(csv_dir)
     if not csv_files:
-        raise ValueError(f"No CFD CSV files found in {csv_dir} (tried cups_structure_ws*.csv and sim_*_ws_*.csv)")
+        raise ValueError(f"No CFD CSV files found in {csv_dir} (tried cups_structure_ws*.csv and sim_*.csv)")
     
     return csv_files
 

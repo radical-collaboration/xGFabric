@@ -158,9 +158,8 @@ def prepare_machine_data(sensor_folder, simulations_folder, partitions_file, out
         raise FileNotFoundError(f"sensor_out.csv not found in {sensor_folder}")
     
     sensor_data = pd.read_csv(sensor_file).sort_values(by='dt')
-    # Convert mph to m/s and round
-    sensor_data['windspeed'] = (sensor_data['windspeed'] * 0.44704).round()
-    sensor_data['windavg'] = (sensor_data['windavg'] * 0.44704).round()
+    sensor_data['windspeed_ms'] = sensor_data['windspeed_ms'].round()
+    sensor_data['windavg_ms'] = sensor_data['windavg_ms'].round()
     sensor_values = sensor_data[column].values.tolist()
     
     print(f"[{ts()}] [INFO]   Loaded {len(sensor_data)} sensor readings (col={column})")
@@ -171,14 +170,16 @@ def prepare_machine_data(sensor_folder, simulations_folder, partitions_file, out
     # Dictionary to store U_Magnitude for each windspeed
     u_mag_by_ws = {}
     available_ws = []
-    
+
+    params_file = str(simulations_folder).removesuffix("simulations")
+    params_file += "params/sim_params.csv"
+    with open(params_file, 'r') as file:
+        lines = file.readlines()
+
     sim_start = time.time()
     for csv_file in tqdm(csv_files, desc="Processing simulations", unit="file"):
-        match = re.search(r'ws_(-?[\d.]+)_wd', csv_file)
-        if not match:
-            continue
-        
-        ws_value = float(match.group(1))
+        sim_number = int(re.search(r'\d+', csv_file).group())       
+        ws_value = float(lines[sim_number + 1].split(",")[0])
         available_ws.append(ws_value)
         
         sim_file = os.path.join(simulations_folder, csv_file)
@@ -276,8 +277,8 @@ def main():
     parser.add_argument('simulations_folder', help='Path to folder containing simulation CSVs')
     parser.add_argument('partitions_file', help='Path to pcr_partitions_full.json')
     parser.add_argument('output_dir', help='Output directory for machine data files')
-    parser.add_argument('--column', default='windavg', choices=['windavg', 'windspeed'],
-                        help='Column to use from sensor data (default: windavg)')
+    parser.add_argument('--column', default='windavg_ms', choices=['windavg_ms', 'windspeed_ms'],
+                        help='Column to use from sensor data (default: windavg_ms)')
     parser.add_argument('--n_components', type=int, default=12,
                         help='Number of PCA components (default: 12)')
     parser.add_argument('--sequence_length', type=int, default=12,
@@ -297,6 +298,7 @@ def main():
         print(f"Error: Partitions file not found: {args.partitions_file}")
         sys.exit(1)
     
+
     prepare_machine_data(
         args.sensor_folder,
         args.simulations_folder,

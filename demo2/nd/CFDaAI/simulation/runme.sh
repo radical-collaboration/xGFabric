@@ -187,7 +187,7 @@ echo "DEBUG: SIM_INDEX='$SIM_INDEX' WIND_DIR='$WIND_DIR'"
 if [ -n "$SIM_INDEX" ] && [ -n "$WIND_DIR" ]; then
     # SIM_INDEX and WIND_DIR should be passed by the caller (parallel orchestrator)
     # Keep the original values (with dots) for consistency with parallel orchestrator
-    RENAMED_CSV="${output_results_dir}/sim_${SIM_INDEX}_ws_${WS_LABEL}_wd_${WIND_DIR}.csv"
+    RENAMED_CSV="${output_results_dir}/sim_${SIM_INDEX}.csv"
     mv "$CSV_FILE" "$RENAMED_CSV"
     echo "Renamed CSV for parallel tracking: $RENAMED_CSV"
     CSV_FILE="$RENAMED_CSV"

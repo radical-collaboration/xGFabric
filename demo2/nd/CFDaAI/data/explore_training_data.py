@@ -61,27 +61,24 @@ def parse_csv_file(filepath):
         reader = csv.DictReader(f)
         for row in reader:
             try:
-                wind_speed_mph = float(row['windspeed'])
+                wind_speed_ms = float(row.get('windspeed_ms', row.get('windspeed', 0)))
                 wind_dir = float(row['winddir'])
-                
+
                 # Skip invalid values (-1 is sentinel for bad data)
-                if wind_speed_mph < 0 or wind_dir < 0:
+                if wind_speed_ms < 0 or wind_dir < 0:
                     parse_errors += 1
                     continue
-                
+
                 # Validate wind direction is in valid range (0-359)
                 if not (0 <= wind_dir <= 360):
                     parse_errors += 1
                     continue
-                
-                # Validate wind speed is reasonable (0-112 mph ~ 0-50 m/s)
-                if not (0 <= wind_speed_mph <= 112):
+
+                # Validate wind speed is reasonable (0-50 m/s)
+                if not (0 <= wind_speed_ms <= 50):
                     parse_errors += 1
                     continue
-                
-                # Convert mph to m/s
-                wind_speed_ms = wind_speed_mph * MPH_TO_MS
-                
+
                 results.append({"speed": wind_speed_ms, "direction": wind_dir})
             except (ValueError, KeyError) as e:
                 parse_errors += 1

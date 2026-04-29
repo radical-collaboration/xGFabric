@@ -51,9 +51,9 @@ fetch_sensor_data() {
             }
         fi
 
-        # Convert raw CSPOT format to CSV if needed
-        # (skipped automatically when _fetch_from_historical wrote sensor_out.csv directly)
-        if [[ -f "$output_dir/sensor_data.txt" && ! -f "$output_dir/sensor_out.csv" ]]; then
+        # Convert raw CSPOT format to CSV (always overwrite — sensor_data.txt is fresh each run)
+        # (skipped when _fetch_from_historical already wrote sensor_out.csv directly)
+        if [[ -f "$output_dir/sensor_data.txt" ]]; then
             _convert_cspot_to_csv "$output_dir/sensor_data.txt" "$output_dir/sensor_out.csv" || {
                 log_error "Failed to convert CSPOT data to CSV"
                 return 1
@@ -170,7 +170,7 @@ _fetch_from_cspot() {
         fi
         
         log_warn "load_historical_data.py not found, using direct CSPOT fetch"
-        if ! "$senspot_path" -W "$cspot_endpoint" > "${output_dir}/sensor_out.csv"; then
+        if ! "$senspot_path" -W "$cspot_endpoint" > "${output_dir}/sensor_data.csv"; then
             log_error "senspot-get failed to fetch from CSPOT"
             return 1
         fi

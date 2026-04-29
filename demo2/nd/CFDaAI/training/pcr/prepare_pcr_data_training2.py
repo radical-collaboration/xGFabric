@@ -156,9 +156,8 @@ def prepare_pcr_data(sensor_folder: str, simulations_folder: str,
     
     sensor_data = pd.read_csv(sensor_file).sort_values(by='dt')
     
-    # Convert mph to m/s and round to integer (reduces unique simulation count)
-    sensor_data['windspeed'] = (sensor_data['windspeed'] * 0.44704).round()
-    sensor_data['windavg'] = (sensor_data['windavg'] * 0.44704).round()
+    sensor_data['windspeed_ms'] = sensor_data['windspeed_ms'].round()
+    sensor_data['windavg_ms'] = sensor_data['windavg_ms'].round()
     
     out_values = sensor_data[column].values
     print(f"Loaded {len(sensor_data)} sensor readings, using column: {column}")
@@ -240,9 +239,8 @@ def prepare_pcr_data_for_grid(sensor_folder: str, simulations_folder: str,
         raise FileNotFoundError(f"sensor_out.csv not found in {sensor_folder}")
     
     sensor_data = pd.read_csv(sensor_file).sort_values(by='dt')
-    # Convert mph to m/s and round to integer (reduces unique simulation count)
-    sensor_data['windspeed'] = (sensor_data['windspeed'] * 0.44704).round()
-    sensor_data['windavg'] = (sensor_data['windavg'] * 0.44704).round()
+    sensor_data['windspeed_ms'] = sensor_data['windspeed_ms'].round()
+    sensor_data['windavg_ms'] = sensor_data['windavg_ms'].round()
     out_values = sensor_data[column].values
     print(f"Loaded {len(sensor_data)} sensor readings, using column: {column}")
     

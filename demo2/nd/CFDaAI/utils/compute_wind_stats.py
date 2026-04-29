@@ -16,8 +16,8 @@ def main():
 
     sensor_csv = sys.argv[1]
     df = pd.read_csv(sensor_csv)
-    col = 'windspeed' if 'windspeed' in df.columns else df.columns[1]
-    vals = pd.to_numeric(df[col], errors='coerce').dropna() * 0.44704
+    col = 'windspeed_ms' if 'windspeed_ms' in df.columns else ('windspeed' if 'windspeed' in df.columns else df.columns[1])
+    vals = pd.to_numeric(df[col], errors='coerce').dropna()
     print(f'{max(2.0, vals.min()):.1f},{vals.max():.1f}')
 
 

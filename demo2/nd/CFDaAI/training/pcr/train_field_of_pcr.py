@@ -246,8 +246,8 @@ def train_field_of_pcr(sensor_folder, simulations_folder, nx=10, ny=5, nz=1,
         raise FileNotFoundError(f"sensor_out.csv not found in {sensor_folder}")
     
     sensor_data = pd.read_csv(sensor_file).sort_values(by='dt')
-    sensor_data['windspeed'] = (sensor_data['windspeed'] * 0.44704).round()
-    sensor_data['windavg'] = (sensor_data['windavg'] * 0.44704).round()
+    sensor_data['windspeed_ms'] = sensor_data['windspeed_ms'].round()
+    sensor_data['windavg_ms'] = sensor_data['windavg_ms'].round()
     out_values = sensor_data[column].values
     sensor_load_end = time.time()
     sensor_load_elapsed = sensor_load_end - sensor_load_start
@@ -351,8 +351,8 @@ def main():
     parser.add_argument('--nx', type=int, default=10, help='Number of points in X direction (default: 10)')
     parser.add_argument('--ny', type=int, default=5, help='Number of points in Y direction (default: 5)')
     parser.add_argument('--nz', type=int, default=1, help='Number of points in Z direction (default: 1)')
-    parser.add_argument('--column', default='windavg', choices=['windavg', 'windspeed'],
-                        help='Column to use from sensor_out.csv (default: windavg)')
+    parser.add_argument('--column', default='windavg_ms', choices=['windavg_ms', 'windspeed_ms'],
+                        help='Column to use from sensor_out.csv (default: windavg_ms)')
     parser.add_argument('--n_components', type=int, default=12, help='Number of PCA components (default: 12)')
     parser.add_argument('--sequence_length', type=int, default=12, help='Sequence length (default: 12)')
     parser.add_argument('--output_dir', '-o', help='Output directory for coefficients')

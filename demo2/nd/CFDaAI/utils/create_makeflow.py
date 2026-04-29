@@ -1,10 +1,11 @@
 #!/bin/python3
-import sys, os, subprocess
+import os, subprocess
 
 def print_phase(file, message: str) -> None:
     file.write("# ============================================================\n")
     file.write(f"# {message}\n")
     file.write("# ============================================================\n")
+
 
 def print_prologue(file, workflow_location: str, global_vars: dict, config: dict) -> None:
     file.write("# --- Configuration ---\n")
@@ -25,15 +26,26 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
     file.write("export NUM_SIMULATIONS\n")
     file.write("\n")
 
-def print_simulations(file, system: tuple, config: dict) -> None:
-    for i in range(config["number_of_simulations"]):
-        if system[0] == "nersc":
-            file.write(f"BATCH_OPTIONS=--qos=regular --constraint=cpu --ntasks={config['number_of_cores']} --time=00:15:00 --job-name=cfd_sim_{i}\n")
-        elif system[0] == "nd":
-            file.write(f"BATCH_OPTIONS=-terse -pe smp {config['number_of_cores']} -q long -N cfd_sim_{i}\n")
 
-        file.write(f"$(WORKFLOW_LOCATION)/simulations/of_sim.{i}: $(WORKFLOW_LOCATION)/pipeline.0\n")
-        file.write(f"\tsh $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} > $(WORKFLOW_LOCATION)/simulations/of_sim.{i} 2>&1\n")
+def print_simulations(file, system: tuple, config: dict) -> None:
+    if config['workqueue_mode']:
+        file.write("CATEGORY=\"simulations\"\n")
+        file.write(f"CORES={config['number_of_cores']}\n")
+        file.write("GPUS=0\n")
+    for i in range(config["number_of_simulations"]):
+        if config['workqueue_mode']:
+            file.write(f"$(RESULTS_DIR)/simulations/sim_{i}.csv: $(WORKFLOW_LOCATION)/pipeline.0 $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR) tasks env simulation lib $(WORKFLOW_LOCATION)/simulations\n")
+            file.write(f"\tsh $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i}\n")
+        else:
+            if system[0] == "nersc":
+                file.write(f"BATCH_OPTIONS=--qos=regular --constraint=cpu --ntasks={config['number_of_cores']} --time=00:15:00 --job-name=cfd_sim_{i}\n")
+            elif system[0] == "nd":
+                file.write(f"BATCH_OPTIONS=-terse -pe smp {config['number_of_cores']} -q long -N cfd_sim_{i}\n")
+
+            file.write(f"$(WORKFLOW_LOCATION)/simulations/of_sim.{i}: $(WORKFLOW_LOCATION)/pipeline.0\n")
+            file.write(f"\tsh $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} > $(WORKFLOW_LOCATION)/simulations/of_sim.{i} 2>&1\n")
+        file.write("\n")
+
 
 def print_training(file, system: tuple, models, config: dict) -> None:
     nersc_group = ""
@@ -58,18 +70,45 @@ def print_training(file, system: tuple, models, config: dict) -> None:
         "fno" : f"BATCH_OPTIONS=-terse -pe smp {config['number_of_cores']} -q gpu -l gpu_card=1 -N fno_train"
     }
 
-    for model in models:
-        if system[0] == "nersc":
-            file.write(f"{nersc_batch_options[model]}\n")
-        elif system[0] == "nd":
-            file.write(f"{nd_batch_options[model]}\n")
+    if config['workqueue_mode']:
+        if ("pinn" in models) or ("fno" in models):
+            file.write("CATEGORY=\"training_gpu\"\n")
+            file.write(f"CORES={config['number_of_cores']}\n")
+            file.write("GPUS=1\n")
+            for model in models:
+                if model == "pcr":
+                    continue
+                file.write(f"$(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz: {system[1]}/{model}_train_{system[1]}.sh training/cfd_common.py training/{model} env lib $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
+                for i in range(config["number_of_simulations"]):
+                    file.write(f" $(RESULTS_DIR)/simulations/sim_{i}.csv")
+                file.write("\n")
+                file.write(f"\tbash {system[1]}/{model}_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model}\n")
+                file.write("\n")
+        if "pcr" in models:
+            file.write("CATEGORY=\"training_cpu\"\n")
+            file.write(f"CORES={config['number_of_cores']}\n")
+            file.write(f"GPUS=0\n")
 
-        file.write(f"$(WORKFLOW_LOCATION)/training/{model}_train.log:")
-        for i in range(config["number_of_simulations"]):
-            file.write(f" $(WORKFLOW_LOCATION)/simulations/of_sim.{i}")
-        file.write("\n")
-        file.write(f"\tbash {system[1]}/{model}_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model} > $(WORKFLOW_LOCATION)/training/{model}_train.log 2>&1\n")
-        file.write("\n")
+            file.write(f"$(RESULTS_DIR)/models/pcr/archives/pcr.tar.gz: {system[1]}/pcr_train_{system[1]}.sh training/cfd_common.py training/pcr env lib $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
+            for i in range(config["number_of_simulations"]):
+                file.write(f" $(RESULTS_DIR)/simulations/sim_{i}.csv")
+            file.write("\n")
+            file.write(f"\tbash {system[1]}/pcr_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/pcr\n")
+            file.write("\n")
+    else:
+        for model in models:
+            if system[0] == "nersc":
+                file.write(f"{nersc_batch_options[model]}\n")
+            elif system[0] == "nd":
+                file.write(f"{nd_batch_options[model]}\n")
+
+            file.write(f"$(WORKFLOW_LOCATION)/training/{model}_train.log:")
+            for i in range(config["number_of_simulations"]):
+                file.write(f" $(RESULTS_DIR)/simulations/sim_{i}.csv")
+            file.write("\n")
+            file.write(f"\tbash {system[1]}/{model}_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model} > $(WORKFLOW_LOCATION)/training/{model}_train.log 2>&1\n")
+            file.write("\n")
+
 
 def detect_system() -> tuple:
     result = subprocess.run(
@@ -85,7 +124,7 @@ def detect_system() -> tuple:
         return ("nd", "uge")
     else:
         return ("ucsb", "slurm")
-    
+
 
 def create_makeflow(global_vars: dict, config: dict) -> None:
     workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
@@ -106,7 +145,11 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
 
         # phase 1
         print_phase(file, "Phase 1: Data Acquisition")
-        file.write("$(WORKFLOW_LOCATION)/pipeline.0:\n")
+        if config['workqueue_mode']:
+            file.write("CATEGORY=\"data_acquisition\"\n")
+            file.write("CORES=1\n")
+            file.write("GPUS=0\n")
+        file.write("$(WORKFLOW_LOCATION)/pipeline.0 $(RESULTS_DIR) $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv:\n")
         file.write("\tLOCAL ./utils/get_data.sh > $(WORKFLOW_LOCATION)/pipeline.0 2>&1\n")
         file.write("\n\n")
 
@@ -122,9 +165,13 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
 	
         # phase 4
         print_phase(file, "Phase 4: Evaluation")
+        if config['workqueue_mode']:
+            file.write("CATEGORY=\"evaluation\"\n")
+            file.write("CORES=1\n")
+            file.write("GPUS=0\n")
         file.write("$(WORKFLOW_LOCATION)/pipeline.3:")
         for model in models:
-            file.write(f" $(WORKFLOW_LOCATION)/training/{model}_train.log")
+            file.write(f" $(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz")
         file.write("\n")
         file.write("\tLOCAL ./utils/evaluation.sh > $(WORKFLOW_LOCATION)/pipeline.3 2>&1\n")
         file.write("\n")
@@ -135,18 +182,20 @@ if __name__ == "__main__":
     start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
     config = {
         "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
-        "max_number_of_workflows"  : None,   # total number of workflows that will be submitted
+        "max_number_of_workflows"  : 1,   # total number of workflows that will be submitted
         "time_between_workflows"   : 5,      # minimum time (in seconds) between workflow submissions.
         "time_check_workflows"     : 1,      # how often the program should check if it can submit new workflows (in seconds)
-        "number_of_cores"          : 32,     # how many cores the simulations should run on
-        "number_of_simulations"    : 10,     # how many OpenFOAM simulations per workflow
+        "number_of_cores"          : 16,     # how many cores the simulations should run on
+        "number_of_simulations"    : 5,     # how many OpenFOAM simulations per workflow
+        "workqueue_mode"           : True     # 
     }
+
     global_vars = {
         "workflow_counter"     : 1,
         "start_time"           : start_time,
         "log_location"         : f"logs/run_{start_time}",
         "workflow_status_file" : f"logs/run_{start_time}/coordinator/workflow_status_log.csv",
-        "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log"
+        "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log",
     }
 
     workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"

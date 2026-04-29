@@ -13,6 +13,7 @@ models/
 models/*
 training/experiment_cfd_*
 simulation/cups_structure_w*
+simulation/cups_structure*
 simulations/cups_structure_*
 _dump/
 train
@@ -40,4 +41,7 @@ uge.status.*
 uge.wrapper
 slurm.wrapper
 slurm.status.*
-
+makeflow.debug
+wq-factory-*/
+.vscode/
+senspot/

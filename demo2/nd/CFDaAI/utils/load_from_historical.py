@@ -148,11 +148,13 @@ def main():
         sys.exit(1)
 
     with open(output_path, 'w', newline='') as f:
-        f.write('dt,windspeed,windavg,winddir\n')
+        f.write('dt,windspeed_ms,windavg_ms,winddir\n')
         written = 0
         for _, row in selected:
             if has_parsed:
-                f.write(f"{row['dt']},{row['windspeed']},{row['windavg']},{row['winddir']}\n")
+                windspeed = float(row['windspeed']) * 0.44704  # mph -> m/s
+                windavg   = float(row['windavg'])   * 0.44704
+                f.write(f"{row['dt']},{windspeed},{windavg},{row['winddir']}\n")
                 written += 1
             else:
                 # Raw CSPOT format: parse data field (fields[3]=windspeed, [4]=windavg, [5]=winddir)
@@ -160,8 +162,8 @@ def main():
                     fields = row['data'].split(':')
                     if len(fields) < 6:
                         continue
-                    windspeed = float(fields[3])
-                    windavg   = float(fields[4])
+                    windspeed = float(fields[3]) * 0.44704  # mph -> m/s
+                    windavg   = float(fields[4]) * 0.44704
                     winddir   = float(fields[5])
                     f.write(f"{row['dt']},{windspeed},{windavg},{winddir}\n")
                     written += 1
