@@ -102,7 +102,7 @@ archive_path="${archive_dir}/${archive_name}"
 
 # Determine which files to archive based on model type
 files_to_archive=()
-mapfile -t files_to_archive < <(find "$OUTPUT_DIR" -type f \( -name 'model.weights.h5' -o -name 'model_meta.json' -o -name 'test_metrics.json' -o -name 'normalization.json' \) 2>/dev/null)
+mapfile -t files_to_archive < <(find "$OUTPUT_DIR" -type f \( -name 'model.weights.h5' -o -name 'model_meta.json' -o -name 'test_metrics.json' -o -name 'training_history.csv' \) 2>/dev/null)
 
 # Check if we found any files
 if [[ ${#files_to_archive[@]} -eq 0 ]]; then

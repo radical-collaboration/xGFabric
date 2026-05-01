@@ -170,7 +170,7 @@ _fetch_from_cspot() {
         fi
         
         log_warn "load_historical_data.py not found, using direct CSPOT fetch"
-        if ! "$senspot_path" -W "$cspot_endpoint" > "${output_dir}/sensor_data.csv"; then
+        if ! "$senspot_path" -W "$cspot_endpoint" > "${output_dir}/sensor_data.txt"; then
             log_error "senspot-get failed to fetch from CSPOT"
             return 1
         fi
