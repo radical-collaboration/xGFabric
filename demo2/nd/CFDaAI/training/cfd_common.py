@@ -186,13 +186,13 @@ def filter_zero_velocity(df, umag_min=0.10):
             return df
     
     n_before = len(df)
-    df_filtered = df[df['U_Magnitude'] > umag_min].copy()
+    df_filtered = df[df['U_Magnitude'] >= 0].copy()
     n_after = len(df_filtered)
-    
+
     if n_before > 0:
         logging.debug(
             f"Velocity filter: {n_before} -> {n_after} points "
-            f"(removed {n_before - n_after} with |U| <= {umag_min} m/s)"
+            f"(removed {n_before - n_after} with |U| < 0 m/s)"
         )
     
     return df_filtered

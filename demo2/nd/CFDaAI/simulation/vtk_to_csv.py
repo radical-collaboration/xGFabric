@@ -55,22 +55,35 @@ def vtk_to_csv(vtk_path, output_csv):
                 for i in range(arr.shape[1]):
                     df[f"{key}_{i}"] = arr[:, i]
         
+        # Report what fields were found in the VTK
+        print(f"Fields found in VTK: {list(point_data.keys()) or '(none)'}")
+        print(f"Columns in output:   {', '.join(df.columns)}")
+
         # Calculate velocity magnitude if U components exist
         if 'U_0' in df.columns and 'U_1' in df.columns and 'U_2' in df.columns:
             df['U_Magnitude'] = np.sqrt(df['U_0']**2 + df['U_1']**2 + df['U_2']**2)
-            print(f"Velocity magnitude range: {df['U_Magnitude'].min():.3f} to {df['U_Magnitude'].max():.3f} m/s")
-        
+            umag_max = df['U_Magnitude'].max()
+            print(f"Velocity magnitude range: {df['U_Magnitude'].min():.3f} to {umag_max:.3f} m/s")
+            if umag_max < 1e-6:
+                print("INFO: Velocity magnitude is zero — zero wind speed input, zero flow output is valid.")
+        else:
+            missing = [c for c in ('U_0', 'U_1', 'U_2') if c not in df.columns]
+            print(f"ERROR: Velocity components missing from VTK: {missing}")
+            print(f"ERROR: VTK fields present: {list(point_data.keys()) or '(none)'}")
+            print("ERROR: Expected a vector field named 'U' in the VTK file.")
+            print("ERROR: Without velocity data the CSV is unusable for training.")
+            return False
+
         # Check for pressure field
         if 'p' in df.columns:
             print(f"Pressure range: {df['p'].min():.3f} to {df['p'].max():.3f} Pa")
         elif 'p_rgh' in df.columns:
             print(f"Pressure (p_rgh) range: {df['p_rgh'].min():.3f} to {df['p_rgh'].max():.3f} Pa")
-        
+
         # Save to CSV
         df.to_csv(output_csv, index=False)
         print(f"CSV saved to: {output_csv}")
-        print(f"Columns: {', '.join(df.columns)}")
-        
+
         return True
         
     except Exception as e:

@@ -158,7 +158,7 @@ def prepare_pcr_data(sensor_folder: str, simulations_folder: str,
     
     sensor_data['windspeed_ms'] = sensor_data['windspeed_ms'].round()
     sensor_data['windavg_ms'] = sensor_data['windavg_ms'].round()
-    
+
     out_values = sensor_data[column].values
     print(f"Loaded {len(sensor_data)} sensor readings, using column: {column}")
     print(f"Windspeed range: {out_values.min():.1f} - {out_values.max():.1f} m/s")
@@ -312,8 +312,8 @@ Example usage:
     parser.add_argument('--target-x', type=float, default=41.0, help='X coordinate for target point (default: 41.0)')
     parser.add_argument('--target-y', type=float, default=48.0, help='Y coordinate for target point (default: 48.0)')
     parser.add_argument('--target-z', type=float, default=4.0, help='Z coordinate for target point (default: 4.0)')
-    parser.add_argument('--column', default='windavg', choices=['windavg', 'windspeed'],
-                        help='Column to use from sensor_out.csv (default: windavg)')
+    parser.add_argument('--column', default='windavg_ms', choices=['windavg_ms', 'windspeed_ms'],
+                        help='Column to use from sensor_out.csv (default: windavg_ms)')
     parser.add_argument('--sequence_length', type=int, default=12, help='Sequence length (default: 12)')
     parser.add_argument('--output_dir', '-o', help='Output directory for data files')
     

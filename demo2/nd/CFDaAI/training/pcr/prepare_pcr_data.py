@@ -298,7 +298,6 @@ def main():
         print(f"Error: Partitions file not found: {args.partitions_file}")
         sys.exit(1)
     
-
     prepare_machine_data(
         args.sensor_folder,
         args.simulations_folder,

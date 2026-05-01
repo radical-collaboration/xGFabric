@@ -116,7 +116,7 @@ def compute_physics_loss_3d(model, x_c, y_c, z_c, ws_c,
 # ---------------------------------------------------------------------------
 # Data preparation  (matches notebook Cell 2 + Cell 3)
 # ---------------------------------------------------------------------------
-def prepare_data_3d(data_list, max_points_per_file=5000, umag_min=0.10,
+def prepare_data_3d(data_list, max_points_per_file=5000, umag_min=0.0,
                     test_size=0.20, val_size=0.10, logger=None):
     """
     Load, filter, normalise and split CFD data -- matching the notebook pipeline.
@@ -163,7 +163,7 @@ def prepare_data_3d(data_list, max_points_per_file=5000, umag_min=0.10,
         raw_v.append(df_f['U_1'].values.astype(np.float32).reshape(-1, 1))
         all_ws.extend([ws] * len(df_f))
 
-        log(f"  ws={ws:6.2f}  spatial={n_spatial:>8,}  after |U|>{umag_min}={n_clean:>8,} "
+        log(f"  ws={ws:6.2f}  spatial={n_spatial:>8,}  after |U|>=0={n_clean:>8,} "
             f"(removed {n_spatial - n_clean:,})  sampled={len(df_f):>5,}")
 
         if len(df_f) == 0:
@@ -249,8 +249,8 @@ def main():
                         help='Number of residual blocks')
     parser.add_argument('--max_points_per_file', type=int, default=5000,
                         help='Max random points per wind-speed file')
-    parser.add_argument('--umag_min', type=float, default=0.10,
-                        help='Drop points with |U| <= this (stagnation/solids)')
+    parser.add_argument('--umag_min', type=float, default=0.0,
+                        help='Drop points with |U| <= this (default: 0.0 = keep all)')
     parser.add_argument('--init_weights', type=str, default=None,
                         help='Pretrained weights for fine-tuning')
     parser.add_argument('--output_dir', type=str, default=None)
@@ -360,7 +360,8 @@ def main():
     logger.info(f"\nTraining PhysicsMLP3D for up to {args.epochs} epochs ...")
 
     for ep in range(args.epochs):
-        batch_losses = []
+        batch_loss_sum = tf.constant(0.0)
+        n_batches = 0
         for xb, yb in ds_train:
             with tf.GradientTape() as tape:
                 pred = model(xb, training=True)
@@ -375,16 +376,19 @@ def main():
             grads = tape.gradient(total_loss, model.trainable_variables)
             clipped, _ = tf.clip_by_global_norm(grads, args.clip_value)
             opt.apply_gradients(zip(clipped, model.trainable_variables))
-            batch_losses.append(float(total_loss))
+            batch_loss_sum = batch_loss_sum + total_loss
+            n_batches += 1
 
-        avg_train = np.mean(batch_losses)
+        avg_train = float(batch_loss_sum) / max(n_batches, 1)
 
         # Validation
-        val_losses = []
+        val_loss_sum = tf.constant(0.0)
+        n_val = 0
         for xb, yb in ds_val:
             pred_v = model(xb, training=False)
-            val_losses.append(float(loss_fn(yb, pred_v)))
-        avg_val = np.mean(val_losses)
+            val_loss_sum = val_loss_sum + loss_fn(yb, pred_v)
+            n_val += 1
+        avg_val = float(val_loss_sum) / max(n_val, 1)
 
         # Log every 10 epochs
         if ep % 10 == 0 or ep == args.epochs - 1:

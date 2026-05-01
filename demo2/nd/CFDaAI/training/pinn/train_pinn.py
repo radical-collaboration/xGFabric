@@ -92,8 +92,11 @@ Examples:
     parser.add_argument('--n_layers', type=int, default=4, help='Residual blocks (default: 4)')
     parser.add_argument('--max_points_per_file', type=int, default=5000,
                         help='Max random points per wind-speed file (default: 5000)')
-    parser.add_argument('--umag_min', type=float, default=0.10,
-                        help='Drop stagnation points with |U| <= this (default: 0.10)')
+    parser.add_argument('--max_total_points', type=int, default=None,
+                        help='Cap total training points across all files; overrides max_points_per_file '
+                             'by distributing the budget evenly (default: disabled)')
+    parser.add_argument('--umag_min', type=float, default=0.0,
+                        help='Drop stagnation points with |U| <= this (default: 0.0 = keep all)')
     parser.add_argument('--verbose', action='store_true', help='Verbose output')
     parser.add_argument('--init_weights', type=str, default=None, 
                         help='Path to pretrained weights for fine-tuning')
@@ -108,6 +111,15 @@ Examples:
     try:
         csv_files = validate_input(args.csv_dir)
         print(f"✓ Found {len(csv_files)} CFD data file(s)")
+
+        if args.max_total_points is not None and len(csv_files) > 0:
+            args.max_points_per_file = min(
+                args.max_points_per_file,
+                max(1, args.max_total_points // len(csv_files)),
+            )
+            print(f"✓ max_total_points={args.max_total_points} → "
+                  f"max_points_per_file={args.max_points_per_file} "
+                  f"({len(csv_files)} files)")
         
         if args.verbose:
             for csv_file in csv_files:

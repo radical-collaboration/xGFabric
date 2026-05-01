@@ -9,12 +9,12 @@ start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
 
 config = {
     "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
-    "max_number_of_workflows"  : 1,   # total number of workflows that will be submitted
+    "max_number_of_workflows"  : None,   # total number of workflows that will be submitted
     "time_between_workflows"   : 5,      # minimum time (in seconds) between workflow submissions.
     "time_check_workflows"     : 1,      # how often the program should check if it can submit new workflows (in seconds)
     "number_of_cores"          : 32,     # how many cores the simulations should run on
-    "number_of_simulations"    : 10,     # how many OpenFOAM simulations per workflow
-    "workqueue_mode"           : True     # 
+    "number_of_simulations"    : 72,     # how many OpenFOAM simulations per workflow
+    "workqueue_mode"           : True    # 
 }
 
 global_vars = {

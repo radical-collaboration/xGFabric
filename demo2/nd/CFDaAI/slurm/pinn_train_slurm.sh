@@ -12,6 +12,9 @@
 # Configuration
 ################################################################################
 
+# Use absolute path - UGE copies scripts to compute nodes
+WORK_DIR="$(pwd)"
+
 # Arguments
 DATA_DIR="${1:?Data directory required}"
 OUTPUT_DIR="${2:?Output directory required}"
@@ -40,6 +43,7 @@ export TF_CPP_MIN_LOG_LEVEL=2
 echo "Environment loaded: $(which python3)"
 echo "TensorFlow: $(python3 -c 'import tensorflow as tf; print(tf.__version__)')"
 
+
 ################################################################################
 # Run Training
 ################################################################################
@@ -52,11 +56,11 @@ if [[ ! -f "$TRAIN_SCRIPT" ]]; then
 fi
 
 # Run from WORK_DIR, not OUTPUT_DIR
-cd "$TRAIN_WORK_DIR"
+cd "$WORK_DIR"
 
-srun -n 1 python3 "$TRAIN_SCRIPT" \
+python3 "$TRAIN_SCRIPT" \
     "$DATA_DIR" \
-    "pinn" \
+    "pinn_model" \
     --output_dir "$OUTPUT_DIR" \
     --subsample 20 \
     --epochs 5 \
@@ -68,5 +72,50 @@ srun -n 1 python3 "$TRAIN_SCRIPT" \
     $EXTRA_ARGS
 
 echo "======================================================="
-echo "Job ${SLURM_JOB_ID} training finished at $(date)"
+echo "Job ${SLURM_JOB_ID} finished at $(date)"
+echo "======================================================="
+
+# Load system libraries
+source "${WORK_DIR}/env/system_config.sh"
+source "${WORK_DIR}/lib/common.sh"
+
+# Create archive directory
+archive_dir="${OUTPUT_DIR}/archives"
+ensure_dir "$archive_dir"
+
+# Generate archive filename with timestamp
+timestamp=$(date +%Y%m%d_%H%M%S)
+archive_name="pinn.tar.gz"
+archive_path="${archive_dir}/${archive_name}"
+
+# Determine which files to archive based on model type
+files_to_archive=()
+mapfile -t files_to_archive < <(find "$OUTPUT_DIR" -type f \( -name '*.weights.h5' -o -name '*.normalization.json' -o -name '*.model_meta.json' -o -name '*.run.json' \) 2>/dev/null)
+
+# Check if we found any files
+if [[ ${#files_to_archive[@]} -eq 0 ]]; then
+    log_warn "No model files found to archive in: ${OUTPUT_DIR}"
+    exit 1
+fi
+
+log_info "Found ${#files_to_archive[@]} files to archive"
+
+# Create tar archive (use relative paths within output_dir)
+relative_files=()
+for file in "${files_to_archive[@]}"; do
+    # Use path relative to output_dir, not just basename
+    rel_path="${file#$OUTPUT_DIR/}"
+    relative_files+=("$rel_path")
+done
+
+if tar -czf "$archive_path" -C "$OUTPUT_DIR" "${relative_files[@]}"; then
+    archive_size=$(du -h "$archive_path" | cut -f1)
+    log_info "✓ Created archive: ${archive_name} (${archive_size})"
+else
+    log_error "✗ Failed to create archive: ${archive_path}"
+    return 1
+fi
+
+echo "======================================================="
+echo "Finished archiving at $(date)"
 echo "======================================================="

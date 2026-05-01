@@ -9,33 +9,34 @@
 ################################################################################
 
 log_info() {
-    echo "[INFO] $(date '+%H:%M:%S') $1"
+    echo "[INFO] $(date '+%H:%M:%S') $1" >&2
 }
 
 log_warn() {
-    echo "[WARN] $(date '+%H:%M:%S') $1"
+    echo "[WARN] $(date '+%H:%M:%S') $1" >&2
 }
 
 log_error() {
-    echo "[ERROR] $(date '+%H:%M:%S') $1"
+    echo "[ERROR] $(date '+%H:%M:%S') $1" >&2
 }
 
 log_debug() {
     if [[ "${DEBUG:-false}" == "true" ]]; then
-        echo "[DEBUG] $(date '+%H:%M:%S') $1"
+        echo "[DEBUG] $(date '+%H:%M:%S') $1" >&2
     fi
 }
 
 log_section() {
     local title="$1"
-    echo "[INFO] $(date '+%H:%M:%S') =========================================="
-    echo "[INFO] $(date '+%H:%M:%S') $title"
-    echo "[INFO] $(date '+%H:%M:%S') =========================================="
+    echo "" >&2
+    echo "[INFO] $(date '+%H:%M:%S') ==========================================" >&2
+    echo "[INFO] $(date '+%H:%M:%S') $title" >&2
+    echo "[INFO] $(date '+%H:%M:%S') ==========================================" >&2
 }
 
 log_subsection() {
     local title="$1"
-    echo "[INFO] $(date '+%H:%M:%S') --- $title ---"
+    echo "[INFO] $(date '+%H:%M:%S') --- $title ---" >&2
 }
 
 ################################################################################

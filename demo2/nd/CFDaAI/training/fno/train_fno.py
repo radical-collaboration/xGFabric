@@ -51,10 +51,13 @@ parser.add_argument('--iter-min', type=int, default=None,
                     help='Minimum iteration number (for multi-iteration format)')
 parser.add_argument('--iter-max', type=int, default=None,
                     help='Maximum iteration number (for multi-iteration format)')
-parser.add_argument('--epochs',   type=int, default=100)
-parser.add_argument('--batch',    type=int, default=16)
-parser.add_argument('--lr',       type=float, default=2e-3)
-parser.add_argument('--patience', type=int, default=60)
+parser.add_argument('--epochs',            type=int,   default=100)
+parser.add_argument('--batch',             type=int,   default=16)
+parser.add_argument('--lr',               type=float, default=2e-3)
+parser.add_argument('--patience',          type=int,   default=60)
+parser.add_argument('--target_file_epochs', type=int,  default=None,
+                    help='Keep total training volume constant: epochs = target_file_epochs // n_files '
+                         '(with a floor of 10). Overrides --epochs when set.')
 args = parser.parse_args()
 
 # Determine data format mode
@@ -128,19 +131,17 @@ N_LAYERS = 4
 EMBED_L  = 2
 IN_CH    = 2 + 4 * EMBED_L * 2   # = 18 when EMBED_L=2
 
-UMAG_MIN_THRESHOLD = 0.10
+UMAG_MIN_THRESHOLD = 0.0
 Z_MIN, Z_MAX       = 0.5, 5.0
 Z_SLICES           = np.linspace(Z_MIN, Z_MAX, 10)
 DZ_HALF            = 0.3
 
-EPOCHS   = args.epochs
 BATCH    = args.batch
 LR       = args.lr
 PATIENCE = args.patience
 CLIP     = 1.0
 
 log.info(f'Grid: {NX}×{NY}  modes=({MODES1},{MODES2})  hidden={HIDDEN}  layers={N_LAYERS}')
-log.info(f'Training: epochs={EPOCHS}  batch={BATCH}  lr={LR}  patience={PATIENCE}')
 
 # =============================================================================
 # 2 – Discover and load data
@@ -233,13 +234,22 @@ ws_counts = pd.Series([ws for ws, _ in file_pairs]).value_counts().sort_index()
 for ws_v, cnt in ws_counts.items():
     log.info(f'  ws={ws_v:.0f} m/s → {cnt} file(s)')
 
+if args.target_file_epochs is not None:
+    n_files = len(file_pairs)
+    args.epochs = max(10, args.target_file_epochs // n_files)
+    log.info(f'target_file_epochs={args.target_file_epochs}: '
+             f'{n_files} files → {args.epochs} epochs')
+
+EPOCHS = args.epochs
+log.info(f'Training: epochs={EPOCHS}  batch={BATCH}  lr={LR}  patience={PATIENCE}')
+
 # Load CSVs
 data_list: list[tuple[float, pd.DataFrame]] = []
 for ws, csv_path in tqdm(file_pairs, desc='Loading CSVs'):
     df   = pd.read_csv(csv_path, usecols=['x', 'y', 'z', 'U_0', 'U_1', 'U_Magnitude'])
     df_f = filter_spatial_bounds(df)
     del df; gc.collect()
-    df_f = df_f[df_f['U_Magnitude'] > UMAG_MIN_THRESHOLD].copy()
+    df_f = df_f[df_f['U_Magnitude'] >= 0].copy()
     if len(df_f) < 10:
         continue
     data_list.append((ws, df_f))

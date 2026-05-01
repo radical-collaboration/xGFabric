@@ -53,10 +53,8 @@ def main():
             wind_dirs = pd.Series([0] * len(wind_speeds))
 
         params_df = pd.DataFrame({'wind_speed': wind_speeds, 'wind_dir': wind_dirs})
-        params_df = params_df[(params_df['wind_speed'] > 0.5) & (params_df['wind_speed'] < 30.0)]
         params_df['wind_speed'] = params_df['wind_speed'].round(1)
         params_df['wind_dir']   = params_df['wind_dir'].round(0)
-        # params_df = params_df.drop_duplicates()
 
         if len(params_df) > max_sims:
             indices   = np.linspace(0, len(params_df) - 1, max_sims, dtype=int)

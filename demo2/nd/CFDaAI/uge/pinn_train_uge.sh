@@ -62,7 +62,7 @@ cd "$WORK_DIR"
 
 python3 "$TRAIN_SCRIPT" \
     "$DATA_DIR" \
-    "pinn" \
+    "pinn_model" \
     --output_dir "$OUTPUT_DIR" \
     --subsample 20 \
     --epochs 5 \

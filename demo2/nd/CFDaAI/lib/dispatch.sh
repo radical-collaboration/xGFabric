@@ -311,8 +311,8 @@ _wait_uge_jobs() {
         
         # Wait while job is still in queue or running
         while qstat -j "$job_id" &>/dev/null 2>&1; do
-            # now=$(date +%s)
-            # printf "[TIMER] Training for %d seconds\n" "$((now - wait_start))"
+            now=$(date +%s)
+            printf "[TIMER] Training for %d seconds\n" "$((now - wait_start))"
             sleep 10
         done
         
