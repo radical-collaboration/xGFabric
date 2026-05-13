@@ -1,6 +1,6 @@
 #!/bin/python3
-import asyncio, os, subprocess, time, sys
-from dataclasses import dataclass
+import asyncio, os, subprocess, time, sys, threading
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Optional
 from create_makeflow import create_makeflow, detect_system
@@ -9,12 +9,16 @@ start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
 
 config = {
     "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
-    "max_number_of_workflows"  : None,   # total number of workflows that will be submitted
-    "time_between_workflows"   : 5,      # minimum time (in seconds) between workflow submissions.
-    "time_check_workflows"     : 1,      # how often the program should check if it can submit new workflows (in seconds)
-    "number_of_cores"          : 32,     # how many cores the simulations should run on
-    "number_of_simulations"    : 72,     # how many OpenFOAM simulations per workflow
-    "workqueue_mode"           : True    # 
+    "max_number_of_workflows"  : None,   # total number of workflows that will be submitted (None = endless)
+    "time_between_workflows"   : 60,      # minimum time (in seconds) between workflow submissions
+    "time_check_workflows"     : 60,      # how often the program checks if it can submit new workflows (seconds)
+    "number_of_cores"          : 32,     # cores per simulation / per node
+    "number_of_simulations"    : 72,      # OpenFOAM simulations per workflow (== number of nodes)
+    "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
+    # --- Node allocation ---
+    "wq_project_name"          : "xgfabric",   # -N name shared by workers and makeflow
+    "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
+    "node_ready_timeout"       : 72000,   # seconds to wait for all workers before giving up (20 h)
 }
 
 global_vars = {
@@ -25,196 +29,453 @@ global_vars = {
     "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log",
 }
 
-def log_info(input: str) -> None:
-    log_string = f"[INFO] {datetime.now().strftime('%H:%M:%S')} {input}"
-    print(log_string)
-    with open(global_vars['coordinator_output'], 'a') as file:
-        file.write(log_string + "\n")
+def log_info(msg: str) -> None:
+    s = f"[INFO]   {datetime.now().strftime('%H:%M:%S')} {msg}"
+    print(s)
+    with open(global_vars['coordinator_output'], 'a') as f:
+        f.write(s + "\n")
 
-def log_action(input: str) -> None:
-    log_string = f"[ACTION] {datetime.now().strftime('%H:%M:%S')} {input}"
-    print(log_string)
-    with open(global_vars['coordinator_output'], 'a') as file:
-        file.write(log_string + "\n")
+def log_status(msg: str) -> None:
+    s = f"[Status] {datetime.now().strftime('%H:%M:%S')} {msg}"
+    sys.stdout.write(f"\r{s}")
+    sys.stdout.flush()
+    with open(global_vars['coordinator_output'], 'a') as f:
+        f.write(s + "\n")
 
-def log_update(input: str) -> None:
-    log_string = f"[UPDATE] {datetime.now().strftime('%H:%M:%S')} {input}"
-    print(log_string)
-    with open(global_vars['coordinator_output'], 'a') as file:
-        file.write(log_string + "\n")
+def log_action(msg: str) -> None:
+    s = f"[ACTION] {datetime.now().strftime('%H:%M:%S')} {msg}"
+    print(s)
+    with open(global_vars['coordinator_output'], 'a') as f:
+        f.write(s + "\n")
+
+def log_update(msg: str) -> None:
+    s = f"[UPDATE] {datetime.now().strftime('%H:%M:%S')} {msg}"
+    print(s)
+    with open(global_vars['coordinator_output'], 'a') as f:
+        f.write(s + "\n")
+
+def log_warn(msg: str) -> None:
+    s = f"[WARN]   {datetime.now().strftime('%H:%M:%S')} {msg}"
+    print(s)
+    with open(global_vars['coordinator_output'], 'a') as f:
+        f.write(s + "\n")
+
+# ---------------------------------------------------------------------------
+# Node allocation
+# ---------------------------------------------------------------------------
+
+class NodeAllocator:
+    """
+    Manages a single `salloc … srun work_queue_worker` reservation.
+
+    The salloc command blocks until the allocation is granted, then immediately
+    runs `srun work_queue_worker` on every allocated node. When the allocation
+    ends (wall-clock limit, preemption, or explicit cancel) the process exits
+    and `is_alive()` returns False, triggering a fresh submission.
+    """
+
+    def __init__(self):
+        self._proc:  Optional[subprocess.Popen] = None
+        self.job_id: Optional[str] = None
+
+    # ------------------------------------------------------------------
+    def is_alive(self) -> bool:
+        """True when the salloc/srun process is still running."""
+        if self._proc is None:
+            return False
+        return self._proc.poll() is None   # None == still running
+
+    # ------------------------------------------------------------------
+    def submit(self) -> None:
+        """
+        Launch the salloc reservation + workers in the background.
+        Captures stderr (where salloc prints 'Granted job allocation <ID>')
+        so we can record the SLURM job ID for later squeue polling.
+        Returns immediately; use is_alive() / job_id to track it.
+        """
+        n_nodes    = config["number_of_simulations"]
+        n_cores    = config["number_of_cores"]
+        project    = config["wq_project_name"]
+        walltime   = "24:00:00"
+        qos        = "regular"
+        constraint = "cpu"
+
+        cmd = [
+            "salloc",
+            f"--nodes={n_nodes}",
+            f"--ntasks={n_cores}",
+            f"--qos={qos}",
+            f"--constraint={constraint}",
+            f"--time={walltime}",
+            "--job-name=openfoam_wq",
+            "srun",
+            "work_queue_worker",
+            "-M", project,
+            "--max-backoff=10", # reconnect quickly
+            "--timeout=86400",  # 24 hours
+            f"--cores={n_cores}",
+        ]
+
+        log_action(f"Submitting node allocation: {' '.join(cmd)}")
+
+        # salloc writes "Granted job allocation <JOBID>" to stderr.
+        # We pipe stderr through a thread so we can parse the ID without
+        # blocking the event loop, while the process keeps running.
+        self._proc  = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        self.job_id = None
+
+        threading.Thread(target=self._parse_job_id, daemon=True).start()
+
+    # ------------------------------------------------------------------
+    def _parse_job_id(self) -> None:
+        """
+        Runs in a background thread. Reads salloc stderr line-by-line
+        until it finds the 'Granted job allocation' message, then stores
+        the numeric job ID.  Any remaining stderr is silently discarded.
+
+        salloc output example:
+            salloc: Granted job allocation 12345678
+        """
+        if self._proc is None or self._proc.stderr is None:
+            return
+        for raw_line in self._proc.stderr:
+            line = raw_line.decode(errors="replace").strip()
+            if "job allocation" in line:
+                parts = line.split()
+                if parts:
+                    self.job_id = parts[-1]
+                    log_info(f"SLURM job ID captured: {self.job_id}")
+                break
+        # Drain any remaining stderr so the pipe buffer never blocks salloc
+        for _ in self._proc.stderr:
+            pass
+
+    # ------------------------------------------------------------------
+    def cancel(self) -> None:
+        """Terminate the salloc process (releases the SLURM reservation)."""
+        if self._proc and self._proc.poll() is None:
+            log_action("Cancelling existing node allocation.")
+            self._proc.terminate()
+            try:
+                self._proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+        self._proc  = None
+        self.job_id = None
+
+    # ------------------------------------------------------------------
+    async def ensure_alive(self) -> None:
+        """
+        Called before each workflow. If the reservation has died (preempted,
+        wall-clock expired, etc.) submit a fresh one.
+        """
+        if not self.is_alive():
+            log_warn("Node allocation is not active. Re-submitting...")
+            self.submit()
+        else:
+            log_info(f"Node allocation is active (SLURM job {self.job_id}).")
+
+# ---------------------------------------------------------------------------
+# SLURM helpers
+# ---------------------------------------------------------------------------
+
+def get_slurm_job_state(job_id: str) -> str:
+    """
+    Return the SLURM state string for `job_id` (e.g. 'R', 'PD', 'CG'),
+    or '' if the job is no longer visible in squeue.
+
+    Uses:  squeue -j <job_id> -h -o %t
+      -h  suppress header
+      %t  state code only
+    """
+    try:
+        result = subprocess.run(
+            ["squeue", "-j", job_id, "-h", "-o", "%t"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        return result.stdout.strip()
+    except FileNotFoundError:
+        log_warn("squeue not found on PATH.")
+        return ""
+    except subprocess.TimeoutExpired:
+        log_warn("squeue timed out.")
+        return ""
+    except Exception as e:
+        log_warn(f"squeue error: {e}")
+        return ""
+
+
+async def wait_for_nodes_running(node_allocator: NodeAllocator) -> bool:
+    """
+    Poll squeue until the SLURM job moves from PD (pending) to R (running),
+    meaning all nodes are allocated and the work_queue_workers have started.
+
+    Returns True  once the job state is 'R'.
+    Returns False if:
+      - the job ID is still unknown after node_ready_timeout seconds
+        (salloc hasn't printed 'Granted job allocation' yet), or
+      - the job disappears from squeue without ever reaching 'R'
+        (cancelled, failed, etc.), or
+      - node_ready_timeout seconds elapse without reaching 'R'.
+    """
+    poll_interval = config["node_poll_interval"]
+    timeout       = config["node_ready_timeout"]
+    deadline      = time.time() + timeout
+
+    log_info("Waiting for SLURM job to reach state R (running)...")
+
+    while True:
+        job_id = node_allocator.job_id
+
+        if job_id is None:
+            log_status("Waiting for SLURM job ID (salloc not yet granted)...")
+        else:
+            state = get_slurm_job_state(job_id)
+            log_status(f"SLURM job {job_id} state: '{state}'")
+
+            if state == "R":
+                log_action(f"SLURM job {job_id} is running. All nodes are ready.")
+                return True
+
+            if state == "":
+                # Job vanished from squeue – it never ran or was cancelled.
+                log_warn(f"SLURM job {job_id} no longer in squeue. Allocation lost.")
+                return False
+
+        if time.time() > deadline:
+            log_warn(f"Timed out after {timeout}s waiting for nodes to reach state R.")
+            return False
+
+        await asyncio.sleep(poll_interval)
+
+# ---------------------------------------------------------------------------
+# Workflow dataclass + coordinator
+# ---------------------------------------------------------------------------
 
 def setup_workflow() -> None:
-    workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
-
-    os.makedirs(f"{workflow_location}", exist_ok=True)
+    workflow_location = (
+        f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
+    )
+    os.makedirs(f"{workflow_location}",             exist_ok=True)
     os.makedirs(f"{workflow_location}/simulations", exist_ok=True)
-    os.makedirs(f"{workflow_location}/training", exist_ok=True)
-
+    os.makedirs(f"{workflow_location}/training",    exist_ok=True)
     create_makeflow(global_vars, config)
 
 
 @dataclass
 class Workflow:
-    workflow_id: int
-    status: str
-    current_task: str
+    workflow_id:     int
+    status:          str
+    current_task:    str
     submission_time: float
+    makeflow_proc:   Optional[subprocess.Popen] = field(default=None, repr=False)
+
 
 class WorkflowCoordinator:
     def __init__(self, wait_time_seconds: float, log_file_path: str):
         self.active_workflows: Dict[int, Workflow] = {}
-        self.log_file_path = log_file_path
-        self.last_workflow_id: Optional[int] = None
-        self.wait_time_seconds = wait_time_seconds
+        self.log_file_path         = log_file_path
+        self.last_workflow_id:     Optional[int]   = None
+        self.last_submission_time: Optional[float] = None
+        self.wait_time_seconds     = wait_time_seconds
 
+    # ------------------------------------------------------------------
     def process_log_update(self, workflow_id: int, curr_task: str, new_status: str):
         """Updates workflow status in O(1) time when logs are consumed."""
-        if workflow_id in self.active_workflows:
-            self.active_workflows[workflow_id].status = new_status
-            self.active_workflows[workflow_id].current_task = curr_task
+        if workflow_id not in self.active_workflows:
+            return
 
-            # If the workflow exited, remove it to free up memory
-            if new_status == 'exited':
-                del self.active_workflows[workflow_id]
-                # If the last submitted workflow just exited, clear the pointer
-                if self.last_workflow_id == workflow_id:
-                    self.last_workflow_id = None
+        self.active_workflows[workflow_id].status       = new_status
+        self.active_workflows[workflow_id].current_task = curr_task
 
+        if new_status == 'exited':
+            del self.active_workflows[workflow_id]
+            if self.last_workflow_id == workflow_id:
+                self.last_workflow_id = None
+
+    # ------------------------------------------------------------------
     def can_submit_new_workflow(self) -> bool:
-        """Checks prior workflow started AND N seconds elapsed."""
-        # If no workflows have been submitted yet, or the last one exited
-        if self.last_workflow_id is None or self.last_workflow_id not in self.active_workflows:
-            return True
-        last_workflow = self.active_workflows[self.last_workflow_id]
-
-        # Condition 1: Has the prior workflow started running?
-        if last_workflow.status != 'exited':
-                # log_update(f"Cannot submit new workflow. Current workflow task is: {last_workflow.current_task}.")
+        """True when the previous workflow has exited and enough time has elapsed."""
+        # Previous workflow is still active → not ready
+        if self.last_workflow_id is not None and self.last_workflow_id in self.active_workflows:
+            last = self.active_workflows[self.last_workflow_id]
+            if last.status != 'exited':
                 return False
 
-        # Condition 2: Have N seconds elapsed?
-        time_elapsed = time.time() - last_workflow.submission_time
-        if time_elapsed < self.wait_time_seconds:
-            time_left = self.wait_time_seconds - time_elapsed
-            # log_update("[Log] Cannot submit new workflow. Not enough time has past.", end=" ")
-            # print(f"{time_left:.0f} seconds remaining.")
-            return False
+        # Minimum gap between submissions (uses recorded time, survives workflow removal)
+        if self.last_submission_time is not None:
+            if time.time() - self.last_submission_time < self.wait_time_seconds:
+                return False
 
-        # Condition 3: Too many concurrent workflows?
+        # Optional concurrency cap
         if config["max_concurrent_workflows"]:
             if len(self.active_workflows) >= config["max_concurrent_workflows"]:
                 return False
 
         return True
 
-    def submit_workflow(self, workflow_id: int):
-        """Adds a new workflow to the tracking dictionary."""
-        new_workflow = Workflow(
+    # ------------------------------------------------------------------
+    def submit_workflow(self, workflow_id: int, proc: subprocess.Popen):
+        """Register a newly launched workflow."""
+        self.active_workflows[workflow_id] = Workflow(
             workflow_id=workflow_id,
             status='submitted',
             current_task='',
-            submission_time=time.time()
+            submission_time=time.time(),
+            makeflow_proc=proc,
         )
-        self.active_workflows[workflow_id] = new_workflow
-        self.last_workflow_id = workflow_id
+        self.last_workflow_id     = workflow_id
+        self.last_submission_time = time.time()
         log_action(f"Workflow {workflow_id} launched.")
 
+
+# ---------------------------------------------------------------------------
+# Async tasks
+# ---------------------------------------------------------------------------
+
 async def monitor_logs(log_file_path: str, coordinator: WorkflowCoordinator):
-    """Asynchronously reads log files as they are written (like 'tail -f')."""
+    """Tail the workflow status CSV and forward updates to the coordinator."""
     log_info(f"Monitoring logs at: {log_file_path}")
 
     with open(log_file_path, 'r') as f:
-        f.seek(0, 2)  # Jump to the end of the file so we only read new logs
+        f.seek(0, 2)   # start at end – only read new lines
 
         while True:
             line = f.readline()
             if not line:
-                # If no new line, yield control back to the event loop for 1 second
                 await asyncio.sleep(1)
                 continue
 
-            line = line.split(",")
-            workflow_id = int(line[0])
-            curr_task = str(line[1]).strip()
-            status = str(line[2]).strip()
+            parts = line.split(",")
+            if len(parts) < 3:
+                continue
+
+            workflow_id = int(parts[0])
+            curr_task   = str(parts[1]).strip()
+            status      = str(parts[2]).strip()
 
             coordinator.process_log_update(workflow_id, curr_task, status)
             log_update(f"Workflow {workflow_id} ==> {curr_task} ==> {status}")
 
-async def workflow_submission_loop(coordinator: WorkflowCoordinator):
-    """Periodically checks if a new workflow can be submitted."""
+
+async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_allocator: NodeAllocator):
+    """
+    Endless loop:
+      1. Ensure SLURM nodes are allocated (re-submit if dead).
+      2. Wait until all Work Queue workers have connected.
+      3. Run Makeflow non-blocking so both simulations and this loop continue.
+      4. Wait for Makeflow to finish before repeating.
+    """
     global global_vars
-    logged_max_reached = False
 
     while True:
         if config["max_number_of_workflows"]:
             if global_vars['workflow_counter'] > config["max_number_of_workflows"]:
-                if len(coordinator.active_workflows) == 0:
-                    log_info("Maximum number of workflows reached and all jobs finished. Shutting down.")
+                if not coordinator.active_workflows:
+                    log_info("Max workflows reached and all jobs done. Shutting down.")
                     sys.exit(0)
-                else:
-                    if not logged_max_reached:
-                        log_info(f"Maximum workflows submitted. Waiting for {len(coordinator.active_workflows)} active job(s) to finish...")
-                        logged_max_reached = True
-                    await asyncio.sleep(config["time_check_workflows"])
-                    continue
+                await asyncio.sleep(config["time_check_workflows"])
+                continue
 
-        if coordinator.can_submit_new_workflow():
-            log_action("Submitting new workflow...")
+        if not coordinator.can_submit_new_workflow():
+            await asyncio.sleep(config["time_check_workflows"])
+            continue
 
-            setup_workflow()
-            makeflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}/cfdaai.makeflow"
+        # ---- Step 1: ensure nodes are allocated ----
+        await node_allocator.ensure_alive()
 
-            system = detect_system()
+        # ---- Step 2: wait until the SLURM job is in state R ----
+        nodes_ready = await wait_for_nodes_running(node_allocator)
+        if not nodes_ready:
+            # Job never started, vanished, or timed out – cancel and retry
+            node_allocator.cancel()
+            log_warn("Will re-allocate nodes and try again...")
+            await asyncio.sleep(config["time_check_workflows"])
+            continue
 
-            args = []
-            if config['workqueue_mode']:
-                args = ["makeflow", "-T", "wq", "-N", "xgfabric", makeflow_location, "-d", "all", "-o", "makeflow.debug"]
-            else:
-                args = ["makeflow", "-T", system[1], makeflow_location, "-d", "all", "-o", "makeflow.debug"]
+        # ---- Step 3: build workflow directory + Makeflow file ----
+        log_action(f"Submitting workflow {global_vars['workflow_counter']}...")
+        setup_workflow()
 
-            subprocess.run(
-                args
-            )
+        makeflow_location = (
+            f"{global_vars['log_location']}/workflows/"
+            f"{global_vars['workflow_counter']}/cfdaai.makeflow"
+        )
+        makeflow_log = (
+            f"{global_vars['log_location']}/workflows/"
+            f"{global_vars['workflow_counter']}/makeflow.debug"
+        )
 
-            # subprocess.Popen(
-            #     args,
-            #     stdout=subprocess.DEVNULL,
-            #     stderr=subprocess.DEVNULL
-            # )
+        # ---- Step 4: launch Makeflow non-blocking ----
+        proc = subprocess.Popen(
+            [
+                "makeflow",
+                "-T", "wq",
+                "-N", config["wq_project_name"],
+                makeflow_location,
+                "-d", "all",
+                "--retry-count=5",
+                "-P", str(global_vars['workflow_counter']),
+                "-o", makeflow_log,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
 
-            coordinator.submit_workflow(global_vars['workflow_counter'])
-            global_vars['workflow_counter'] += 1
+        coordinator.submit_workflow(global_vars['workflow_counter'], proc)
+        wf_id = global_vars['workflow_counter']
+        global_vars['workflow_counter'] += 1
 
-        # Wait N seconds before checking the conditions again
-        await asyncio.sleep(config["time_check_workflows"])
+        # ---- Step 5: wait for this Makeflow to finish ----
+        log_info(f"Waiting for workflow {wf_id} Makeflow process to complete...")
+        while True:
+            if wf_id not in coordinator.active_workflows:
+                log_info(f"Workflow {wf_id} complete.")
+                break
+            # Fallback: detect silent crashes where the log never writes 'exited'
+            if proc.poll() is not None:
+                log_warn(f"Workflow {wf_id} Makeflow process exited (rc={proc.returncode}) "
+                         f"without a log status update. Marking complete.")
+                coordinator.process_log_update(wf_id, 'unknown', 'exited')
+                break
+            await asyncio.sleep(config["time_check_workflows"])
+
+        # Brief pause before the next iteration
+        await asyncio.sleep(config["time_between_workflows"])
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 async def main():
-    # ensure main log folder
     os.makedirs(f"{global_vars['log_location']}/coordinator", exist_ok=True)
-    os.makedirs(f"{global_vars['log_location']}/workflows", exist_ok=True)
+    os.makedirs(f"{global_vars['log_location']}/workflows",   exist_ok=True)
 
-    # create the workflow status file
     if not os.path.exists(global_vars['workflow_status_file']):
-        with open(global_vars['workflow_status_file'], 'w') as file:
-            file.write("workflow_id,task,status,unix_time\n")
+        with open(global_vars['workflow_status_file'], 'w') as f:
+            f.write("workflow_id,task,status,unix_time\n")
 
-    # create the log for the coordinator
     if not os.path.exists(global_vars['coordinator_output']):
         open(global_vars['coordinator_output'], 'a').close()
 
-    # Initialize coordinator
-    coordinator = WorkflowCoordinator(config["time_between_workflows"], global_vars['workflow_status_file'])
+    coordinator    = WorkflowCoordinator(config["time_between_workflows"], global_vars['workflow_status_file'])
+    node_allocator = NodeAllocator()
 
-    # asyncio.gather runs both the log monitor and submission loop concurrently
     await asyncio.gather(
         monitor_logs(global_vars['workflow_status_file'], coordinator),
-        workflow_submission_loop(coordinator),
-        return_exceptions=True
+        workflow_submission_loop(coordinator, node_allocator),
+        return_exceptions=True,
     )
 
+
 if __name__ == "__main__":
-    # Start the event loop
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

@@ -50,7 +50,7 @@ def print_simulations(file, system: tuple, config: dict) -> None:
     for i in range(config["number_of_simulations"]):
         if config['workqueue_mode']:
             file.write(f"$(RESULTS_DIR)/simulations/sim_{i}.csv $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log: $(WORKFLOW_LOCATION)/pipeline.0 $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params/sim_{i}.json $(RESULTS_DIR)/data tasks env simulation lib\n")
-            file.write(f"\tmkdir -p $(WORKFLOW_LOCATION)/simulations && mkdir -p $(RESULTS_DIR)/simulations && bash $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} 2>&1 | tee $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log\n")
+            file.write(f"\tmkdir -p $(WORKFLOW_LOCATION)/simulations && mkdir -p $(RESULTS_DIR)/simulations && bash $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} > $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log 2>&1\n")
         else:
             if system[0] == "nersc":
                 file.write(f"BATCH_OPTIONS=--qos=regular --constraint=cpu --ntasks={config['number_of_cores']} --time=00:15:00 --job-name=cfd_sim_{i}\n")
@@ -86,28 +86,14 @@ def print_training(file, system: tuple, models, config: dict) -> None:
     }
 
     if config['workqueue_mode']:
-        if ("pinn" in models) or ("fno" in models):
-            file.write("CATEGORY=\"training_gpu\"\n")
-            file.write(f"CORES={config['number_of_cores']}\n")
-            file.write("GPUS=1\n")
-            for model in models:
-                if model == "pcr":
-                    continue
-                file.write(f"$(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz $(WORKFLOW_LOCATION)/training/{model}_train.log: {system[1]}/{model}_train_{system[1]}.sh training/cfd_common.py training/{model} env lib $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
-                for i in range(config["number_of_simulations"]):
-                    file.write(f" $(RESULTS_DIR)/simulations/sim_{i}.csv")
-                file.write("\n")
-                file.write(f"\tmkdir -p $(WORKFLOW_LOCATION)/training && bash {system[1]}/{model}_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model} 2>&1 | tee $(WORKFLOW_LOCATION)/training/{model}_train.log\n")
-                file.write("\n")
-        if "pcr" in models:
-            file.write("CATEGORY=\"training_cpu\"\n")
-            file.write(f"CORES={config['number_of_cores']}\n")
-            file.write(f"GPUS=0\n")
-            file.write(f"$(RESULTS_DIR)/models/pcr/archives/pcr.tar.gz $(WORKFLOW_LOCATION)/training/pcr_train.log: {system[1]}/pcr_train_{system[1]}.sh training/cfd_common.py training/pcr env lib $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
+        file.write("CATEGORY=\"training\"\n")
+        file.write(f"CORES={config['number_of_cores']}\n")
+        for model in models:
+            file.write(f"$(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz $(WORKFLOW_LOCATION)/training/{model}_train.log: {system[1]}/{model}_train_{system[1]}.sh training/cfd_common.py training/{model} env lib $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
             for i in range(config["number_of_simulations"]):
                 file.write(f" $(RESULTS_DIR)/simulations/sim_{i}.csv")
             file.write("\n")
-            file.write(f"\tmkdir -p $(WORKFLOW_LOCATION)/training && bash {system[1]}/pcr_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/pcr 2>&1 | tee $(WORKFLOW_LOCATION)/training/pcr_train.log\n")
+            file.write(f"\tmkdir -p $(WORKFLOW_LOCATION)/training && bash {system[1]}/{model}_train_{system[1]}.sh $(RESULTS_DIR)/simulations $(RESULTS_DIR)/models/{model} > $(WORKFLOW_LOCATION)/training/{model}_train.log 2>&1\n")
             file.write("\n")
     else:
         for model in models:
@@ -178,7 +164,7 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
             file.write("CATEGORY=\"evaluation\"\n")
             file.write("CORES=1\n")
             file.write("GPUS=0\n")
-        file.write("$(WORKFLOW_LOCATION)/pipeline.3:")
+        file.write("$(WORKFLOW_LOCATION)/pipeline.3: bin")
         for model in models:
             if config['workqueue_mode']:
                 file.write(f" $(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz")

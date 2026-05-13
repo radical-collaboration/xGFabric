@@ -117,7 +117,7 @@ archive_and_send_model() {
     log_info "Sending to: ${woof_endpoint}"
     
     # Send with verbose output redirected to log only (not console)
-    if ./senspot/senspot-file-send -f "$archive_path" -W "$woof_endpoint" -V > "$send_log" 2>&1; then
+    if bin/senspot-file-send -f "$archive_path" -W "$woof_endpoint" -V > "$send_log" 2>&1; then
         # Extract transfer rate from log for summary
         local transfer_rate=$(grep -oP '\d+\.\d+ megabytes / second' "$send_log" | head -1 || echo "")
         if [[ -n "$transfer_rate" ]]; then

@@ -45,3 +45,4 @@ makeflow.debug
 wq-factory-*/
 .vscode/
 senspot/
+bin/
