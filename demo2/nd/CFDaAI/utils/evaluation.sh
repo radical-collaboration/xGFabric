@@ -109,7 +109,7 @@ archive_and_send_model() {
             ;;
     esac
     # Send via senspot-file-send
-    local woof_endpoint="${SENSPOT_MODELS_ENDPOINT:-woof://169.231.230.76/sharedfs/models}/${model_type}.nd.woof"
+    local woof_endpoint="${SENSPOT_MODELS_ENDPOINT:-woof://169.231.230.76/sharedfs/models}/${model_type}.nersc.woof"
     local archive_dir="${output_dir}/archives"
     local archive_path="${archive_dir}/${archive_name}"
     local send_log="${archive_dir}/send_${model_type}.log"
