@@ -128,7 +128,7 @@ class NodeAllocator:
             "work_queue_worker",
             "-M", project,
             "--max-backoff=10", # reconnect quickly
-            f"--timeout=86400{node_ready_timeout}", 
+            f"--timeout={node_ready_timeout}", 
             f"--cores={n_cores}",
         ]
 

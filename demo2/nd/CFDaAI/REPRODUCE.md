@@ -1,10 +1,10 @@
 # Reproducing CFDaAI on NERSC
 
-This document is a work-in-progress guide for installing and running the full
+This document serves as a guide for installing and running the full
 sim and train loop.
 
-> I am using the home filesystem to host the code. I later use the scratch
-> file system for holding the logs and results.
+> This guide uses the home filesystem to host the code. Then, the scratch
+> filesystem is used for holding the logs and results.
 
 ### Obtain code
 1. From GitHub
@@ -13,7 +13,7 @@ git clone https://github.com/radical-collaboration/xGFabric.git
 cd xGFabric/demo2/nd/CFDaAI/
 ```
 
-### Install dependencies.
+### Install dependencies
 
 1. Install cspot if not already on path.
 ```
@@ -48,20 +48,23 @@ spack install openmpi@4.1.5
 
 ```
 cd <GIT_REPO_ROOT>/demo2/nd/CFDaAI/
-conda create python=3.12 -f cfdaai.yml
+conda create python=3.12 -f utils/environment.yml
 conda activate cfdaai
 ```
 
 2. XGFabric Environment
 ```
+# notice different path here:
 cd <GIT_REPO_ROOT>/demo1/nd/
 conda create python=3.12 -f environment.yml
 ```
 
 
 ### Create link to scratch space 
+This allows for using scratchspace to host the results and logs.
 ```
 mkdir $SCRATCH/xgfabric
+cd <GIT_REPO_ROOT>/demo2/nd/CFDaAI
 ln -s $SCRATCH/xgfabric scratchspace
 ```
 
@@ -70,6 +73,10 @@ ln -s $SCRATCH/xgfabric scratchspace
 cp config_template.sh config.sh
 ```
 Fill in variables as needed.
+
+Note: the workflow pushes models to a CSPOT endpoint. There is a default one in
+the config template, but if you want to run this with your own CSPOT endpoint,
+refer to the CSPOT docs on how to set up a file WooF.
 
 
 ### Verify environments
@@ -81,11 +88,13 @@ Verify that the conda environments, OpenFOAM, and other items are accessible
 4. `cd <GIT_REPO_ROOT>/demo2/nd/CFDaAI/`
 4. Run `senspot-file-recv`. Should return a short help text (eg. you should not
    get 'command not found')
-5. Run `test_environment.sh`. Should be successful
+5. Run `test_environment.sh`. Should be successful (ok if it warns about conda
+   init before conda activate, or a warning on onloading the cpe module).
 6. Exit interactive prompt
 
 
-### Run 
+### Run Complete Workflow
+> Takes about ~3-4hrs waiting in slurm queue from my experience.
 ```
 nohup bash main.sh &
 ```
