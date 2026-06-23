@@ -12,7 +12,7 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
     file.write("WORK_DIR=.\n")
     file.write(f"WORKFLOW_NUMBER={global_vars['workflow_counter']}\n")
     file.write(f"WORKFLOW_LOCATION={workflow_location}\n")
-    file.write(f"RESULTS_DIR=results/run_{global_vars['start_time']}/workflow_{global_vars['workflow_counter']}\n")
+    file.write(f"RESULTS_DIR=scratchspace/results/run_{global_vars['start_time']}/workflow_{global_vars['workflow_counter']}\n")
     file.write(f"START_TIME={global_vars['start_time']}\n")
     file.write(f"LOGS_DIR={global_vars['log_location']}\n")
     file.write(f"SIMULATION_THREADS={config['number_of_cores']}\n")
@@ -126,7 +126,7 @@ def detect_system() -> tuple:
         return ("ucsb", "slurm")
 
 
-def create_makeflow(global_vars: dict, config: dict) -> None:
+def create_makeflow(global_vars: dict, config: dict) -> str:
     workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
     makeflow_file = f"{workflow_location}/cfdaai.makeflow"
 
@@ -164,7 +164,7 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
             file.write("CATEGORY=\"evaluation\"\n")
             file.write("CORES=1\n")
             file.write("GPUS=0\n")
-        file.write("$(WORKFLOW_LOCATION)/pipeline.3: bin")
+        file.write("$(WORKFLOW_LOCATION)/pipeline.3: ")
         for model in models:
             if config['workqueue_mode']:
                 file.write(f" $(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz")
@@ -173,33 +173,46 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
         file.write("\n")
         file.write("\tLOCAL ./utils/evaluation.sh > $(WORKFLOW_LOCATION)/pipeline.3 2>&1\n")
         file.write("\n")
+    return makeflow_file
 
 
 if __name__ == "__main__":
     from datetime import datetime
     start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
     config = {
-        "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
-        "max_number_of_workflows"  : 1,   # total number of workflows that will be submitted
-        "time_between_workflows"   : 5,      # minimum time (in seconds) between workflow submissions.
-        "time_check_workflows"     : 1,      # how often the program should check if it can submit new workflows (in seconds)
-        "number_of_cores"          : 16,     # how many cores the simulations should run on
-        "number_of_simulations"    : 5,     # how many OpenFOAM simulations per workflow
-        "workqueue_mode"           : True     # 
+    "max_concurrent_workflows" : int(os.getenv("MAX_PARALLEL_WORKFLOWS", 1)),   # total number of workflows that can run concurrently
+    "max_number_of_workflows"  : int(os.getenv("MAX_NUMBER_OF_WORKFLOWS", 1)),   # total number of workflows that will be submitted (None = endless)
+    "time_between_workflows"   : int(os.getenv("TIME_BETWEEN_WORKFLOWS", 60)),      # minimum time (in seconds) between workflow submissions
+    "time_check_workflows"     : 60,      # how often the program checks if it can submit new workflows (seconds)
+    "number_of_cores"          : int(os.getenv("NUM_OF_CORES_PER_SIM", 32)),     # cores per simulation / per node
+    "number_of_simulations"    : int(os.getenv("NUM_SIMULATIONS", 72)),      # OpenFOAM simulations per workflow (== number of nodes)
+    "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
+    # --- Node allocation ---
+    "wq_project_name"          : os.getenv("WORK_QUEUE_PROJECT_NAME"),   # -N name shared by workers and makeflow
+    "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
+    "node_ready_timeout"       : int(os.getenv("AWAIT_WORK_QUEUE_WORKERS_TIMEOUT",72000)),   # seconds to wait for all workers before giving up (20 h)
+    "worker_walltime"          : os.getenv("MAX_WORK_QUEUE_WORKER_WALLTIME", "01:00:00"),
+    "worker_qos"               : os.getenv("WORK_QUEUE_QOS", "regular"),
+    "worker_constraint"     : os.getenv("WORK_QUEUE_CONSTRAINT", "cpu"),
+    "worker_nodes"          : int(os.getenv("WORK_QUEUE_NUM_NODES", 1)),
+    "worker_cores"          : int(os.getenv("WORK_QUEUE_WORKER_CORES", 128)),
     }
+
+    scratch_path = os.getenv("SCRATCHSPACE", ".")
 
     global_vars = {
         "workflow_counter"     : 1,
         "start_time"           : start_time,
-        "log_location"         : f"logs/run_{start_time}",
-        "workflow_status_file" : f"logs/run_{start_time}/coordinator/workflow_status_log.csv",
-        "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log",
+        "log_location"         : f"{scratch_path}/logs/run_{start_time}",
+        "workflow_status_file" : f"{scratch_path}/logs/run_{start_time}/coordinator/workflow_status_log.csv",
+        "coordinator_output"   : f"{scratch_path}/logs/run_{start_time}/coordinator/coordinator_output.log",
     }
 
-    workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
-
-    os.makedirs(f"{workflow_location}", exist_ok=True)
+    workflow_location = (
+        f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
+    )
+    os.makedirs(f"{workflow_location}",             exist_ok=True)
     os.makedirs(f"{workflow_location}/simulations", exist_ok=True)
-    os.makedirs(f"{workflow_location}/training", exist_ok=True)
-
+    os.makedirs(f"{workflow_location}/training",    exist_ok=True)
     create_makeflow(global_vars, config)
+

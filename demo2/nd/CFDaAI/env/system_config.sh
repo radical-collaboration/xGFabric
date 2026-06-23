@@ -19,6 +19,8 @@
 
 set -e
 
+
+
 # Determine script directory
 if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,6 +28,10 @@ else
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 fi
 export WORK_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Load main config
+source $WORK_DIR/config.sh
+
 
 ################################################################################
 # System Detection

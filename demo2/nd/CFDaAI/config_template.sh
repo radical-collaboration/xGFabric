@@ -5,24 +5,25 @@
 # Copy this file to config.sh and fill in your values.
 # config.sh is gitignored and should never be committed.
 #
-# cp config_template.sh config.sh
+# Runs one workflow and exits. 
 #
-# This file is sourced by main.sh and other scripts.
-
-################################################################################
-# System Override (optional)
-################################################################################
+#
+# No need to edit values for "old values", as the new makeflow + workqueue makes 
+# these portions obsolete.
+#
+# This file is sourced by main.sh and other scripts
 
 # Force a specific system type instead of auto-detection
 # Valid values: "nersc", "ucsb", "local", "hybrid"
-# SYSTEM_TYPE="nersc"
+SYSTEM_TYPE="nersc"
+NERSC_PROJECT_ID="m5290"
 
 ################################################################################
-# Data Source Configuration
+# Data Source Configuration + Simulation Config
 ################################################################################
 
 # CSPOT endpoint for sensor data
-CSPOT_ENDPOINT="woof://YOUR_CSPOT_HOST/davisstations/daviscupsout"
+CSPOT_ENDPOINT="woof://128.111.45.61/davisstations/daviscupsout"
 
 # Alternative: Pre-downloaded data directory (if CSPOT not available)
 # DATA_SOURCE_DIR="/path/to/local/sensor/data"
@@ -36,21 +37,11 @@ CSPOT_LIMIT="72"
 # Format: YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DD
 # When set: fetches the N most recent records AT OR BEFORE this date from CSPOT.
 # If CSPOT no longer stores data that old, falls back to HISTORICAL_DATA_PATH.
-DATA_CUTOFF_DATE="YYYY-MM-DDTHH:MM:SSZ"
+DATA_CUTOFF_DATE="2026-05-28T19:22:30Z"
 
 # Path to archived historical sensor CSVs (Davis station, same format as CSPOT output).
 # Used as fallback when DATA_CUTOFF_DATE is set but CSPOT data doesn't reach back that far.
-HISTORICAL_DATA_PATH="/path/to/cups_historical"
-
-################################################################################
-# Simulation Configuration
-################################################################################
-
-# OpenFOAM template directory
-# SIM_TEMPLATE="${WORK_DIR}/simulation/template"
-
-# Maximum number of parallel simulations (UCSB mode)
-MAX_PARALLEL_SIMS=72
+HISTORICAL_DATA_PATH="$SCRATCH/cups_historical"
 
 # Simulation parameter generation mode:
 #   "interpolated" - Generate evenly-spaced wind speeds between min/max (default)
@@ -61,12 +52,25 @@ SIM_PARAM_MODE="sensor_direct"
 #   interpolated mode: number of evenly-spaced points to generate
 #   sensor_direct mode: maximum number of unique sensor measurements to use
 NUM_SIMULATIONS=72
+NUM_OF_CORES_PER_SIM=32
 
-# NERSC SLURM settings for simulations
-SIM_SLURM_QOS="regular"
-SIM_SLURM_CONSTRAINT="cpu"
-SIM_SLURM_TIME="01:00:00"
-SIM_SLURM_NODES=1
+################################################################################
+# Workqueue and Workflow Configuration 
+################################################################################
+
+MAX_PARALLEL_WORKFLOWS=1
+
+# determines how many complete back-to-back workflows you want to run
+# be sure to adjust walltime var to reflect number of workflows
+MAX_NUMBER_OF_WORKFLOWS=1
+TIME_BETWEEN_WORKFLOWS=60
+MAX_WORK_QUEUE_WORKER_WALLTIME="01:00:00"
+WORK_QUEUE_QOS="regular"
+WORK_QUEUE_CONSTRAINT="cpu"
+WORK_QUEUE_NUM_NODES=72
+AWAIT_WORK_QUEUE_WORKERS_TIMEOUT=72000
+WORK_QUEUE_PROJECT_NAME="wq_cfdaai"
+
 
 ################################################################################
 # Training Configuration
@@ -74,35 +78,6 @@ SIM_SLURM_NODES=1
 
 # Which models to train (space-separated: pcr pinn fno)
 TRAIN_MODELS="pcr pinn fno"
-
-# PCR grid configuration
-PCR_GRID_CONFIG="${WORK_DIR}/training/pcr/grid_config.json"
-
-# NERSC SLURM settings for training
-TRAIN_SLURM_QOS="regular"
-TRAIN_SLURM_TIME_PCR="00:05:00"
-TRAIN_SLURM_TIME_PINN="00:15:00"
-TRAIN_SLURM_TIME_FNO="00:15:00"
-
-################################################################################
-# UCSB SSH Configuration
-################################################################################
-
-# Machine list for distributed execution (one hostname per line)
-MACHINE_LIST="${WORK_DIR}/machine_list.txt"
-
-# SSH key for passwordless access
-SSH_KEY="${WORK_DIR}/id_rsa"
-
-# Remote working directory on UCSB machines
-UCSB_REMOTE_WORK_DIR="/path/to/remote/intheloop"
-
-################################################################################
-# Output Configuration
-################################################################################
-
-# Keep intermediate files after completion
-KEEP_INTERMEDIATE=false
 
 ################################################################################
 # Model Archiving and CSPOT Sending
@@ -112,35 +87,35 @@ KEEP_INTERMEDIATE=false
 SENSPOT_SEND_MODELS=true
 
 # WOOF endpoint for model storage
-SENSPOT_MODELS_ENDPOINT="woof://YOUR_SENSPOT_HOST/sharedfs/models"
+SENSPOT_MODELS_ENDPOINT="woof://169.231.229.75/sharedfs/ucsb-data"
 
 # Keep local archives after sending (true) or remove them (false)
-SENSPOT_KEEP_ARCHIVES=false
+SENSPOT_KEEP_ARCHIVES=true
+
+
+
+
+
+
+
 
 ################################################################################
+# Old Values (no change needed, but kept so vars are set)
+################################################################################
+
+# UCSB SSH
+# Machine list for distributed execution (one hostname per line)
+MACHINE_LIST="${WORK_DIR}/machine_list.txt"
+# SSH key for passwordless access
+SSH_KEY="${WORK_DIR}/id_rsa"
+# Remote working directory on UCSB machines
+UCSB_REMOTE_WORK_DIR="/path/to/remote/intheloop"
 # Results Archiving (UCSB only)
-################################################################################
-
 # Automatically archive results to storage after pipeline completes (UCSB only)
 AUTO_ARCHIVE=true
-
-# Archive destination base directory (defaults to ARCHIVE_BASE from system_config)
 # ARCHIVE_DIR="/local/foam/cases/archived"
 
-################################################################################
-# Notification (optional)
-################################################################################
-
-# Email for job notifications (NERSC)
-# SLURM_EMAIL="user@example.com"
-
-# Slack webhook for notifications (optional)
-# SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
-
-################################################################################
-# Hybrid Mode Configuration
-################################################################################
-
+# Hbyrid Mode Config
 # NERSC SSH access from UCSB.
 # NOTE: Use NERSC_SSH_HOST (not NERSC_HOST) to avoid collision with the
 # NERSC_HOST environment variable that NERSC sets automatically on its systems.
@@ -149,8 +124,6 @@ NERSC_USER="YOUR_NERSC_USERNAME"
 NERSC_SSH_KEY="${WORK_DIR}/nersc"
 NERSC_REMOTE_WORK_DIR="/global/homes/X/YOUR_NERSC_USERNAME/intheloop"
 NERSC_SCRATCH_DIR="/pscratch/sd/X/YOUR_NERSC_USERNAME"
-# Read-only system installation containing training Python scripts
-NERSC_TRAIN_WORK_DIR="/global/homes/X/YOUR_NERSC_USERNAME/common/kurl_system/intheloop"
 
 # RaceLab GPU1 SSH access (rw-gpu1.cs.ucsb.edu) — full-access machine, no queue.
 # Run env/setup_racelab.sh once to bootstrap conda + GPU environment before use.
@@ -159,17 +132,6 @@ RACELAB_USER="YOUR_RACELAB_USERNAME"
 RACELAB_SSH_KEY="${WORK_DIR}/racelabgpu"
 RACELAB_REMOTE_WORK_DIR="/home/YOUR_RACELAB_USERNAME/intheloop_hybrid"
 
-# Per-module system routing for hybrid mode.
-# "ucsb"    = run locally on UCSB cluster (SSH-distributed or local)
-# "nersc"   = dispatch to NERSC via SSH + SLURM
-# "racelab" = dispatch to racelab-gpu1 via SSH, direct run (no queue)
-# If a remote machine is not reachable and a module is assigned to it, the job fails.
-HYBRID_MODULE_DATA="ucsb"
-HYBRID_MODULE_SIMULATIONS="ucsb"
-HYBRID_MODULE_PCR="ucsb"
 HYBRID_MODULE_PINN="racelab"
 HYBRID_MODULE_FNO="racelab"
 
-# Debug mode: use NERSC debug queue + minimal training params (2 epochs, tiny data)
-# Set to "true" for quick end-to-end testing, "false" for production
-NERSC_DEBUG=false

@@ -8,25 +8,32 @@ from create_makeflow import create_makeflow, detect_system
 start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
 
 config = {
-    "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
-    "max_number_of_workflows"  : None,   # total number of workflows that will be submitted (None = endless)
-    "time_between_workflows"   : 60,      # minimum time (in seconds) between workflow submissions
-    "time_check_workflows"     : 60,      # how often the program checks if it can submit new workflows (seconds)
-    "number_of_cores"          : 32,     # cores per simulation / per node
-    "number_of_simulations"    : 72,      # OpenFOAM simulations per workflow (== number of nodes)
-    "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
-    # --- Node allocation ---
-    "wq_project_name"          : "xgfabric",   # -N name shared by workers and makeflow
-    "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
-    "node_ready_timeout"       : 72000,   # seconds to wait for all workers before giving up (20 h)
+"max_concurrent_workflows" : int(os.getenv("MAX_PARALLEL_WORKFLOWS", 1)),   # total number of workflows that can run concurrently
+"max_number_of_workflows"  : int(os.getenv("MAX_NUMBER_OF_WORKFLOWS", 1)),   # total number of workflows that will be submitted (None = endless)
+"time_between_workflows"   : int(os.getenv("TIME_BETWEEN_WORKFLOWS", 60)),      # minimum time (in seconds) between workflow submissions
+"time_check_workflows"     : 60,      # how often the program checks if it can submit new workflows (seconds)
+"number_of_cores"          : int(os.getenv("NUM_OF_CORES_PER_SIM", 32)),     # cores per simulation / per node
+"number_of_simulations"    : int(os.getenv("NUM_SIMULATIONS", 72)),      # OpenFOAM simulations per workflow (== number of nodes)
+"workqueue_mode"           : True,   # always True for Work Queue / Makeflow
+# --- Node allocation ---
+"wq_project_name"          : os.getenv("WORK_QUEUE_PROJECT_NAME"),   # -N name shared by workers and makeflow
+"node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
+"node_ready_timeout"       : int(os.getenv("AWAIT_WORK_QUEUE_WORKERS_TIMEOUT",72000)),   # seconds to wait for all workers before giving up (20 h)
+"worker_walltime"          : os.getenv("MAX_WORK_QUEUE_WORKER_WALLTIME", "01:00:00"),
+"worker_qos"               : os.getenv("WORK_QUEUE_QOS", "regular"),
+"worker_constraint"     : os.getenv("WORK_QUEUE_CONSTRAINT", "cpu"),
+"worker_nodes"          : int(os.getenv("WORK_QUEUE_NUM_NODES", 1)),
+"worker_cores"          : int(os.getenv("WORK_QUEUE_WORKER_CORES", 128)),
 }
+
+scratch_path = os.getenv("SCRATCHSPACE", ".")
 
 global_vars = {
     "workflow_counter"     : 1,
     "start_time"           : start_time,
-    "log_location"         : f"logs/run_{start_time}",
-    "workflow_status_file" : f"logs/run_{start_time}/coordinator/workflow_status_log.csv",
-    "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log",
+    "log_location"         : f"{scratch_path}/logs/run_{start_time}",
+    "workflow_status_file" : f"{scratch_path}/logs/run_{start_time}/coordinator/workflow_status_log.csv",
+    "coordinator_output"   : f"{scratch_path}/logs/run_{start_time}/coordinator/coordinator_output.log",
 }
 
 def log_info(msg: str) -> None:
@@ -93,12 +100,19 @@ class NodeAllocator:
         so we can record the SLURM job ID for later squeue polling.
         Returns immediately; use is_alive() / job_id to track it.
         """
-        n_nodes    = config["number_of_simulations"]
-        n_cores    = config["number_of_cores"]
+        n_nodes    = config["worker_nodes"]
+        n_cores    = config["worker_cores"]
         project    = config["wq_project_name"]
-        walltime   = "24:00:00"
-        qos        = "regular"
-        constraint = "cpu"
+        walltime   = config["worker_walltime"]
+        qos        = config["worker_qos"]
+        constraint = config["worker_constraint"]
+        node_ready_timeout = config["node_ready_timeout"]
+
+        # total cores
+        max_sims_per_node = config["worker_cores"] // config["number_of_cores"]
+        if(max_sims_per_node == 0):
+            log_warn(f"Too few worker cores to run a simulation with rank={config['number_of_cores']}!")
+        
 
         cmd = [
             "salloc",
@@ -107,14 +121,17 @@ class NodeAllocator:
             f"--qos={qos}",
             f"--constraint={constraint}",
             f"--time={walltime}",
-            "--job-name=openfoam_wq",
+            "--job-name=ben_openfoam_wq",
             "srun",
             "work_queue_worker",
             "-M", project,
             "--max-backoff=10", # reconnect quickly
-            "--timeout=86400",  # 24 hours
+            f"--timeout=86400{node_ready_timeout}", 
             f"--cores={n_cores}",
         ]
+
+        # Script calls: bash $(WORK_DIR)/slurm/simulation_slurm.sh
+        # $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations 67
 
         log_action(f"Submitting node allocation: {' '.join(cmd)}")
 
@@ -258,14 +275,14 @@ async def wait_for_nodes_running(node_allocator: NodeAllocator) -> bool:
 # Workflow dataclass + coordinator
 # ---------------------------------------------------------------------------
 
-def setup_workflow() -> None:
+def setup_workflow() -> str:
     workflow_location = (
         f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
     )
     os.makedirs(f"{workflow_location}",             exist_ok=True)
     os.makedirs(f"{workflow_location}/simulations", exist_ok=True)
     os.makedirs(f"{workflow_location}/training",    exist_ok=True)
-    create_makeflow(global_vars, config)
+    return create_makeflow(global_vars, config)
 
 
 @dataclass
@@ -364,7 +381,7 @@ async def monitor_logs(log_file_path: str, coordinator: WorkflowCoordinator):
             log_update(f"Workflow {workflow_id} ==> {curr_task} ==> {status}")
 
 
-async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_allocator: NodeAllocator):
+async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_allocator: NodeAllocator, generate_makeflow_only=False):
     """
     Endless loop:
       1. Ensure SLURM nodes are allocated (re-submit if dead).
@@ -373,6 +390,30 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
       4. Wait for Makeflow to finish before repeating.
     """
     global global_vars
+
+
+    # check makeflow dependency
+    proc_test = subprocess.Popen(
+            [
+                "makeflow",
+                "--version"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    # Communicate with the process to get the output and error
+    stdout, stderr = proc_test.communicate()
+
+    # Print the output and error
+    log_info(f"Makeflow Version: {stdout.decode()} {stderr}")
+
+    if(generate_makeflow_only):
+        log_info("Generating makeflow file only")
+        makeflow_file = setup_workflow()
+        log_info(f"Makeflow workflow saved at {makeflow_file}")
+        sys.exit(0)
+        return
+
 
     while True:
         if config["max_number_of_workflows"]:
@@ -457,6 +498,7 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
 async def main():
     os.makedirs(f"{global_vars['log_location']}/coordinator", exist_ok=True)
     os.makedirs(f"{global_vars['log_location']}/workflows",   exist_ok=True)
+    log_info("Coordinator Startup")
 
     if not os.path.exists(global_vars['workflow_status_file']):
         with open(global_vars['workflow_status_file'], 'w') as f:
@@ -468,11 +510,40 @@ async def main():
     coordinator    = WorkflowCoordinator(config["time_between_workflows"], global_vars['workflow_status_file'])
     node_allocator = NodeAllocator()
 
+    generate_makeflow_only = False
+    if(len(sys.argv) == 2 and sys.argv[1] == "--generate-makeflow-only"):
+        generate_makeflow_only = True
+
+    if(len(sys.argv) == 2 and sys.argv[1] == "--help"):
+        print("\nPass no parameters to run normal coordinator.py.")
+        print("Pass --generate-makeflow-only to only generate a makeflow workflow script")
+        print("Pass --help to see this message\n")
+        return
+
     await asyncio.gather(
         monitor_logs(global_vars['workflow_status_file'], coordinator),
-        workflow_submission_loop(coordinator, node_allocator),
+        workflow_submission_loop(coordinator, node_allocator,generate_makeflow_only),
         return_exceptions=True,
     )
+    
+
+    # monitor_task = asyncio.create_task(
+    #     monitor_logs(global_vars['workflow_status_file'], coordinator)
+    # )
+    # submission_task = asyncio.create_task(
+    #     workflow_submission_loop(coordinator, node_allocator)
+    # )
+
+    # done, pending = await asyncio.wait(
+    #     {monitor_task, submission_task},
+    #     return_when=asyncio.FIRST_EXCEPTION,
+    # )
+
+    # for task in pending:
+    #     task.cancel()
+    # for task in done:
+    #     if task.exception() is not None:
+    #         raise task.exception()
 
 
 if __name__ == "__main__":
