@@ -4,6 +4,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Optional
 from create_makeflow import create_makeflow, detect_system
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path="config.sh")
+
 
 start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
 
@@ -16,7 +20,7 @@ config = {
 "number_of_simulations"    : int(os.getenv("NUM_SIMULATIONS", 72)),      # OpenFOAM simulations per workflow (== number of nodes)
 "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
 # --- Node allocation ---
-"wq_project_name"          : os.getenv("WORK_QUEUE_PROJECT_NAME"),   # -N name shared by workers and makeflow
+"wq_project_name"          : os.getenv("WORK_QUEUE_PROJECT_NAME", "wq_default_proj"),   # -N name shared by workers and makeflow
 "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
 "node_ready_timeout"       : int(os.getenv("AWAIT_WORK_QUEUE_WORKERS_TIMEOUT",72000)),   # seconds to wait for all workers before giving up (20 h)
 "worker_walltime"          : os.getenv("MAX_WORK_QUEUE_WORKER_WALLTIME", "01:00:00"),
@@ -109,6 +113,7 @@ class NodeAllocator:
         qos        = config["worker_qos"]
         constraint = config["worker_constraint"]
         node_ready_timeout = config["node_ready_timeout"]
+        print(config)
 
         # total cores
         max_sims_per_node = config["worker_cores"] // config["number_of_cores"]
@@ -134,7 +139,6 @@ class NodeAllocator:
 
         # Script calls: bash $(WORK_DIR)/slurm/simulation_slurm.sh
         # $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations 67
-
         log_action(f"Submitting node allocation: {' '.join(cmd)}")
 
         # salloc writes "Granted job allocation <JOBID>" to stderr.
@@ -522,12 +526,29 @@ async def main():
         print("Pass --help to see this message\n")
         return
 
-    await asyncio.gather(
-        monitor_logs(global_vars['workflow_status_file'], coordinator),
-        workflow_submission_loop(coordinator, node_allocator,generate_makeflow_only),
-        return_exceptions=True,
+    # exp = await asyncio.gather(
+    #     monitor_logs(global_vars['workflow_status_file'], coordinator),
+    #     workflow_submission_loop(coordinator, node_allocator,generate_makeflow_only),
+    #     return_exceptions=True,
+    # )
+    
+    monitor_task = asyncio.create_task(
+        monitor_logs(global_vars['workflow_status_file'], coordinator)
+    )
+    submission_task = asyncio.create_task(
+        workflow_submission_loop(coordinator, node_allocator)
     )
 
+    done, pending = await asyncio.wait(
+        {monitor_task, submission_task},
+        return_when=asyncio.FIRST_EXCEPTION,
+    )
+
+    for task in pending:
+        task.cancel()
+    for task in done:
+        if task.exception() is not None:
+            raise task.exception()
 
 
 if __name__ == "__main__":

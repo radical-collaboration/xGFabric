@@ -32,3 +32,4 @@ dependencies:
    - keras
    - tqdm
    - numpy
+   - python-dotenv

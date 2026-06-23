@@ -11,5 +11,8 @@ source $ENV_DIR/env_coordinator.sh
 # activate environment
 conda activate cfdaai
 
+# if missing, python might not pick up config.sh
+source config.sh
+
 # launch the coordinator
 python3 $UTILS_DIR/coordinator.py
