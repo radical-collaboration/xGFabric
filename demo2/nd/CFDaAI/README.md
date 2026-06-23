@@ -7,6 +7,10 @@ Unified CFD simulation and ML training pipeline that works across:
 
 ## Quick Start
 
+See `REPRODUCE.md` for running on NERSC. Instructions below are out of date. 
+
+### Former quick start
+
 ```bash
 # 1. Edit configuration
 cp config.sh.example config.sh  # if needed
