@@ -19,8 +19,6 @@
 
 set -e
 
-
-
 # Determine script directory
 if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

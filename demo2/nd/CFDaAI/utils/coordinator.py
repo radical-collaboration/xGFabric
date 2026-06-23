@@ -28,6 +28,8 @@ config = {
 
 scratch_path = os.getenv("SCRATCHSPACE", ".")
 
+config['scratchspace'] = scratch_path
+
 global_vars = {
     "workflow_counter"     : 1,
     "start_time"           : start_time,
@@ -525,25 +527,7 @@ async def main():
         workflow_submission_loop(coordinator, node_allocator,generate_makeflow_only),
         return_exceptions=True,
     )
-    
 
-    # monitor_task = asyncio.create_task(
-    #     monitor_logs(global_vars['workflow_status_file'], coordinator)
-    # )
-    # submission_task = asyncio.create_task(
-    #     workflow_submission_loop(coordinator, node_allocator)
-    # )
-
-    # done, pending = await asyncio.wait(
-    #     {monitor_task, submission_task},
-    #     return_when=asyncio.FIRST_EXCEPTION,
-    # )
-
-    # for task in pending:
-    #     task.cancel()
-    # for task in done:
-    #     if task.exception() is not None:
-    #         raise task.exception()
 
 
 if __name__ == "__main__":

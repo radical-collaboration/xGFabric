@@ -12,7 +12,7 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
     file.write("WORK_DIR=.\n")
     file.write(f"WORKFLOW_NUMBER={global_vars['workflow_counter']}\n")
     file.write(f"WORKFLOW_LOCATION={workflow_location}\n")
-    file.write(f"RESULTS_DIR=scratchspace/results/run_{global_vars['start_time']}/workflow_{global_vars['workflow_counter']}\n")
+    file.write(f"RESULTS_DIR={config['scratchspace']}/results/run_{global_vars['start_time']}/workflow_{global_vars['workflow_counter']}\n")
     file.write(f"START_TIME={global_vars['start_time']}\n")
     file.write(f"LOGS_DIR={global_vars['log_location']}\n")
     file.write(f"SIMULATION_THREADS={config['number_of_cores']}\n")
@@ -199,6 +199,7 @@ if __name__ == "__main__":
     }
 
     scratch_path = os.getenv("SCRATCHSPACE", ".")
+    config['scratchspace'] = scratch_path
 
     global_vars = {
         "workflow_counter"     : 1,
@@ -215,4 +216,3 @@ if __name__ == "__main__":
     os.makedirs(f"{workflow_location}/simulations", exist_ok=True)
     os.makedirs(f"{workflow_location}/training",    exist_ok=True)
     create_makeflow(global_vars, config)
-
