@@ -536,7 +536,7 @@ async def main():
         monitor_logs(global_vars['workflow_status_file'], coordinator)
     )
     submission_task = asyncio.create_task(
-        workflow_submission_loop(coordinator, node_allocator)
+        workflow_submission_loop(coordinator, node_allocator, generate_makeflow_only)
     )
 
     done, pending = await asyncio.wait(

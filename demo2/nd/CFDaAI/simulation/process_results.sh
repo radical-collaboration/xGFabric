@@ -2,6 +2,9 @@
 
 set -e
 
+# load config
+source ../config.sh
+
 # Process OpenFOAM results: export VTK, convert to CSV, cleanup
 # Usage: ./process_results.sh <case_directory> <windspeed> <output_directory>
 #
@@ -67,7 +70,7 @@ elif [ "$SYSTEM_TYPE" == "nersc" ]; then
     module load conda
     module load paraview || true  # paraview may not be needed at runtime
     spack load openmpi@4.1.5
-    group_num=$(groups | awk -F" " '{print $2}')
+    group_num=$NERSC_PROJECT_ID
     export OPENFOAM_ROOT="/global/common/software/$group_num/openfoam"
     source "$OPENFOAM_ROOT/OpenFOAM-dev/etc/bashrc" || true  # non-fatal: OF env may already be set
     export LD_LIBRARY_PATH=$(spack location -i openmpi@4.1.5)/lib:$LD_LIBRARY_PATH

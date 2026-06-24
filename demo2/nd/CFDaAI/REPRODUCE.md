@@ -26,7 +26,7 @@ wget https://raw.githubusercontent.com/MAYHEM-Lab/cspot/refs/heads/caplets/dist/
 chmod +x update-cspot-distribution.sh
 ./update-cspot-distribution.sh
 export PATH="${PWD}:${PATH}"
-echo "export PATH=\"${PWD}:${PATH}\"" >> ~/.bashrc
+echo "export PATH=\"${PWD}:\$PATH\"" >> ~/.bashrc
 ```
 
 2. Obtain cups_structure.zip
@@ -52,7 +52,7 @@ conda create python=3.12 -f utils/environment.yml
 conda activate cfdaai
 ```
 
-2. XGFabric Environment
+2. XGFabric Environment - for running sims.
 ```
 # notice different path here:
 cd <GIT_REPO_ROOT>/demo1/nd/
@@ -106,7 +106,8 @@ Instead of running with coordinator / 72 nodes, run makeflow and work queue
 manually with an interactive session.
 
 1. Setup:
-- Run `python coordinator.py --generate-makeflow-only`
+- Activate the `cfdaai` conda environment
+- Run `python utils/coordinator.py --generate-makeflow-only`
 - Locate the makeflow file generated. 
 
 2. Open two terminals, both in the working directory of the repository.
