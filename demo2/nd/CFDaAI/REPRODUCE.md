@@ -6,14 +6,14 @@ sim and train loop.
 > This guide uses the home filesystem to host the code. Then, the scratch
 > filesystem is used for holding the logs and results.
 
-### Obtain code
+### Step One: Obtain code
 1. From GitHub
 ```
 git clone https://github.com/radical-collaboration/xGFabric.git
 cd xGFabric/demo2/nd/CFDaAI/
 ```
 
-### Install dependencies
+### Step Two: Install dependencies
 
 1. Install cspot if not already on path.
 ```
@@ -43,7 +43,7 @@ spack install openmpi@4.1.5
 ```
 
 
-### Create conda environments
+### Step Three: Create conda environments
 1. Main python environment
 
 ```
@@ -60,7 +60,7 @@ conda create python=3.12 -f environment.yml
 ```
 
 
-### Create link to scratch space 
+### Step Four: Create link to scratch space 
 This allows for using scratchspace to host the results and logs.
 ```
 mkdir $SCRATCH/xgfabric
@@ -68,7 +68,7 @@ cd <GIT_REPO_ROOT>/demo2/nd/CFDaAI
 ln -s $SCRATCH/xgfabric scratchspace
 ```
 
-### Edit config.sh
+### Step Five: Edit config.sh
 ```
 cp config_template.sh config.sh
 ```
@@ -79,7 +79,7 @@ the config template, but if you want to run this with your own CSPOT endpoint,
 refer to the CSPOT docs on how to set up a file WooF.
 
 
-### Verify environments
+### Step Six: Verify environments
 Verify that the conda environments, OpenFOAM, and other items are accessible
 1. Start an interactive prompt via:
 `salloc --nodes 1 --time 00:15:00 --qos interactive --constraint cpu --account PROJECT_ID`
@@ -93,7 +93,7 @@ Verify that the conda environments, OpenFOAM, and other items are accessible
 6. Exit interactive prompt
 
 
-### Run Complete Workflow
+### Step Seven: Run Complete Workflow
 > Takes about ~3-4hrs waiting in slurm queue from my experience.
 ```
 nohup bash main.sh &
