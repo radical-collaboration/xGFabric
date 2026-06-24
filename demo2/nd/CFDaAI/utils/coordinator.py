@@ -29,7 +29,8 @@ config = {
 "worker_nodes"          : int(os.getenv("WORK_QUEUE_NUM_NODES", 1)),
 "worker_cores"          : int(os.getenv("WORK_QUEUE_WORKER_CORES", 128)),
 "nersc_project_id"      : os.getenv("NERSC_PROJECT_ID", "noid"),
-"train_models"          : os.getenv("TRAIN_MODELS","pcr fno pinn")
+"train_models"          : os.getenv("TRAIN_MODELS","pcr fno pinn"),
+"system_type"           : os.getenv("SYSTEM_TYPE","nersc")
 }
 
 scratch_path = os.getenv("SCRATCHSPACE", ".")
@@ -462,8 +463,7 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
         )
 
         # ---- Step 4: launch Makeflow non-blocking ----
-        proc = subprocess.Popen(
-            [
+        makeflow_cmd = [
                 "makeflow",
                 "-T", "wq",
                 "-N", config["wq_project_name"],
@@ -472,7 +472,17 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
                 "--retry-count=5",
                 "-P", str(global_vars['workflow_counter']),
                 "-o", makeflow_log,
-            ],
+            ]
+        
+        if(config['system_type'] == "nersc"):
+            makeflow_cmd += ["--shared-fs",
+                "/pscratch",
+                "--shared-fs",
+                "/global/homes"
+                ]
+            
+        proc = subprocess.Popen(
+            makeflow_cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

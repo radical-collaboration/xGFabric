@@ -17,6 +17,7 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
     file.write(f"LOGS_DIR={global_vars['log_location']}\n")
     file.write(f"SIMULATION_THREADS={config['number_of_cores']}\n")
     file.write(f"NUM_SIMULATIONS={config['number_of_simulations']}\n")
+    file.write(f"NERSC_PROJECT_ID={config['nersc_project_id']}\n")
     file.write("export WORK_DIR\n")
     file.write("export WORKFLOW_NUMBER\n")
     file.write("export WORKFLOW_LOCATION\n")
@@ -24,6 +25,7 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
     file.write("export LOGS_DIR\n")
     file.write("export SIMULATION_THREADS\n")
     file.write("export NUM_SIMULATIONS\n")
+    file.write("export NERSC_PROJECT_ID\n")
     file.write("\n")
 
 
@@ -49,7 +51,7 @@ def print_simulations(file, system: tuple, config: dict) -> None:
         file.write("GPUS=0\n")
     for i in range(config["number_of_simulations"]):
         if config['workqueue_mode']:
-            file.write(f"$(RESULTS_DIR)/simulations/sim_{i}.csv $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log: $(WORKFLOW_LOCATION)/pipeline.0 $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params/sim_{i}.json $(RESULTS_DIR)/data tasks env simulation lib\n")
+            file.write(f"$(RESULTS_DIR)/simulations/sim_{i}.csv $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log: $(WORKFLOW_LOCATION)/pipeline.0 $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params/sim_{i}.json $(RESULTS_DIR)/data tasks env simulation lib config.sh\n")
             file.write(f"\tmkdir -p $(WORKFLOW_LOCATION)/simulations && mkdir -p $(RESULTS_DIR)/simulations && bash $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} > $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log 2>&1\n")
         else:
             if system[0] == "nersc":
@@ -83,7 +85,7 @@ def print_training(file, system: tuple, models, config: dict) -> None:
         file.write("CATEGORY=\"training\"\n")
         file.write(f"CORES={config['number_of_cores']}\n")
         for model in models:
-            file.write(f"$(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz $(WORKFLOW_LOCATION)/training/{model}_train.log: {system[1]}/{model}_train_{system[1]}.sh training/cfd_common.py training/{model} env lib $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
+            file.write(f"$(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz $(WORKFLOW_LOCATION)/training/{model}_train.log: {system[1]}/{model}_train_{system[1]}.sh training/cfd_common.py training/{model} env lib config.sh $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
             for i in range(config["number_of_simulations"]):
                 file.write(f" $(RESULTS_DIR)/simulations/sim_{i}.csv")
             file.write("\n")
@@ -188,7 +190,8 @@ if __name__ == "__main__":
     "worker_nodes"          : int(os.getenv("WORK_QUEUE_NUM_NODES", 1)),
     "worker_cores"          : int(os.getenv("WORK_QUEUE_WORKER_CORES", 128)),
     "nersc_project_id"      : os.getenv("NERSC_PROJECT_ID", "noid"),
-    "train_models"          : os.getenv("TRAIN_MODELS","pcr fno pinn")
+    "train_models"          : os.getenv("TRAIN_MODELS","pcr fno pinn"),
+    "system_type"           : os.getenv("SYSTEM_TYPE","nersc")
     }
 
     scratch_path = os.getenv("SCRATCHSPACE", ".")
