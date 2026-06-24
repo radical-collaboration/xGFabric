@@ -27,9 +27,6 @@ else
 fi
 export WORK_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Load main config
-source $WORK_DIR/config.sh
-
 
 ################################################################################
 # System Detection

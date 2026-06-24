@@ -2,12 +2,12 @@
 set -eo pipefail
 
 # fill in envs
-WORK_DIR="$(pwd)"
+# WORK_DIR="$(pwd)"
 
 
-echo "LOGS_DIR=" $LOGS_DIR
-echo "WORKFLOW_NUMBER=" $WORKFLOW_NUMBER
-echo "STATUS_FILE=" $STATUS_FILE
+echo "LOGS_DIR=" $LOGS_DIR > eval_txt.txt
+echo "WORKFLOW_NUMBER=" $WORKFLOW_NUMBER > wk_num.txt
+echo "STATUS_FILE=" $STATUS_FILE > st_f.txt
 
 
 # Load user config if it exists
