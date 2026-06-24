@@ -28,6 +28,8 @@ config = {
 "worker_constraint"     : os.getenv("WORK_QUEUE_CONSTRAINT", "cpu"),
 "worker_nodes"          : int(os.getenv("WORK_QUEUE_NUM_NODES", 1)),
 "worker_cores"          : int(os.getenv("WORK_QUEUE_WORKER_CORES", 128)),
+"nersc_project_id"      : os.getenv("NERSC_PROJECT_ID", "noid"),
+"train_models"          : os.getenv("TRAIN_MODELS","pcr fno pinn")
 }
 
 scratch_path = os.getenv("SCRATCHSPACE", ".")

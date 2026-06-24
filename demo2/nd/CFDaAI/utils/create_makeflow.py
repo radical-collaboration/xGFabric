@@ -65,13 +65,7 @@ def print_simulations(file, system: tuple, config: dict) -> None:
 def print_training(file, system: tuple, models, config: dict) -> None:
     nersc_group = ""
     if system[0] == "nersc":
-        nersc_group = subprocess.run(
-            ["groups"],
-            capture_output=True,
-            text=True
-        )
-
-        nersc_group = str(nersc_group.stdout).strip().split(" ")[1]
+        nersc_group = config['nersc_project_id']
 
     nersc_batch_options = {
         "pcr" : f"BATCH_OPTIONS=--job-name=pcr_train --qos=regular --constraint=cpu --ntasks={config['number_of_cores']} --time=00:05:00",
@@ -133,10 +127,7 @@ def create_makeflow(global_vars: dict, config: dict) -> str:
     system = detect_system()
 
     models = []
-    with open("config.sh", "r") as file:
-        for line in file:
-            if line.strip().startswith("TRAIN_MODELS"):
-                models = line.split("=")[1].strip().strip('"').split(" ")
+    models = config['train_models'].split(' ')
 
     with open(makeflow_file, "w") as file:
         print_prologue(file, workflow_location, global_vars, config)
@@ -188,7 +179,7 @@ if __name__ == "__main__":
     "number_of_simulations"    : int(os.getenv("NUM_SIMULATIONS", 72)),      # OpenFOAM simulations per workflow (== number of nodes)
     "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
     # --- Node allocation ---
-    "wq_project_name"          : os.getenv("WORK_QUEUE_PROJECT_NAME"),   # -N name shared by workers and makeflow
+    "wq_project_name"          : os.getenv("WORK_QUEUE_PROJECT_NAME", "wq_default_proj"),   # -N name shared by workers and makeflow
     "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
     "node_ready_timeout"       : int(os.getenv("AWAIT_WORK_QUEUE_WORKERS_TIMEOUT",72000)),   # seconds to wait for all workers before giving up (20 h)
     "worker_walltime"          : os.getenv("MAX_WORK_QUEUE_WORKER_WALLTIME", "01:00:00"),
@@ -196,6 +187,8 @@ if __name__ == "__main__":
     "worker_constraint"     : os.getenv("WORK_QUEUE_CONSTRAINT", "cpu"),
     "worker_nodes"          : int(os.getenv("WORK_QUEUE_NUM_NODES", 1)),
     "worker_cores"          : int(os.getenv("WORK_QUEUE_WORKER_CORES", 128)),
+    "nersc_project_id"      : os.getenv("NERSC_PROJECT_ID", "noid"),
+    "train_models"          : os.getenv("TRAIN_MODELS","pcr fno pinn")
     }
 
     scratch_path = os.getenv("SCRATCHSPACE", ".")
