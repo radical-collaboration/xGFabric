@@ -67,7 +67,7 @@ export MAX_PARALLEL_WORKFLOWS=1
 # be sure to adjust walltime var to reflect number of workflows
 export MAX_NUMBER_OF_WORKFLOWS=1
 export TIME_BETWEEN_WORKFLOWS=60
-export MAX_WORK_QUEUE_WORKER_WALLTIME="01:00:00"
+export MAX_WORK_QUEUE_WORKER_WALLTIME="02:00:00"
 export WORK_QUEUE_QOS="regular"
 export WORK_QUEUE_CONSTRAINT="cpu"
 export WORK_QUEUE_NUM_NODES=72

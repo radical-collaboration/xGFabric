@@ -72,7 +72,7 @@ ln -s $SCRATCH/xgfabric scratchspace
 ```
 cp config_template.sh config.sh
 ```
-Fill in variables as needed.
+Edit variables as needed.
 
 Note: the workflow pushes models to a CSPOT endpoint. There is a default one in
 the config template, but if you want to run this with your own CSPOT endpoint,

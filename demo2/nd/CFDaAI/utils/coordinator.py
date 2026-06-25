@@ -131,7 +131,7 @@ class NodeAllocator:
             f"--qos={qos}",
             f"--constraint={constraint}",
             f"--time={walltime}",
-            "--job-name=ben_openfoam_wq",
+            "--job-name=nersc_run_cfd",
             "srun",
             "work_queue_worker",
             "-M", project,
@@ -475,11 +475,13 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
             ]
         
         if(config['system_type'] == "nersc"):
-            makeflow_cmd += ["--shared-fs",
-                "/pscratch",
-                "--shared-fs",
-                "/global/homes"
+            makeflow_cmd += [
+                "--shared-fs", "/pscratch",
+                "--shared-fs", "/global/homes",
+                "--wait-for-files-upto", "2"
                 ]
+
+        log_info(f"Running: {' '.join(makeflow_cmd)}")
             
         proc = subprocess.Popen(
             makeflow_cmd,
