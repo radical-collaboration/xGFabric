@@ -12,11 +12,12 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
     file.write("WORK_DIR=.\n")
     file.write(f"WORKFLOW_NUMBER={global_vars['workflow_counter']}\n")
     file.write(f"WORKFLOW_LOCATION={workflow_location}\n")
-    file.write(f"RESULTS_DIR=results/run_{global_vars['start_time']}/workflow_{global_vars['workflow_counter']}\n")
+    file.write(f"RESULTS_DIR={config['scratchspace']}/results/run_{global_vars['start_time']}/workflow_{global_vars['workflow_counter']}\n")
     file.write(f"START_TIME={global_vars['start_time']}\n")
     file.write(f"LOGS_DIR={global_vars['log_location']}\n")
     file.write(f"SIMULATION_THREADS={config['number_of_cores']}\n")
     file.write(f"NUM_SIMULATIONS={config['number_of_simulations']}\n")
+    file.write(f"NERSC_PROJECT_ID={config['nersc_project_id']}\n")
     file.write("export WORK_DIR\n")
     file.write("export WORKFLOW_NUMBER\n")
     file.write("export WORKFLOW_LOCATION\n")
@@ -24,6 +25,7 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
     file.write("export LOGS_DIR\n")
     file.write("export SIMULATION_THREADS\n")
     file.write("export NUM_SIMULATIONS\n")
+    file.write("export NERSC_PROJECT_ID\n")
     file.write("\n")
 
 
@@ -49,7 +51,7 @@ def print_simulations(file, system: tuple, config: dict) -> None:
         file.write("GPUS=0\n")
     for i in range(config["number_of_simulations"]):
         if config['workqueue_mode']:
-            file.write(f"$(RESULTS_DIR)/simulations/sim_{i}.csv $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log: $(WORKFLOW_LOCATION)/pipeline.0 $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params/sim_{i}.json $(RESULTS_DIR)/data tasks env simulation lib\n")
+            file.write(f"$(RESULTS_DIR)/simulations/sim_{i}.csv $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log: $(WORKFLOW_LOCATION)/pipeline.0 $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params/sim_{i}.json $(RESULTS_DIR)/data tasks env simulation lib config.sh\n")
             file.write(f"\tmkdir -p $(WORKFLOW_LOCATION)/simulations && mkdir -p $(RESULTS_DIR)/simulations && bash $(WORK_DIR)/{system[1]}/simulation_{system[1]}.sh $(RESULTS_DIR)/params $(RESULTS_DIR)/simulations {i} > $(WORKFLOW_LOCATION)/simulations/of_sim_{i}.log 2>&1\n")
         else:
             if system[0] == "nersc":
@@ -65,13 +67,7 @@ def print_simulations(file, system: tuple, config: dict) -> None:
 def print_training(file, system: tuple, models, config: dict) -> None:
     nersc_group = ""
     if system[0] == "nersc":
-        nersc_group = subprocess.run(
-            ["groups"],
-            capture_output=True,
-            text=True
-        )
-
-        nersc_group = str(nersc_group.stdout).strip().split(" ")[1]
+        nersc_group = config['nersc_project_id']
 
     nersc_batch_options = {
         "pcr" : f"BATCH_OPTIONS=--job-name=pcr_train --qos=regular --constraint=cpu --ntasks={config['number_of_cores']} --time=00:05:00",
@@ -89,7 +85,7 @@ def print_training(file, system: tuple, models, config: dict) -> None:
         file.write("CATEGORY=\"training\"\n")
         file.write(f"CORES={config['number_of_cores']}\n")
         for model in models:
-            file.write(f"$(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz $(WORKFLOW_LOCATION)/training/{model}_train.log: {system[1]}/{model}_train_{system[1]}.sh training/cfd_common.py training/{model} env lib $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
+            file.write(f"$(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz $(WORKFLOW_LOCATION)/training/{model}_train.log: {system[1]}/{model}_train_{system[1]}.sh training/cfd_common.py training/{model} env lib config.sh $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
             for i in range(config["number_of_simulations"]):
                 file.write(f" $(RESULTS_DIR)/simulations/sim_{i}.csv")
             file.write("\n")
@@ -126,17 +122,14 @@ def detect_system() -> tuple:
         return ("ucsb", "slurm")
 
 
-def create_makeflow(global_vars: dict, config: dict) -> None:
+def create_makeflow(global_vars: dict, config: dict) -> str:
     workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
     makeflow_file = f"{workflow_location}/cfdaai.makeflow"
 
     system = detect_system()
 
     models = []
-    with open("config.sh", "r") as file:
-        for line in file:
-            if line.strip().startswith("TRAIN_MODELS"):
-                models = line.split("=")[1].strip().strip('"').split(" ")
+    models = config['train_models'].split(' ')
 
     with open(makeflow_file, "w") as file:
         print_prologue(file, workflow_location, global_vars, config)
@@ -164,7 +157,7 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
             file.write("CATEGORY=\"evaluation\"\n")
             file.write("CORES=1\n")
             file.write("GPUS=0\n")
-        file.write("$(WORKFLOW_LOCATION)/pipeline.3: bin")
+        file.write("$(WORKFLOW_LOCATION)/pipeline.3: ")
         for model in models:
             if config['workqueue_mode']:
                 file.write(f" $(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz")
@@ -173,33 +166,49 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
         file.write("\n")
         file.write("\tLOCAL ./utils/evaluation.sh > $(WORKFLOW_LOCATION)/pipeline.3 2>&1\n")
         file.write("\n")
+    return makeflow_file
 
 
 if __name__ == "__main__":
     from datetime import datetime
     start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
     config = {
-        "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
-        "max_number_of_workflows"  : 1,   # total number of workflows that will be submitted
-        "time_between_workflows"   : 5,      # minimum time (in seconds) between workflow submissions.
-        "time_check_workflows"     : 1,      # how often the program should check if it can submit new workflows (in seconds)
-        "number_of_cores"          : 16,     # how many cores the simulations should run on
-        "number_of_simulations"    : 5,     # how many OpenFOAM simulations per workflow
-        "workqueue_mode"           : True     # 
+    "max_concurrent_workflows" : int(os.getenv("MAX_PARALLEL_WORKFLOWS", 1)),   # total number of workflows that can run concurrently
+    "max_number_of_workflows"  : int(os.getenv("MAX_NUMBER_OF_WORKFLOWS", 1)),   # total number of workflows that will be submitted (None = endless)
+    "time_between_workflows"   : int(os.getenv("TIME_BETWEEN_WORKFLOWS", 60)),      # minimum time (in seconds) between workflow submissions
+    "time_check_workflows"     : 60,      # how often the program checks if it can submit new workflows (seconds)
+    "number_of_cores"          : int(os.getenv("NUM_OF_CORES_PER_SIM", 32)),     # cores per simulation / per node
+    "number_of_simulations"    : int(os.getenv("NUM_SIMULATIONS", 72)),      # OpenFOAM simulations per workflow (== number of nodes)
+    "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
+    # --- Node allocation ---
+    "wq_project_name"          : os.getenv("WORK_QUEUE_PROJECT_NAME", "wq_default_proj"),   # -N name shared by workers and makeflow
+    "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
+    "node_ready_timeout"       : int(os.getenv("AWAIT_WORK_QUEUE_WORKERS_TIMEOUT",72000)),   # seconds to wait for all workers before giving up (20 h)
+    "worker_walltime"          : os.getenv("MAX_WORK_QUEUE_WORKER_WALLTIME", "01:00:00"),
+    "worker_qos"               : os.getenv("WORK_QUEUE_QOS", "regular"),
+    "worker_constraint"     : os.getenv("WORK_QUEUE_CONSTRAINT", "cpu"),
+    "worker_nodes"          : int(os.getenv("WORK_QUEUE_NUM_NODES", 1)),
+    "worker_cores"          : int(os.getenv("WORK_QUEUE_WORKER_CORES", 128)),
+    "nersc_project_id"      : os.getenv("NERSC_PROJECT_ID", "noid"),
+    "train_models"          : os.getenv("TRAIN_MODELS","pcr fno pinn"),
+    "system_type"           : os.getenv("SYSTEM_TYPE","nersc")
     }
+
+    scratch_path = os.getenv("SCRATCHSPACE", ".")
+    config['scratchspace'] = scratch_path
 
     global_vars = {
         "workflow_counter"     : 1,
         "start_time"           : start_time,
-        "log_location"         : f"logs/run_{start_time}",
-        "workflow_status_file" : f"logs/run_{start_time}/coordinator/workflow_status_log.csv",
-        "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log",
+        "log_location"         : f"{scratch_path}/logs/run_{start_time}",
+        "workflow_status_file" : f"{scratch_path}/logs/run_{start_time}/coordinator/workflow_status_log.csv",
+        "coordinator_output"   : f"{scratch_path}/logs/run_{start_time}/coordinator/coordinator_output.log",
     }
 
-    workflow_location = f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
-
-    os.makedirs(f"{workflow_location}", exist_ok=True)
+    workflow_location = (
+        f"{global_vars['log_location']}/workflows/{global_vars['workflow_counter']}"
+    )
+    os.makedirs(f"{workflow_location}",             exist_ok=True)
     os.makedirs(f"{workflow_location}/simulations", exist_ok=True)
-    os.makedirs(f"{workflow_location}/training", exist_ok=True)
-
+    os.makedirs(f"{workflow_location}/training",    exist_ok=True)
     create_makeflow(global_vars, config)

@@ -1,5 +1,10 @@
 cspot
 cspot/*
+scratchspace
+scratchspace/*
+
+nohup*
+
 __*
 *.csv
 *.log

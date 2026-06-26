@@ -1,6 +1,15 @@
 #!/bin/bash
 set -eo pipefail
 
+# fill in envs
+# WORK_DIR="$(pwd)"
+
+
+echo "LOGS_DIR=" $LOGS_DIR > eval_txt.txt
+echo "WORKFLOW_NUMBER=" $WORKFLOW_NUMBER > wk_num.txt
+echo "STATUS_FILE=" $STATUS_FILE > st_f.txt
+
+
 # Load user config if it exists
 CONFIG_FILE="${WORK_DIR}/config.sh"
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
@@ -117,7 +126,7 @@ archive_and_send_model() {
     log_info "Sending to: ${woof_endpoint}"
     
     # Send with verbose output redirected to log only (not console)
-    if bin/senspot-file-send -f "$archive_path" -W "$woof_endpoint" -V > "$send_log" 2>&1; then
+    if senspot-file-send -f "$archive_path" -W "$woof_endpoint" -V > "$send_log" 2>&1; then
         # Extract transfer rate from log for summary
         local transfer_rate=$(grep -oP '\d+\.\d+ megabytes / second' "$send_log" | head -1 || echo "")
         if [[ -n "$transfer_rate" ]]; then
@@ -194,7 +203,7 @@ export_metrics_json "${RESULTS_DIR}/pipeline_metrics.json"
 
 # Auto-archive results (UCSB: storage/archived, NERSC: $SCRATCH/experiment_archive)
 if [[ "${AUTO_ARCHIVE:-false}" == "true" ]]; then
-    local short_info
+    # local short_info
     short_info="$(echo "${TRAIN_MODELS}" | tr ' ' '-')"
     archive_results "$RESULTS_DIR" "$short_info"
 fi

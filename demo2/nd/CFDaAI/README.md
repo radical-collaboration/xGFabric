@@ -6,7 +6,17 @@ Unified CFD simulation and ML training pipeline that works across:
 - **UCSB Cluster** (SSH-based distributed execution)
 - **Local systems** (sequential execution)
 
+--- 
 ## Quick Start
+
+
+See `REPRODUCE.md` for running on NERSC. 
+
+⚠️ **Instructions below are out of date.** ⚠️
+
+--- 
+
+### Former quick start
 
 ```bash
 # 1. Edit configuration
