@@ -2,6 +2,7 @@
 
 Unified CFD simulation and ML training pipeline that works across:
 - **NERSC Perlmutter** (SLURM-based scheduling)
+- **Notre Dame CRC** (UGE-based scheduling)
 - **UCSB Cluster** (SSH-based distributed execution)
 - **Local systems** (sequential execution)
 
@@ -85,29 +86,6 @@ intheloop/
             ├── params/
             └── simulations/
 ```
-
-Overview of the workflow:
-1. A workflow is launched by the coordinator
-    - Workflow status updates to "started"
-2. The workflow loads the environment.
-3. The workflow submits an OpenFOAM array job to the cluster.
-    - Workflow status updates to "submitted"
-4. Workflow waits for the OpenFOAM jobs to start running
-5. OpenFOAM jobs start running
-    - Workflow status updates to "running"
-6. OpenFOAM jobs finish. PCR jobs get initialized
-7. PCR job gets submitted to the cluster.
-    - Workflow status updates to "submitted"
-8. PCR job starts running.
-    - Workflow status updates to "running"
-9. PCR job finishes. PINN and FNO jobs are launched.
-    - Workflow status updates to "submitted"
-10. PINN and FNO jobs start running.
-    - Workflow status updates to "running"
-11. PINN and FNO jobs finish. Workflow finalizes the data and exits.
-    - Workflow status updates to "exited"
-
-
 
 ## System Detection
 

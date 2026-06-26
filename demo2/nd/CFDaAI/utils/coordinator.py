@@ -103,7 +103,8 @@ class NodeAllocator:
         cmd = [
             "salloc",
             f"--nodes={n_nodes}",
-            f"--ntasks={n_cores}",
+            "--ntasks-per-node=1",
+            f"--cpus-per-task={n_cores}",
             f"--qos={qos}",
             f"--constraint={constraint}",
             f"--time={walltime}",
@@ -420,6 +421,7 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
                 "-N", config["wq_project_name"],
                 makeflow_location,
                 "-d", "all",
+                "--fast-abort=1000",
                 "--retry-count=5",
                 "-P", str(global_vars['workflow_counter']),
                 "-o", makeflow_log,
@@ -440,8 +442,19 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
                 break
             # Fallback: detect silent crashes where the log never writes 'exited'
             if proc.poll() is not None:
-                log_warn(f"Workflow {wf_id} Makeflow process exited (rc={proc.returncode}) "
-                         f"without a log status update. Marking complete.")
+                rc = proc.returncode
+                # subprocess reports a kill-by-signal as a negative return code
+                # (e.g. -11 == SIGSEGV). Surface that explicitly.
+                if rc is not None and rc < 0:
+                    import signal as _signal
+                    try:
+                        signame = _signal.Signals(-rc).name
+                    except ValueError:
+                        signame = f"signal {-rc}"
+
+                    log_warn(f"Workflow {wf_id} Makeflow process was KILLED by {signame} (rc={rc}) without a log status update. Marking complete.")
+                else:
+                    log_warn(f"Workflow {wf_id} Makeflow process exited (rc={rc}) without a log status update. Marking complete.")
                 coordinator.process_log_update(wf_id, 'unknown', 'exited')
                 break
             await asyncio.sleep(config["time_check_workflows"])
