@@ -106,7 +106,6 @@ async def main():
         sim_jobs = []
         for i, data_point in enumerate(sensor_data):
             sim_jobs.append(do_sim(config.copy(), data_point, i))
-            break
 
         # barrier. Wait for all sims to complete
         sims = await asyncio.gather(*sim_jobs)
