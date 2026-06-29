@@ -1,12 +1,12 @@
 #!/bin/bash
 set -eo pipefail
 
-export STATUS_FILE="${LOGS_DIR}/coordinator/workflow_status_log.csv"
+export STATUS_FILE="${LOGS_DIR}/workflow_status_log.csv"
 python3 ${WORK_DIR}/utils/csv_logger.py "${WORKFLOW_NUMBER}" "workflow" "started" "${STATUS_FILE}"
 
 # Load user config if it exists
-CONFIG_FILE="${WORK_DIR}/config.sh"
-[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
+# CONFIG_FILE="${WORK_DIR}/config.sh"
+# [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
 
 # Load system libraries
 source "${WORK_DIR}/env/system_config.sh"

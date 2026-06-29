@@ -32,10 +32,13 @@
 
 #
 import asyncio
+import os
 from radical.asyncflow import WorkflowEngine
 from radical.asyncflow.logging import init_default_logger
 import logging
 from rose.al.active_learner import Learner
+from dotenv import load_dotenv
+from utils_architecture import verify_config, get_fdate
 
 # Load backends:
 from resources.local_cpu import LocalCPU as LocalCPU
@@ -51,11 +54,21 @@ from tasks.to_edge import tk_to_edge
 logger = logging.getLogger(__name__)
 
 
+load_dotenv("tasks/common/config.sh")
+
+verify_config()
+
+
 async def main():
     # Setup environment
     init_default_logger(logging.INFO)
 
     logger.info("Warming up....")
+
+    # Create interim directory for storing logs / outputs
+    dt_str = get_fdate()
+    os.makedirs(os.getenv("INTERIM_DIR") + f"/run_{dt_str}")
+    os.environ["INTERIM_DIR"] = os.getenv("INTERIM_DIR") + f"/run_{dt_str}"
 
     # Get backends
     local_cpu = LocalCPU()
@@ -74,9 +87,18 @@ async def main():
     to_edge = acl.training_task(as_executable=False)(tk_to_edge)
 
     # Create pipeline
-    async def pipeline():
+    async def pipeline(pipeline_id):
         logger.info("Start pipeline!")
-        sensor_data = await get_data()
+
+        # Create scratch directory
+        pipeline_interim = f"{os.getenv("INTERIM_DIR")}/{pipeline_id}"
+        os.makedirs(pipeline_interim)
+        config = {
+            "PIPELINE_INTERIM_TASK_DIR": pipeline_interim,
+            "PARENT_UNIQUE_ID": "0",
+        }
+
+        sensor_data = await get_data(config.copy())
 
         # sensor_data spits out 72 points. Run one sim per point.
 
@@ -97,7 +119,7 @@ async def main():
 
         logger.info(f"Pipeline completed {edge_result}")
 
-    results = await pipeline()
+    results = await pipeline(1)
     logger.info(f"Program complete! Results: {results}")
 
 

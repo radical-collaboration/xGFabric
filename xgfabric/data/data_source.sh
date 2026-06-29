@@ -122,6 +122,7 @@ _fetch_from_cspot() {
 
         # Capture output to parse RUN_DIR; use || to stay safe under set -e
         local loader_output loader_exit=0
+        echo "python3 '$loader_script' $cmd_args"
         loader_output=$(eval "python3 '$loader_script' $cmd_args" 2>&1) || loader_exit=$?
 
         echo "$loader_output"

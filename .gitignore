@@ -4,6 +4,8 @@ VERSION
 ve/
 
 .vscode/
+.mypy_cache/
+rose/
 
 # C extensions
 *.so
@@ -62,3 +64,6 @@ com.apple.timemachine.donotpresent
 
 # data files
 demo1/nd/ryans_scripts/squarecil/
+
+# exception
+!xgfabric/lib
