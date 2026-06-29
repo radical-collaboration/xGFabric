@@ -3,6 +3,8 @@ VERSION
 .env
 ve/
 
+.vscode/
+
 # C extensions
 *.so
 
