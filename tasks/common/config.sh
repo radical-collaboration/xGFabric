@@ -1,7 +1,7 @@
 #/bin/bash
 
 # ROSE / Python config
-INTERIM_DIR=/pscratch/sd/b/bcarter/playground/interim
+PLAYGROUND_DIR=/pscratch/sd/b/bcarter/playground
 
 COMMON_DIR="../common"
 
@@ -10,6 +10,10 @@ COMMON_DIR="../common"
 SYSTEM_TYPE="nersc"
 NERSC_PROJECT_ID="m5290"
 
+CUPS_STRUCTURE_ZIP="/pscratch/sd/b/bcarter/playground/cups_structure.zip"
+
+# how many processors to spawn when running a sim
+SIM_THREADS=32
 
 
 ################################################################################

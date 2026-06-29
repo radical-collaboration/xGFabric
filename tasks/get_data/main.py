@@ -13,25 +13,16 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_get_data(config):
-    my_unique_id = random.randint(0, 40000)
+    my_unique_id = str(random.randint(0, 40000))
 
     logger.info(
         f"Task get_data fired: {time.time()}. Unique ID: {my_unique_id}. Called by: {config['PARENT_UNIQUE_ID']}"
     )
 
-    # create directory for interim results
-    config["LOGS_DIR"] = config["PIPELINE_INTERIM_TASK_DIR"] + "/get_data"
-    os.makedirs(config["LOGS_DIR"])
-
-    # create directory for main results
-    config["RESULTS_DIR"] = config["LOGS_DIR"]
-
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config["WORK_DIR"] = f"{script_dir}"  # script_dir
-
     # Use senspot to download config['CSPOT_LIMIT']
 
     data_source = WooF(name=os.getenv("CSPOT_ENDPOINT"))
+
     # get latest.
     latest = data_source.WooFGet(str)
     latest_seq = latest.seq_no
@@ -41,7 +32,6 @@ async def tk_get_data(config):
 
     # Now, format.
     wind_data = parse(items)
-
     outputs = strip_cols(wind_data)
 
     print(f"OUTPUT: {outputs}")

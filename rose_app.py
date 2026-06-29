@@ -67,8 +67,8 @@ async def main():
 
     # Create interim directory for storing logs / outputs
     dt_str = get_fdate()
-    os.makedirs(os.getenv("INTERIM_DIR") + f"/run_{dt_str}")
-    os.environ["INTERIM_DIR"] = os.getenv("INTERIM_DIR") + f"/run_{dt_str}"
+    os.makedirs(os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}")
+    os.environ["PLAYGROUND_DIR"] = os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}"
 
     # Get backends
     local_cpu = LocalCPU()
@@ -90,21 +90,23 @@ async def main():
     async def pipeline(pipeline_id):
         logger.info("Start pipeline!")
 
-        # Create scratch directory
-        pipeline_interim = f"{os.getenv("INTERIM_DIR")}/{pipeline_id}"
-        os.makedirs(pipeline_interim)
+        # Create directory to store logs and results
+        pipeline_playground = f"{os.getenv("PLAYGROUND_DIR")}/{pipeline_id}"
+        os.makedirs(pipeline_playground)
         config = {
-            "PIPELINE_INTERIM_TASK_DIR": pipeline_interim,
+            "PIPELINE_DIR": pipeline_playground,
             "PARENT_UNIQUE_ID": "0",
         }
 
-        sensor_data = await get_data(config.copy())
+        unique_id, sensor_data = await get_data(config.copy())
+        config["PARENT_UNIQUE_ID"] = unique_id
 
         # sensor_data spits out 72 points. Run one sim per point.
 
         sim_jobs = []
-        for data_point in sensor_data:
-            sim_jobs.append(do_sim(data_point))
+        for i, data_point in enumerate(sensor_data):
+            sim_jobs.append(do_sim(config.copy(), data_point, i))
+            break
 
         # barrier. Wait for all sims to complete
         sims = await asyncio.gather(*sim_jobs)

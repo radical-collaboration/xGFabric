@@ -2,6 +2,7 @@
 VERSION
 .env
 ve/
+test_config.sh
 
 .vscode/
 .mypy_cache/
