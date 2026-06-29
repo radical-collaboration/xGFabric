@@ -1,0 +1,3 @@
+[submodule "tasks/common/pyspot"]
+	path = tasks/common/pyspot
+	url = https://github.com/BenCarter44/PySPOT.git

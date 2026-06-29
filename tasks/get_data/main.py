@@ -1,25 +1,15 @@
 # Fetch data from cspot
 
-import asyncio
-import glob
-import subprocess
 import os
 import logging
 import time
 import random
-from dataclasses import dataclass, asdict
+from .parse_cspot import parse
+from .sensor_to_sim_params import strip_cols
+
+from ..common.pyspot.pyspot.senspot import WooF
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Get_Data_Input:
-    LOGS_DIR: str
-    COMMON_DIR: str
-    WORK_DIR: str
-    RESULTS_DIR: str
-    PIPELINE_INTERIM_TASK_DIR: str
-    PARENT_UNIQUE_ID: str
 
 
 async def tk_get_data(config):
@@ -36,47 +26,25 @@ async def tk_get_data(config):
     # create directory for main results
     config["RESULTS_DIR"] = config["LOGS_DIR"]
 
-    # Model get_data.sh
-    # - needs: csv_logger.py
-    # - needs: config.sh
-    # - needs: env/system_config.sh
-    # - needs: lib/common.sh
-    # - needs: lib/simulations.sh
-    # - needs: data/data_source.sh
-
-    # config contains env's for the run.
-
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    config["WORK_DIR"] = f"{script_dir}/../../xgfabric"  # script_dir
+    config["WORK_DIR"] = f"{script_dir}"  # script_dir
 
-    env = os.environ.copy()
-    env.update(config)
+    # Use senspot to download config['CSPOT_LIMIT']
 
-    with open("test_config.sh", "w") as f:
-        for c in config:
-            f.write(f"export {c}={config[c]}\n")
+    data_source = WooF(name=os.getenv("CSPOT_ENDPOINT"))
+    # get latest.
+    latest = data_source.WooFGet(str)
+    latest_seq = latest.seq_no
 
-    script = subprocess.Popen(
-        [f"{config['WORK_DIR']}/utils/get_data.sh"],
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    points = int(os.getenv("CSPOT_LIMIT"))
+    items = data_source.WooFGets(str, items=points, seq_no=latest_seq - points)
 
-    stdout, stderr = script.communicate()
+    # Now, format.
+    wind_data = parse(items)
 
-    if script.returncode != 0:
-        logger.warning(f"get_data returned non-zero status: {stderr}")
+    outputs = strip_cols(wind_data)
 
-    stdout_file = config["LOGS_DIR"] + f"/output.txt"
-    stderr_file = config["LOGS_DIR"] + f"/err.txt"
-
-    # Return data points.
-    with open(stdout_file, "w") as f:
-        f.write(stdout)
-    with open(stderr_file, "w") as f:
-        f.write(stderr)
+    print(f"OUTPUT: {outputs}")
 
     # return array of filenames of parameters
-    return list(glob.glob(f"{config['RESULTS_DIR']}/params/sim_*.json"))
+    return my_unique_id, outputs.to_dict(orient="records")
