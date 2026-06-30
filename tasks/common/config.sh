@@ -16,6 +16,10 @@ CUPS_STRUCTURE_ZIP="/pscratch/sd/b/bcarter/playground/cups_structure.zip"
 SIM_THREADS=32
 
 
+# Training 
+TF_CPP_MIN_LOG_LEVEL=2
+PCR_MACHINE_SPLITS=32
+
 ################################################################################
 # Data Source Configuration + Simulation Config
 ################################################################################

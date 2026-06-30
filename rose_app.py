@@ -30,14 +30,18 @@
 # Evaluation data:
 # Random values for now.
 
-#
+# Env must be first
+from dotenv import load_dotenv
+
+load_dotenv("tasks/common/config.sh")
+
 import asyncio
 import os
 from radical.asyncflow import WorkflowEngine
 from radical.asyncflow.logging import init_default_logger
 import logging
 from rose.al.active_learner import Learner
-from dotenv import load_dotenv
+
 from utils_architecture import verify_config, get_fdate
 
 # Load backends:
@@ -53,8 +57,6 @@ from tasks.to_edge import tk_to_edge
 
 logger = logging.getLogger(__name__)
 
-
-load_dotenv("tasks/common/config.sh")
 
 verify_config()
 
@@ -91,7 +93,7 @@ async def main():
         logger.info("Start pipeline!")
 
         # Create directory to store logs and results
-        pipeline_playground = f"{os.getenv("PLAYGROUND_DIR")}/{pipeline_id}"
+        pipeline_playground = f"{os.getenv('PLAYGROUND_DIR')}/{pipeline_id}"
         os.makedirs(pipeline_playground)
         config = {
             "PIPELINE_DIR": pipeline_playground,
@@ -106,16 +108,26 @@ async def main():
         sim_jobs = []
         for i, data_point in enumerate(sensor_data):
             sim_jobs.append(do_sim(config.copy(), data_point, i))
+            break
 
         # barrier. Wait for all sims to complete
         sims = await asyncio.gather(*sim_jobs)
 
+        sim_ids = ""
+        data_list = []
+        for sim_id, wind_speed, sim_csv in sims:
+            sim_ids = str(sim_id) + ","
+            data_list.append((wind_speed, sim_csv))
+
+        sim_ids = sim_ids[:-1]
+        config["PARENT_UNIQUE_ID"] = sim_ids
+
         # now, train using the results form the sims
         # then push to edge when complete
         edge_result = await asyncio.gather(
-            to_edge(do_pcr(sims), "pcr"),
-            to_edge(do_fno(sims), "fno"),
-            to_edge(do_pinn(sims), "pinn"),
+            to_edge(do_pcr(config.copy(), data_list, sensor_data), "pcr"),
+            to_edge(do_fno(config.copy(), data_list), "fno"),
+            to_edge(do_pinn(config.copy(), data_list), "pinn"),
         )
 
         logger.info(f"Pipeline completed {edge_result}")

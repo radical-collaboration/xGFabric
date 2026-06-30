@@ -1,0 +1,35 @@
+{
+    "description": "Centralized grid configuration for PCR training",
+    "version": "2.0",
+    "last_updated": "2026-01-28",
+    "boundaries": {
+        "x_min": 8.3,
+        "x_max": 176.5,
+        "y_min": 8.1,
+        "y_max": 82.1,
+        "z_min": 1.0,
+        "z_max": 7.0,
+        "comment": "Based on CFD simulation domain and region of interest"
+    },
+    "grid": {
+        "nx": 85,
+        "ny": 38,
+        "nz": 4,
+        "total_points": 12920,
+        "x_step": 2.0,
+        "y_step": 2.0,
+        "z_step": 2.0,
+        "z_planes": [
+            1.0,
+            3.0,
+            5.0,
+            7.0
+        ],
+        "comment": "85x38x4 = 12,920 points with ~2.0m resolution"
+    },
+    "cfd_averaging": {
+        "radius": 1.5,
+        "unit": "meters",
+        "comment": "Radius for averaging CFD points around each grid point"
+    }
+}

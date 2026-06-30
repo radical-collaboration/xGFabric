@@ -11,4 +11,4 @@ def verify_config():
 
 def get_fdate():
     now = datetime.datetime.now()
-    return datetime.datetime.strftime(now, "%d-%m-%Y_%H_%M_%S")
+    return datetime.datetime.strftime(now, "%m-%d-%Y_%H_%M_%S")
