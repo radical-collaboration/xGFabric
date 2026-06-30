@@ -228,27 +228,4 @@ def prepare_machine_data(
         machine_data_outputs.append(machine_data)
     overall_end = time.time()
 
-    # # Summary
-    # total_size = sum(fc["size_mb"] for fc in files_created)
-    # print(
-    #     f"[{ts()}] [INFO] prepare_pcr_data: Complete - {num_machines} machines, {total_size:.1f}MB, {format_duration(overall_end - overall_start)}"
-    # )
-
-    # # Save manifest
-    # manifest = {
-    #     "created_at": datetime.now().isoformat(),
-    #     "total_points": total_points,
-    #     "num_machines": num_machines,
-    #     "files": files_created,
-    #     "config": {
-    #         "column": "wind_speed",
-    #         "n_components": n_components,
-    #         "sequence_length": sequence_length,
-    #     },
-    # }
-
-    # manifest_file = os.path.join(output_dir, "manifest.json")
-    # with open(manifest_file, "w") as f:
-    #     json.dump(manifest, f, indent=2)
-
     return machine_data_outputs

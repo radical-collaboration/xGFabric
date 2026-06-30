@@ -20,16 +20,12 @@ Output is written to:
             field_comparison.png
 """
 
-import argparse
 from dataclasses import dataclass
 import gc
 import json
 import logging
-import os
-import re
 import sys
 import time
-from pathlib import Path
 
 _script_start = time.time()
 
