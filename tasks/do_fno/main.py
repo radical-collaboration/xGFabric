@@ -17,8 +17,6 @@ async def tk_do_fno(config, sims_list):
         f"Task do_fno fired: {time.time()}. Unique ID: {unique_id}. Called by: {config['PARENT_UNIQUE_ID']}"
     )
 
-    print(sims_list)
-
     # Require conda cfdaai
 
     # create directory for models

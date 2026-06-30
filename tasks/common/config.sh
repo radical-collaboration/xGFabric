@@ -20,6 +20,11 @@ SIM_THREADS=32
 TF_CPP_MIN_LOG_LEVEL=2
 PCR_MACHINE_SPLITS=32
 
+# PUBLISH endpoints
+PINN_ENDPOINT="woof://169.231.229.75/sharedfs/ucsb-data/pinn.nersc.woof"
+PCR_ENDPOINT="woof://169.231.229.75/sharedfs/ucsb-data/pcr.nersc.woof"
+FNO_ENDPOINT="woof://169.231.229.75/sharedfs/ucsb-data/fno.nersc.woof"
+
 ################################################################################
 # Data Source Configuration + Simulation Config
 ################################################################################

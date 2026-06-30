@@ -125,9 +125,9 @@ async def main():
         # now, train using the results form the sims
         # then push to edge when complete
         edge_result = await asyncio.gather(
-            to_edge(do_pcr(config.copy(), data_list, sensor_data), "pcr"),
-            to_edge(do_fno(config.copy(), data_list), "fno"),
-            to_edge(do_pinn(config.copy(), data_list), "pinn"),
+            # to_edge(do_pcr(config.copy(), data_list, sensor_data), "pcr"),
+            # to_edge(do_fno(config.copy(), data_list), "fno"),
+            to_edge(config.copy(), do_pinn(config.copy(), data_list), "pinn"),
         )
 
         logger.info(f"Pipeline completed {edge_result}")
