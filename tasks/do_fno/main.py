@@ -12,10 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_do_fno(config, sims_list):
-    unique_id = random.randint(0, 40000)
-    logger.info(
-        f"Task do_fno fired: {time.time()}. Unique ID: {unique_id}. Called by: {config['PARENT_UNIQUE_ID']}"
-    )
+    logger.info(f"Task do_fno fired: {time.time()}.")
 
     # Require conda cfdaai
 
@@ -38,7 +35,7 @@ async def tk_do_fno(config, sims_list):
     fno_config = FNO_Config()
 
     # quick train:
-    fno_config.epochs = 1
+    # fno_config.epochs = 1
 
     cwd = os.getcwd()
     os.chdir(env["INTERIM_DIR"])
@@ -77,4 +74,4 @@ async def tk_do_fno(config, sims_list):
         logger.warning(f"Error executing tar!")
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
-    return unique_id, env["OUTPUT_DIR"] + "/fno.tar.gz"
+    return env["OUTPUT_DIR"] + "/fno.tar.gz"

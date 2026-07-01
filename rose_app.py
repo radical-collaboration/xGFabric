@@ -50,7 +50,7 @@ from resources.local_cpu import LocalCPU as LocalCPU
 # Tasks:
 from tasks.get_data import tk_get_data
 from tasks.do_simulation import tk_do_simulation
-from tasks.do_pcr import tk_do_pcr
+from tasks.do_pcr import tk_do_pcr, tk_pcr_partition, tk_do_pcr_pack
 from tasks.do_pinn import tk_do_pinn
 from tasks.do_fno import tk_do_fno
 from tasks.to_edge import tk_to_edge
@@ -75,17 +75,25 @@ async def main():
     # Get backends
     local_cpu = LocalCPU()
     backend_local_cpu = await local_cpu.get_backend()
-    asyncflow = await WorkflowEngine.create(backend=[backend_local_cpu])
+    asyncflow = await WorkflowEngine.create(
+        backend=[backend_local_cpu],
+    )
 
     # Define ROSE APP style
     acl = Learner(asyncflow)
 
     # Define tasks
     get_data = acl.utility_task(as_executable=False)(tk_get_data)
+
     do_sim = acl.simulation_task(as_executable=False)(tk_do_simulation)
-    do_pcr = acl.training_task(as_executable=False)(tk_do_pcr)
+
     do_pinn = acl.training_task(as_executable=False)(tk_do_pinn)
     do_fno = acl.training_task(as_executable=False)(tk_do_fno)
+
+    do_pcr_partition = acl.utility_task(as_executable=False)(tk_pcr_partition)
+    do_pcr = acl.training_task(as_executable=False)(tk_do_pcr)
+    do_pcr_pack = acl.utility_task(as_executable=False)(tk_do_pcr_pack)
+
     to_edge = acl.training_task(as_executable=False)(tk_to_edge)
 
     # Create pipeline
@@ -97,22 +105,17 @@ async def main():
         os.makedirs(pipeline_playground)
         config = {
             "PIPELINE_DIR": pipeline_playground,
-            "PARENT_UNIQUE_ID": "0",
         }
 
-        unique_id, sensor_data = await get_data(config.copy())
-        config["PARENT_UNIQUE_ID"] = unique_id
-
+        sensor_data = await get_data(config.copy())
         # sensor_data spits out 72 points. Run one sim per point.
 
         sim_jobs = []
         for i, data_point in enumerate(sensor_data):
             sim_jobs.append(do_sim(config.copy(), data_point, i))
-            break
 
         # barrier. Wait for all sims to complete
         sims = await asyncio.gather(*sim_jobs)
-
         sim_ids = ""
         data_list = []
         for sim_id, wind_speed, sim_csv in sims:
@@ -124,11 +127,22 @@ async def main():
 
         # now, train using the results form the sims
         # then push to edge when complete
-        edge_result = await asyncio.gather(
-            # to_edge(do_pcr(config.copy(), data_list, sensor_data), "pcr"),
-            # to_edge(do_fno(config.copy(), data_list), "fno"),
+
+        train_jobs = [
+            to_edge(config.copy(), do_fno(config.copy(), data_list), "fno"),
             to_edge(config.copy(), do_pinn(config.copy(), data_list), "pinn"),
-        )
+        ]
+
+        # add pcr, which has a utility task
+        env, partitions = await do_pcr_partition(config.copy(), data_list, sensor_data)
+
+        pcr_jobs = []
+        for partition in partitions:
+            pcr_jobs.append(do_pcr(env, partition))
+
+        train_jobs.append(to_edge(config.copy(), do_pcr_pack(env, *pcr_jobs), "pcr"))
+
+        edge_result = await asyncio.gather(*train_jobs)
 
         logger.info(f"Pipeline completed {edge_result}")
 

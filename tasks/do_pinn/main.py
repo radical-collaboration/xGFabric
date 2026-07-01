@@ -12,10 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_do_pinn(config, sims_list):
-    unique_id = random.randint(0, 40000)
-    logger.info(
-        f"Task do_pinn fired: {time.time()}. Unique ID: {unique_id}. Called by: {config['PARENT_UNIQUE_ID']}"
-    )
+    logger.info(f"Task do_pinn fired: {time.time()}.")
 
     # Require conda cfdaai
 
@@ -38,8 +35,8 @@ async def tk_do_pinn(config, sims_list):
     pinn_config = PINN_Config()
 
     # quick train:
-    pinn_config.max_points_per_file = 600
-    pinn_config.epochs = 1
+    # pinn_config.max_points_per_file = 600
+    # pinn_config.epochs = 1
 
     cwd = os.getcwd()
     os.chdir(env["INTERIM_DIR"])
@@ -78,4 +75,4 @@ async def tk_do_pinn(config, sims_list):
         logger.warning(f"Error executing tar!")
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
-    return unique_id, env["OUTPUT_DIR"] + "/pinn.tar.gz"
+    return env["OUTPUT_DIR"] + "/pinn.tar.gz"

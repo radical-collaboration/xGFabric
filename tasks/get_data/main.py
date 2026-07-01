@@ -13,11 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_get_data(config):
-    my_unique_id = str(random.randint(0, 40000))
-
-    logger.info(
-        f"Task get_data fired: {time.time()}. Unique ID: {my_unique_id}. Called by: {config['PARENT_UNIQUE_ID']}"
-    )
+    logger.info(f"Task get_data fired: {time.time()}.")
 
     # Use senspot to download config['CSPOT_LIMIT']
 
@@ -37,4 +33,4 @@ async def tk_get_data(config):
     print(f"OUTPUT: {outputs}")
 
     # return array of filenames of parameters
-    return my_unique_id, outputs.to_dict(orient="records")
+    return outputs.to_dict(orient="records")

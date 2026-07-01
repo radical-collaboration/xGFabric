@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_do_simulation_tmp(config, sensor_point, sim_id):
-    logger.info(
-        f"Task do_sim fired: {time.time()}. Unique ID: {sim_id}. Called by: {config['PARENT_UNIQUE_ID']}"
-    )
+    logger.info(f"Task do_sim fired: {time.time()}.")
 
     # create directory for sims
     task_dir = config["PIPELINE_DIR"] + "/simulations" + f"/{sim_id}"
@@ -38,11 +36,9 @@ async def tk_do_simulation(config, sensor_point, sim_id):
     # config: dict
     # sensor_point: has wind_speed and wind_dir
 
-    return await tk_do_simulation_tmp(config, sensor_point, sim_id)
+    # return await tk_do_simulation_tmp(config, sensor_point, sim_id)
 
-    logger.info(
-        f"Task do_sim fired: {time.time()}. Unique ID: {sim_id}. Called by: {config['PARENT_UNIQUE_ID']}"
-    )
+    logger.info(f"Task do_sim fired: {time.time()}.")
 
     # create directory for sims
     task_dir = config["PIPELINE_DIR"] + "/simulations" + f"/{sim_id}"

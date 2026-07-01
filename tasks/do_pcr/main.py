@@ -20,14 +20,11 @@ from .train_pcr_chunk import train_chunk
 logger = logging.getLogger(__name__)
 
 
-async def tk_do_pcr(config, sims_list, sensor_values):
-    unique_id = random.randint(0, 40000)
-    logger.info(
-        f"Task do_pinn fired: {time.time()}. Unique ID: {unique_id}. Called by: {config['PARENT_UNIQUE_ID']}"
-    )
+async def tk_pcr_partition(config, sims_list, sensor_values):
+    logger.info(f"Task do_pcr_partition fired: {time.time()}.")
 
     # create directory for models
-    task_dir = config["PIPELINE_DIR"] + "/models/pinn"
+    task_dir = config["PIPELINE_DIR"] + "/models/pcr"
     os.makedirs(task_dir)
     os.makedirs(task_dir + "/results")
     os.makedirs(task_dir + "/logs")
@@ -56,13 +53,30 @@ async def tk_do_pcr(config, sims_list, sensor_values):
         sensor_df, sims_list, data_w_points, env["OUTPUT_DIR"]
     )
 
+    os.chdir(cwd)
+
+    return env, machine_data_outputs
+
+
+async def tk_do_pcr(env, machine_data_output):
+    logger.info(f"Task do_pcr fired: {time.time()}.")
+
+    cwd = os.getcwd()
+    os.chdir(env["INTERIM_DIR"])
+
     # eventually parallelize this
-    for i, machine in enumerate(machine_data_outputs):
-        logger.info(f"Processing machine {i}")
-        train_chunk(machine, env["OUTPUT_DIR"])
+
+    logger.info(f"Processing machine {i}")
+    train_chunk(machine_data_output, env["OUTPUT_DIR"])
+
     # outputs are in env['OUTPUT_DIR']/pcr_coefficients_*.csv
 
     os.chdir(cwd)
+    return env
+
+
+async def tk_do_pcr_pack(env, *dummy_pcr_return):
+    logger.info(f"Task do_pcr_pack fired: {time.time()}. ")
 
     # results should be in env['OUTPUT_DIR']
     files_to_archive = list(glob.glob(env["OUTPUT_DIR"] + "/pcr_coefficients_*.csv"))
@@ -94,4 +108,4 @@ async def tk_do_pcr(config, sims_list, sensor_values):
         logger.warning(f"Error executing tar!")
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
-    return unique_id, env["OUTPUT_DIR"] + "/pcr.tar.gz"
+    return env["OUTPUT_DIR"] + "/pcr.tar.gz"

@@ -11,12 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_to_edge(config, incoming_model, model_name) -> FileWooFItem:
-    parent_id, model = incoming_model
-    my_unique_id = str(random.randint(0, 40000))
+    model = incoming_model
 
-    logger.info(
-        f"Task to_edge fired: {time.time()}. Unique ID: {my_unique_id}. Called by: {parent_id}"
-    )
+    logger.info(f"Task to_edge fired: {time.time()}.")
 
     # Use senspot to upload file to endpoint
 
@@ -31,4 +28,4 @@ async def tk_to_edge(config, incoming_model, model_name) -> FileWooFItem:
     result = target.send(model)
 
     # return array of filenames of parameters
-    return my_unique_id, result
+    return result
