@@ -64,9 +64,6 @@ async def tk_do_pcr(env, machine_data_output):
     cwd = os.getcwd()
     os.chdir(env["INTERIM_DIR"])
 
-    # eventually parallelize this
-
-    logger.info(f"Processing machine {i}")
     train_chunk(machine_data_output, env["OUTPUT_DIR"])
 
     # outputs are in env['OUTPUT_DIR']/pcr_coefficients_*.csv

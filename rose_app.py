@@ -46,6 +46,7 @@ from utils_architecture import verify_config, get_fdate
 
 # Load backends:
 from resources.local_cpu import LocalCPU as LocalCPU
+from resources.nersc_cpu import NerscCPU as NerscCPU
 
 # Tasks:
 from tasks.get_data import tk_get_data
@@ -57,6 +58,9 @@ from tasks.to_edge import tk_to_edge
 
 logger = logging.getLogger(__name__)
 
+import rhapsody
+
+rhapsody.enable_logging(level=logging.INFO)
 
 verify_config()
 
@@ -73,11 +77,16 @@ async def main():
     os.environ["PLAYGROUND_DIR"] = os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}"
 
     # Get backends
-    local_cpu = LocalCPU()
-    backend_local_cpu = await local_cpu.get_backend()
+    nersc_cpu = NerscCPU(node_count=18)
+    backend_nersc_cpu = await nersc_cpu.get_backend()
     asyncflow = await WorkflowEngine.create(
-        backend=[backend_local_cpu],
+        backend=[backend_nersc_cpu],
     )
+
+    # Setup environment
+    init_default_logger(logging.INFO)
+
+    logger.info("Warming up post engine creation....")
 
     # Define ROSE APP style
     acl = Learner(asyncflow)
@@ -133,14 +142,18 @@ async def main():
             to_edge(config.copy(), do_pinn(config.copy(), data_list), "pinn"),
         ]
 
-        # add pcr, which has a utility task
-        env, partitions = await do_pcr_partition(config.copy(), data_list, sensor_data)
+        @asyncflow.block
+        async def pcr_block(config, data_list, sensor_data):
+            # do this independently of the workflow
+            env, partitions = await do_pcr_partition(
+                config.copy(), data_list, sensor_data
+            )
+            pcr_jobs = []
+            for partition in partitions:
+                pcr_jobs.append(do_pcr(env, partition))
+            return await to_edge(config.copy(), do_pcr_pack(env, *pcr_jobs), "pcr")
 
-        pcr_jobs = []
-        for partition in partitions:
-            pcr_jobs.append(do_pcr(env, partition))
-
-        train_jobs.append(to_edge(config.copy(), do_pcr_pack(env, *pcr_jobs), "pcr"))
+        train_jobs.append(pcr_block(config, data_list, sensor_data))
 
         edge_result = await asyncio.gather(*train_jobs)
 
@@ -148,6 +161,8 @@ async def main():
 
     results = await pipeline(1)
     logger.info(f"Program complete! Results: {results}")
+
+    await acl.shutdown()
 
 
 if __name__ == "__main__":

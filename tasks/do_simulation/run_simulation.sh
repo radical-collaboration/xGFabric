@@ -44,7 +44,7 @@ elif [ "$SYSTEM_TYPE" == "nersc" ]; then
     spack load openmpi@4.1.5
     group_num=$NERSC_PROJECT_ID
     export OPENFOAM_ROOT="/global/common/software/$group_num/openfoam"
-    source "$OPENFOAM_ROOT/OpenFOAM-dev/etc/bashrc" || true  # non-fatal: OF env may already be set
+    source "$OPENFOAM_ROOT/OpenFOAM-11-ompi/etc/bashrc" || true  # non-fatal: OF env may already be set
     export LD_LIBRARY_PATH=$(spack location -i openmpi@4.1.5)/lib:$LD_LIBRARY_PATH
 elif [ -n "$FOAM_BASH" ]; then
     source $FOAM_BASH
