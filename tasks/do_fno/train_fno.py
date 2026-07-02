@@ -50,6 +50,8 @@ from ..common.cfd_common import (  # noqa: E402
     y_max,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class FNO_Config:
@@ -134,7 +136,7 @@ class FNO2D(tf.keras.Model):
         return self.proj2(self.proj1(v))
 
 
-def fno_main_entry(file_pairs, output_directory, log_directory, fno_config: FNO_Config):
+def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config):
     # Determine data format mode
     USE_ITERATION_MODE = (
         fno_config.iter_min is not None and fno_config.iter_max is not None
@@ -143,21 +145,11 @@ def fno_main_entry(file_pairs, output_directory, log_directory, fno_config: FNO_
     ITER_MAX = fno_config.iter_max or 999999
 
     OUTPUT_DIR = output_directory
-    LOG_DIR = log_directory
     PLOTS_DIR = "."  # use working dir
 
     # results dir will be for model
     # logs dir for plots
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s  %(levelname)s  %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler(LOG_DIR + "/train.log"),
-        ],
-    )
-    log = logging.getLogger(__name__)
+    log = logger
     logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
     mode_str = (
@@ -167,7 +159,9 @@ def fno_main_entry(file_pairs, output_directory, log_directory, fno_config: FNO_
     log.info(f"FNO2D training  |  {mode_str}")
     log.info(f"Output dir : {OUTPUT_DIR}")
     log.info(f"TensorFlow : {tf.__version__}")
-    log.info(f'GPUs       : {tf.config.list_physical_devices("GPU")}')
+    print("Here....")
+    # log.info(f'GPUs       : {tf.config.list_physical_devices("GPU")}')
+    print("Here22222....")
     log.info("=" * 70)
 
     # =============================================================================

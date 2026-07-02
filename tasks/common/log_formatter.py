@@ -53,6 +53,7 @@ def register_log(env, log_level=logging.INFO):
         logger_name=env["TASK_NAME"],
         clear_handlers=True,
     )
+    logger.info(f"Task {env["TASK_NAME"]} started!")
     return logger
 
 

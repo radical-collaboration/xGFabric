@@ -12,6 +12,20 @@ from .train_fno import fno_main_entry, FNO_Config
 logger = logging.getLogger(__name__)
 
 
+def main():
+    sims_list = [
+        (
+            0.0,
+            "/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations/sim_0.csv",
+        )
+    ]
+    out_dir = (
+        "/pscratch/sd/b/bcarter/playground/run_07-02-2026_12_50_05/1/do_fno/0/results"
+    )
+    fno_config = FNO_Config()
+    fno_main_entry(sims_list, out_dir, fno_config)
+
+
 async def tk_do_fno(config, sims_list):
     env = register_task(config, "do_fno", 0)
     logger = register_log(env, logging.INFO)
@@ -25,7 +39,8 @@ async def tk_do_fno(config, sims_list):
     # quick train:
     fno_config.epochs = 1
 
-    fno_main_entry(sims_list, env["OUTPUT_DIR"], env["LOG_DIR"], fno_config)
+    print(sims_list, env["OUTPUT_DIR"], logger, fno_config)
+    fno_main_entry(sims_list, env["OUTPUT_DIR"], fno_config)
 
     # results should be in env['OUTPUT_DIR']
     files_to_archive = list(glob.glob(env["OUTPUT_DIR"] + "/*.weights.h5"))
