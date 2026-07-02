@@ -6,29 +6,19 @@ import random
 import logging
 import os
 import math
+from ..common.log_formatter import register_task, register_log, close_task
+import datetime
 
 logger = logging.getLogger(__name__)
 
 
 async def tk_do_simulation_tmp(config, sensor_point, sim_id):
-    logger.info(f"Task do_sim fired: {time.time()}.")
-
-    # create directory for sims
-    task_dir = config["PIPELINE_DIR"] + "/simulations" + f"/{sim_id}"
-    os.makedirs(task_dir)
-    os.makedirs(task_dir + "/results")
-    os.makedirs(task_dir + "/logs")
-    os.makedirs(task_dir + "/interim")
-
-    env = os.environ.copy()
-    env.update(config)
-
-    env["OUTPUT_DIR"] = task_dir + "/results"
-    env["LOG_DIR"] = task_dir + "/logs"
-    env["INTERIM_DIR"] = task_dir + "/interim"
+    env = register_task(config, "do_simulation", sim_id)
+    logger = register_log(env, logging.INFO)
 
     skip_dir = "/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations"
 
+    close_task(env)
     return sim_id, 0.0, skip_dir + f"/sim_{sim_id}.csv"
 
 
@@ -36,23 +26,11 @@ async def tk_do_simulation(config, sensor_point, sim_id):
     # config: dict
     # sensor_point: has wind_speed and wind_dir
 
-    # return await tk_do_simulation_tmp(config, sensor_point, sim_id)
-
-    logger.info(f"Task do_sim fired: {time.time()}.")
+    return await tk_do_simulation_tmp(config, sensor_point, sim_id)
 
     # create directory for sims
-    task_dir = config["PIPELINE_DIR"] + "/simulations" + f"/{sim_id}"
-    os.makedirs(task_dir)
-    os.makedirs(task_dir + "/results")
-    os.makedirs(task_dir + "/logs")
-    os.makedirs(task_dir + "/interim")
-
-    env = os.environ.copy()
-    env.update(config)
-
-    env["OUTPUT_DIR"] = task_dir + "/results"
-    env["LOG_DIR"] = task_dir + "/logs"
-    env["INTERIM_DIR"] = task_dir + "/interim"
+    env = register_task(config, "do_simulation", sim_id)
+    logger = register_log(env, logging.INFO)
 
     # sim_id
 
@@ -105,5 +83,5 @@ async def tk_do_simulation(config, sensor_point, sim_id):
         f.write(stderr)
 
     # search for sims in OUTPUT_DIR
-
+    close_task(env)
     return sim_id, wind_speed, env["OUTPUT_DIR"] + f"/sim_{sim_id}.csv"

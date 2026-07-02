@@ -18,7 +18,7 @@ SIM_THREADS=32
 
 # Training 
 TF_CPP_MIN_LOG_LEVEL=2
-PCR_MACHINE_SPLITS=32
+PCR_MACHINE_SPLITS=1
 
 # PUBLISH endpoints
 PINN_ENDPOINT="woof://169.231.229.75/sharedfs/ucsb-data/pinn.nersc.woof"

@@ -3,6 +3,9 @@ import random, logging
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers
+import logging
+
+logger = logging.getLogger(__name__)
 
 # -----------------------------
 # Domain bounds (meters)
@@ -73,7 +76,7 @@ def inflow_gates_from_uv(u, v, thresh=0.3, k=8.0):
     gW = soft_gate(u, thresh, k)  # u > +thresh
     gE = soft_gate(-u, thresh, k)  # u < -thresh
     # Note: Using print here to avoid logger dependency in utility function
-    print(
+    logger.info(
         f"[gate diag] mean gates: N={float(gN.mean()):.2f} S={float(gS.mean()):.2f} "
         f"W={float(gW.mean()):.2f} E={float(gE.mean()):.2f} thr={thresh}"
     )
@@ -127,69 +130,6 @@ def calm_weight(speed_mag, s0=0.5, gamma=2.0, floor=0.005):
 
 def normalize(val, min_val, max_val):
     return (val - min_val) / (max_val - min_val + 1e-12)
-
-
-def setup_logger(experiment_dir):
-    """Set up logger to write to both console and file in experiment directory"""
-    try:
-        # Create logger
-        logger = logging.getLogger("PINN_Experiment")
-        logger.setLevel(logging.INFO)
-
-        # Clear any existing handlers
-        logger.handlers.clear()
-
-        # Create formatters
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-        )
-
-        # File handler - save to experiment directory
-        log_file = os.path.join(experiment_dir, "experiment.log")
-        file_handler = logging.FileHandler(log_file, mode="w")  # 'w' to start fresh
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(formatter)
-
-        # Console handler - continue showing on console
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
-        console_formatter = logging.Formatter(
-            "%(message)s"
-        )  # Simpler format for console
-        console_handler.setFormatter(console_formatter)
-
-        # Add handlers to logger
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-
-        # Test the logger
-        logger.info("Logger successfully initialized")
-
-        return logger
-    except Exception as e:
-        print(f"Warning: Could not set up logger: {e}")
-        print("Falling back to print statements")
-        return None
-
-
-def log_message(logger, message, level="info"):
-    """Helper function to log message with fallback to print"""
-    if logger:
-        if level == "info":
-            logger.info(message)
-        elif level == "error":
-            logger.error(message)
-        elif level == "warning":
-            logger.warning(message)
-        else:
-            logger.info(message)
-    else:
-        if level == "error":
-            print(f"ERROR: {message}")
-        elif level == "warning":
-            print(f"WARNING: {message}")
-        else:
-            print(message)
 
 
 class PINN(tf.keras.Model):
@@ -436,9 +376,6 @@ def log_residual_norms(aux_dict, logger=None):
     fu_rms = tf.sqrt(tf.reduce_mean(tf.square(aux_dict["fu"]))).numpy()
     fv_rms = tf.sqrt(tf.reduce_mean(tf.square(aux_dict["fv"]))).numpy()
     div_rms = tf.sqrt(tf.reduce_mean(tf.square(aux_dict["div"]))).numpy()
-    message = f"   RMS(f_u)={fu_rms:.3e} RMS(f_v)={fv_rms:.3e} RMS(div)={div_rms:.3e}"
-    if logger:
-        logger.info(message)
-    else:
-        print(message)
+    message = f"RMS(f_u)={fu_rms:.3e} RMS(f_v)={fv_rms:.3e} RMS(div)={div_rms:.3e}"
+    logger.info(message)
     return fu_rms, fv_rms, div_rms

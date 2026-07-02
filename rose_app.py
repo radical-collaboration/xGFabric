@@ -31,9 +31,22 @@
 # Random values for now.
 
 # Env must be first
+import glob
+
 from dotenv import load_dotenv
 
+from reports.plot_workflow_dashboard import plot_split
+from reports.plot_workflow_gantt import plot as plot_gantt
+
+from tasks.common.log_formatter import register_log_main
+
 load_dotenv("tasks/common/config.sh")
+import rhapsody
+import logging
+
+rhapsody.enable_logging(
+    level=logging.INFO,
+)
 
 import asyncio
 import os
@@ -56,35 +69,37 @@ from tasks.do_pinn import tk_do_pinn
 from tasks.do_fno import tk_do_fno
 from tasks.to_edge import tk_to_edge
 
-logger = logging.getLogger(__name__)
-
-import rhapsody
-
-rhapsody.enable_logging(level=logging.INFO)
-
 verify_config()
 
 
 async def main():
     # Setup environment
-    init_default_logger(logging.INFO)
-
-    logger.info("Warming up....")
-
     # Create interim directory for storing logs / outputs
     dt_str = get_fdate()
     os.makedirs(os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}")
     os.environ["PLAYGROUND_DIR"] = os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}"
 
     # Get backends
-    nersc_cpu = NerscCPU(node_count=18)
+    nersc_cpu = LocalCPU()  # NerscCPU(node_count=1)
     backend_nersc_cpu = await nersc_cpu.get_backend()
     asyncflow = await WorkflowEngine.create(
         backend=[backend_nersc_cpu],
     )
 
+    telemetry = await asyncflow.start_telemetry(
+        resource_poll_interval=0.5,
+        checkpoint_path=os.getenv("PLAYGROUND_DIR") + "/telemetry",
+    )
+
+    logger = register_log_main(
+        os.getenv("PLAYGROUND_DIR") + "/rose.log",
+        os.getenv("PLAYGROUND_DIR") + "/libs.log",
+        logging.INFO,
+    )
+
     # Setup environment
-    init_default_logger(logging.INFO)
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.INFO)
+    logging.getLogger("matplotlib.colorbar").setLevel(logging.INFO)
 
     logger.info("Warming up post engine creation....")
 
@@ -107,6 +122,7 @@ async def main():
 
     # Create pipeline
     async def pipeline(pipeline_id):
+        # if True:
         logger.info("Start pipeline!")
 
         # Create directory to store logs and results
@@ -122,6 +138,7 @@ async def main():
         sim_jobs = []
         for i, data_point in enumerate(sensor_data):
             sim_jobs.append(do_sim(config.copy(), data_point, i))
+            break
 
         # barrier. Wait for all sims to complete
         sims = await asyncio.gather(*sim_jobs)
@@ -132,7 +149,6 @@ async def main():
             data_list.append((wind_speed, sim_csv))
 
         sim_ids = sim_ids[:-1]
-        config["PARENT_UNIQUE_ID"] = sim_ids
 
         # now, train using the results form the sims
         # then push to edge when complete
@@ -145,24 +161,40 @@ async def main():
         @asyncflow.block
         async def pcr_block(config, data_list, sensor_data):
             # do this independently of the workflow
-            env, partitions = await do_pcr_partition(
-                config.copy(), data_list, sensor_data
+            partitions = await do_pcr_partition(
+                config.copy(),
+                data_list,
+                sensor_data,
             )
             pcr_jobs = []
             for partition in partitions:
-                pcr_jobs.append(do_pcr(env, partition))
-            return await to_edge(config.copy(), do_pcr_pack(env, *pcr_jobs), "pcr")
+                pcr_jobs.append(do_pcr(config.copy(), partition))
+            return await to_edge(
+                config.copy(), do_pcr_pack(config.copy(), *pcr_jobs), "pcr"
+            )
 
         train_jobs.append(pcr_block(config, data_list, sensor_data))
 
         edge_result = await asyncio.gather(*train_jobs)
 
-        logger.info(f"Pipeline completed {edge_result}")
+        logger.info(f"Pipeline completed: {edge_result}")
 
-    results = await pipeline(1)
+    async with asyncflow.workflow_scope(1):
+        results = await pipeline(1)
+
+    await asyncio.sleep(1)
     logger.info(f"Program complete! Results: {results}")
 
+    logger.info(f"Telemetry summary: {telemetry.summary()}")
     await acl.shutdown()
+    await telemetry.stop()
+
+    # Call reports
+    for f in glob.glob(os.getenv("PLAYGROUND_DIR") + "/telemetry/*.telemetry.jsonl"):
+        plot_split(f)
+
+    for f in glob.glob(os.getenv("PLAYGROUND_DIR") + "/telemetry/*.telemetry.jsonl"):
+        plot_gantt(f)
 
 
 if __name__ == "__main__":

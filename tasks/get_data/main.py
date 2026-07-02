@@ -5,6 +5,8 @@ import logging
 import time
 import random
 from .parse_cspot import parse
+from ..common.log_formatter import register_task, register_log, close_task
+import datetime
 from .sensor_to_sim_params import strip_cols
 
 from ..common.pyspot.pyspot.senspot import WooF
@@ -13,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_get_data(config):
-    logger.info(f"Task get_data fired: {time.time()}.")
+    env = register_task(config, "get_data", 0)
+    logger = register_log(env, logging.INFO)
 
     # Use senspot to download config['CSPOT_LIMIT']
 
@@ -30,7 +33,6 @@ async def tk_get_data(config):
     wind_data = parse(items)
     outputs = strip_cols(wind_data)
 
-    print(f"OUTPUT: {outputs}")
-
     # return array of filenames of parameters
+    close_task(env)
     return outputs.to_dict(orient="records")

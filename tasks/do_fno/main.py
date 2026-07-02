@@ -1,46 +1,31 @@
 import asyncio
+import datetime
 import glob
 import os
 import subprocess
 import time
 import logging
 import random
-
+from ..common.log_formatter import register_task, register_log, close_task
 from .train_fno import fno_main_entry, FNO_Config
 
 logger = logging.getLogger(__name__)
 
 
 async def tk_do_fno(config, sims_list):
-    logger.info(f"Task do_fno fired: {time.time()}.")
+    env = register_task(config, "do_fno", 0)
+    logger = register_log(env, logging.INFO)
 
     # Require conda cfdaai
-
-    # create directory for models
-    task_dir = config["PIPELINE_DIR"] + "/models/fno"
-    os.makedirs(task_dir)
-    os.makedirs(task_dir + "/results")
-    os.makedirs(task_dir + "/logs")
-    os.makedirs(task_dir + "/interim")
-
-    env = os.environ.copy()
-    env.update(config)
-
-    env["OUTPUT_DIR"] = task_dir + "/results"
-    env["LOG_DIR"] = task_dir + "/logs"
-    env["INTERIM_DIR"] = task_dir + "/interim"
 
     # Start conda and then call main()
 
     fno_config = FNO_Config()
 
     # quick train:
-    # fno_config.epochs = 1
+    fno_config.epochs = 1
 
-    cwd = os.getcwd()
-    os.chdir(env["INTERIM_DIR"])
     fno_main_entry(sims_list, env["OUTPUT_DIR"], env["LOG_DIR"], fno_config)
-    os.chdir(cwd)
 
     # results should be in env['OUTPUT_DIR']
     files_to_archive = list(glob.glob(env["OUTPUT_DIR"] + "/*.weights.h5"))
@@ -74,4 +59,5 @@ async def tk_do_fno(config, sims_list):
         logger.warning(f"Error executing tar!")
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
+    close_task(env)
     return env["OUTPUT_DIR"] + "/fno.tar.gz"

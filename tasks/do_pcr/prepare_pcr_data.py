@@ -42,6 +42,9 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
 from tqdm import tqdm
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Default proximity radius for averaging CFD data around each grid point
 # Will be overridden by value from pcr_partitions.json if available
@@ -131,7 +134,7 @@ def prepare_machine_data(
     overall_start = time.time()
     ts = lambda: datetime.now().strftime("%H:%M:%S")
 
-    print(f"[{ts()}] [INFO] prepare_pcr_data: Starting (KD-Tree optimized)")
+    logger.info(f"prepare_pcr_data: Starting (KD-Tree optimized)")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -147,8 +150,8 @@ def prepare_machine_data(
         "averaging_radius", DEFAULT_AVERAGING_RADIUS
     )
 
-    print(
-        f"[{ts()}] [INFO]   Grid: {nx}x{ny}x{nz}={total_points}pts, {num_machines} machines, radius={averaging_radius}m"
+    logger.info(
+        f"Grid: {nx}x{ny}x{nz}={total_points}pts, {num_machines} machines, radius={averaging_radius}m"
     )
 
     # Collect ALL unique grid points from ALL partitions
@@ -169,7 +172,7 @@ def prepare_machine_data(
     sensor_data["wind_speed"] = sensor_data["wind_speed"].round()
     sensor_values = sensor_data["wind_speed"].values.tolist()
 
-    print(f"[{ts()}] [INFO]   Loaded {len(sensor_data)} sensor readings")
+    logger.info(f"Loaded {len(sensor_data)} sensor readings")
 
     # Dictionary to store U_Magnitude for each windspeed
     u_mag_by_ws = {}
@@ -187,8 +190,8 @@ def prepare_machine_data(
     available_ws = sorted(available_ws)
     sim_end = time.time()
 
-    print(
-        f"[{ts()}] [INFO]   Processed {len(available_ws)} sims in {format_duration(sim_end - sim_start)}, ws={available_ws}"
+    logger.info(
+        f"Processed {len(available_ws)} sims in {format_duration(sim_end - sim_start)}, ws={available_ws}"
     )
 
     # Create machine-specific data files

@@ -32,6 +32,9 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_squared_error
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def format_duration(seconds):
@@ -168,7 +171,7 @@ def train_chunk(chunk_data, output_dir):
     overall_start = time.time()
     ts = lambda: datetime.now().strftime("%H:%M:%S")
 
-    print(f"[{ts()}] [INFO] train_pcr_chunk: Starting (sklearn mode)")
+    logger.info(f"train_pcr_chunk: Starting (sklearn mode)")
 
     # ==== TIMING: Initialization ====
     init_start = time.time()
@@ -192,8 +195,8 @@ def train_chunk(chunk_data, output_dir):
     n_components = config["n_components"]
     sequence_length = config["sequence_length"]
 
-    print(
-        f"[{ts()}] [INFO]   Machine {machine_id}: {num_points} points, {len(sensor_values)} readings, {len(available_ws)} windspeeds"
+    logger.info(
+        f"Machine {machine_id}: {num_points} points, {len(sensor_values)} readings, {len(available_ws)} windspeeds"
     )
 
     # Create output directory
@@ -253,8 +256,8 @@ def train_chunk(chunk_data, output_dir):
         if (i + 1) % 500 == 0 or (i + 1) == num_points:
             avg_time = sum(point_times) / len(point_times)
             eta = avg_time * (num_points - i - 1)
-            print(
-                f"[{ts()}] [INFO]   Progress: {i+1}/{num_points} ({progress_pct:.0f}%) eta={format_duration(eta)}"
+            logger.info(
+                f"Progress: {i+1}/{num_points} ({progress_pct:.0f}%) eta={format_duration(eta)}"
             )
 
     train_end = time.time()
@@ -270,11 +273,11 @@ def train_chunk(chunk_data, output_dir):
     avg_r2 = np.mean(r_squared_values) if r_squared_values else 0
     avg_rmse = np.mean(rmse_values) if rmse_values else 0
 
-    print(
-        f"[{ts()}] [INFO] train_pcr_chunk: Machine {machine_id} done - ok={successful} fail={failed} R²={avg_r2:.3f} RMSE={avg_rmse:.3f}"
+    logger.info(
+        f"train_pcr_chunk: Machine {machine_id} done - ok={successful} fail={failed} R²={avg_r2:.3f} RMSE={avg_rmse:.3f}"
     )
-    print(
-        f"[{ts()}] [TIMER] init={init_time:.1f}s load={load_time:.1f}s train={train_elapsed:.1f}s total={overall_elapsed:.1f}s ({throughput:.1f} pts/s)"
+    logger.debug(
+        f"[TIMER] init={init_time:.1f}s load={load_time:.1f}s train={train_elapsed:.1f}s total={overall_elapsed:.1f}s ({throughput:.1f} pts/s)"
     )
 
     # Save detailed summary

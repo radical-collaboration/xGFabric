@@ -24,6 +24,9 @@ Output:
 import json
 import os
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def load_grid_config(path_to_config):
@@ -32,7 +35,7 @@ def load_grid_config(path_to_config):
         with open(path_to_config) as f:
             data = json.load(f)
         return data
-    print(f"Warning: grid_config.json not found in any search path, using defaults")
+    logger.warning(f"grid_config.json not found in any search path, using defaults")
     return {
         "boundaries": {
             "x_min": 8.3,
@@ -124,8 +127,8 @@ class PCR_Partition_Grid:
         base_chunk_size = total_points // num_machines
         remainder = total_points % num_machines
 
-        print(
-            f"[INFO] partition_pcr_grid: {nx}x{ny}x{nz}={total_points}pts -> {num_machines} machines ({base_chunk_size}+{remainder}r pts/machine)"
+        logger.info(
+            f"partition_pcr_grid: {nx}x{ny}x{nz}={total_points}pts -> {num_machines} machines ({base_chunk_size}+{remainder}r pts/machine)"
         )
 
         partitions = []
@@ -137,7 +140,7 @@ class PCR_Partition_Grid:
             chunk_size = base_chunk_size + (1 if m < remainder else 0)
 
             if chunk_size == 0:
-                print(f"[WARN]   Machine {m}: no points (too many machines)")
+                logger.warning(f"Machine {m}: no points (too many machines)")
                 continue
 
             # Get the points for this machine

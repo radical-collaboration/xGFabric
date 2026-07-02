@@ -15,7 +15,7 @@ Key design choices (matching notebook):
 """
 
 from dataclasses import dataclass
-
+import logging
 import numpy as np
 import tensorflow as tf
 import pandas as pd
@@ -25,7 +25,7 @@ import json
 import gc
 from sklearn.model_selection import train_test_split
 
-from .MPWB2 import PhysicsMLP3D, setup_logger, normalize
+from .MPWB2 import PhysicsMLP3D, normalize
 from ..common.cfd_common import (
     x_min,
     x_max,
@@ -41,6 +41,7 @@ from ..common.cfd_common import (
     expand_to_df,
 )
 
+logger = logging.getLogger(__name__)
 # -----------------------------
 # Reproducibility
 # -----------------------------
@@ -126,7 +127,6 @@ def prepare_data_3d(
     umag_min=0.0,
     test_size=0.20,
     val_size=0.10,
-    logger=None,
 ):
     """
     Load, filter, normalise and split CFD data -- matching the notebook pipeline.
@@ -292,7 +292,6 @@ class PINN_Config:
 
 def pinn_main_entry(simulation_data_list, output_directory, pinn_config: PINN_Config):
     # expand each csv into dataframes
-    logger = setup_logger(output_directory)
 
     data_list = []
     for wind_speed, simulation_csv in simulation_data_list:
@@ -309,11 +308,9 @@ def pinn_main_entry(simulation_data_list, output_directory, pinn_config: PINN_Co
             umag_min=pinn_config.umag_min,
             test_size=pinn_config.test_size,
             val_size=pinn_config.val_size,
-            logger=logger,
         )
     except RuntimeError as exc:
-        logger.error(str(exc))
-        logger.error("Training aborted — no data to train on.")
+        logger.exception("Training aborted — no data to train on.")
         return
 
     VEL_MAX = splits["VEL_MAX"]

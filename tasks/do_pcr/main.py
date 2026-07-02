@@ -5,8 +5,11 @@ import subprocess
 import time
 import logging
 import random
+import datetime
 
 import pandas as pd
+
+from ..common.log_formatter import register_task, register_log, close_task
 
 # step 1
 from .partition_pcr_grid import PCR_Partition_Grid
@@ -21,24 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_pcr_partition(config, sims_list, sensor_values):
-    logger.info(f"Task do_pcr_partition fired: {time.time()}.")
-
-    # create directory for models
-    task_dir = config["PIPELINE_DIR"] + "/models/pcr"
-    os.makedirs(task_dir)
-    os.makedirs(task_dir + "/results")
-    os.makedirs(task_dir + "/logs")
-    os.makedirs(task_dir + "/interim")
-
-    env = os.environ.copy()
-    env.update(config)
-
-    env["OUTPUT_DIR"] = task_dir + "/results"
-    env["LOG_DIR"] = task_dir + "/logs"
-    env["INTERIM_DIR"] = task_dir + "/interim"
-
-    cwd = os.getcwd()
-    os.chdir(env["INTERIM_DIR"])
+    env = register_task(config, "do_pcr_partition", 0)
+    logger = register_log(env, logging.INFO)
 
     # partition PCR grid
     machinecount = int(env["PCR_MACHINE_SPLITS"])
@@ -53,56 +40,54 @@ async def tk_pcr_partition(config, sims_list, sensor_values):
         sensor_df, sims_list, data_w_points, env["OUTPUT_DIR"]
     )
 
-    os.chdir(cwd)
+    close_task(env)
+    return machine_data_outputs
 
-    return env, machine_data_outputs
 
+async def tk_do_pcr(config, machine_data_output):
+    u_id = machine_data_output["machine_id"]
 
-async def tk_do_pcr(env, machine_data_output):
-    logger.info(f"Task do_pcr fired: {time.time()}.")
-
-    cwd = os.getcwd()
-    os.chdir(env["INTERIM_DIR"])
+    env = register_task(config, "do_pcr", u_id)
+    logger = register_log(env, logging.INFO)
 
     train_chunk(machine_data_output, env["OUTPUT_DIR"])
 
-    # outputs are in env['OUTPUT_DIR']/pcr_coefficients_*.csv
-
-    os.chdir(cwd)
-    return env
+    close_task(env)
+    return env["OUTPUT_DIR"]
 
 
-async def tk_do_pcr_pack(env, *dummy_pcr_return):
-    logger.info(f"Task do_pcr_pack fired: {time.time()}. ")
+async def tk_do_pcr_pack(config, *pcr_output_dirs):
+    env = register_task(config, "do_pcr_pack", 0)
+    logger = register_log(env, logging.INFO)
 
     # results should be in env['OUTPUT_DIR']
-    files_to_archive = list(glob.glob(env["OUTPUT_DIR"] + "/pcr_coefficients_*.csv"))
-    files_to_archive += list(glob.glob(env["OUTPUT_DIR"] + "/*.json"))
+    files_to_archive = []
+    for pcr_output in pcr_output_dirs:
+        files_to_archive += list(glob.glob(pcr_output + "/pcr_coefficients_*.csv"))
+        files_to_archive += list(glob.glob(pcr_output + "/*.json"))
 
-    # keep everything after OUTPUT_DIR
-    for i in range(len(files_to_archive)):
-        files_to_archive[i] = files_to_archive[i][len(env["OUTPUT_DIR"]) + 1 :]
-
-    # launch tar.
     cmd_tar = [
         "tar",
         "-czf",
-        env["OUTPUT_DIR"] + "/pcr.tar.gz",
-        "-C",
-        env["OUTPUT_DIR"],
-    ] + files_to_archive
-    # logger.info(f"Running tar: {' '.join(cmd_tar)}")
+        f"{env['OUTPUT_DIR']}/pcr.tar.gz",
+        "--transform=s|.*/||",  # Strip directories, keep only filename
+        "-T",
+        "-",  # Read file list from stdin
+    ]
 
     tarproc = subprocess.Popen(
         cmd_tar,
+        stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        text=True,
     )
 
-    tarproc.communicate()
+    tarproc.communicate(input="\n".join(files_to_archive))
 
     if tarproc.returncode != 0:
-        logger.warning(f"Error executing tar!")
+        logger.warning("Error executing tar!")
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
+    close_task(env)
     return env["OUTPUT_DIR"] + "/pcr.tar.gz"

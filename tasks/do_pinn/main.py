@@ -1,47 +1,30 @@
 import asyncio
+import datetime
 import glob
 import os
 import subprocess
 import time
 import logging
 import random
-
+from ..common.log_formatter import register_task, register_log, close_task
 from .MPWB2_CFD import PINN_Config, pinn_main_entry
 
 logger = logging.getLogger(__name__)
 
 
 async def tk_do_pinn(config, sims_list):
-    logger.info(f"Task do_pinn fired: {time.time()}.")
+    env = register_task(config, "do_pinn", 0)
+    logger = register_log(env, logging.INFO)
 
     # Require conda cfdaai
-
-    # create directory for models
-    task_dir = config["PIPELINE_DIR"] + "/models/pinn"
-    os.makedirs(task_dir)
-    os.makedirs(task_dir + "/results")
-    os.makedirs(task_dir + "/logs")
-    os.makedirs(task_dir + "/interim")
-
-    env = os.environ.copy()
-    env.update(config)
-
-    env["OUTPUT_DIR"] = task_dir + "/results"
-    env["LOG_DIR"] = task_dir + "/logs"
-    env["INTERIM_DIR"] = task_dir + "/interim"
-
-    # Start conda and then call main()
 
     pinn_config = PINN_Config()
 
     # quick train:
-    # pinn_config.max_points_per_file = 600
-    # pinn_config.epochs = 1
+    pinn_config.max_points_per_file = 600
+    pinn_config.epochs = 1
 
-    cwd = os.getcwd()
-    os.chdir(env["INTERIM_DIR"])
     pinn_main_entry(sims_list, env["OUTPUT_DIR"], pinn_config)
-    os.chdir(cwd)
 
     # results should be in env['OUTPUT_DIR']
     files_to_archive = list(glob.glob(env["OUTPUT_DIR"] + "/*.weights.h5"))
@@ -75,4 +58,5 @@ async def tk_do_pinn(config, sims_list):
         logger.warning(f"Error executing tar!")
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
+    close_task(env)
     return env["OUTPUT_DIR"] + "/pinn.tar.gz"

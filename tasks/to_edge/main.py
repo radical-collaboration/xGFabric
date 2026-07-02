@@ -4,6 +4,8 @@ import os
 import logging
 import time
 import random
+from ..common.log_formatter import register_task, register_log, close_task
+import datetime
 
 from ..common.pyspot.pyspot.senspot import FileWooF, FileWooFItem
 
@@ -11,9 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 async def tk_to_edge(config, incoming_model, model_name) -> FileWooFItem:
-    model = incoming_model
+    env = register_task(config, "to_edge", model_name)
+    logger = register_log(env, logging.INFO)
+    # create directory for sims
 
-    logger.info(f"Task to_edge fired: {time.time()}.")
+    model = incoming_model
 
     # Use senspot to upload file to endpoint
 
@@ -28,4 +32,5 @@ async def tk_to_edge(config, incoming_model, model_name) -> FileWooFItem:
     result = target.send(model)
 
     # return array of filenames of parameters
+    close_task(env)
     return result
