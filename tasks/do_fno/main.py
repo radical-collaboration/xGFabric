@@ -37,9 +37,8 @@ async def tk_do_fno(config, sims_list):
     fno_config = FNO_Config()
 
     # quick train:
-    fno_config.epochs = 1
+    # fno_config.epochs = 1
 
-    print(sims_list, env["OUTPUT_DIR"], logger, fno_config)
     fno_main_entry(sims_list, env["OUTPUT_DIR"], fno_config)
 
     # results should be in env['OUTPUT_DIR']

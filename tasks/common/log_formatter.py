@@ -26,10 +26,16 @@ def register_task(env, task_name: str, task_number: int | str = 0):
 
 def register_log_main(file_path_rose, file_path_libs, log_level=logging.INFO):
     # workaround for preventing double logging:
+    root_logger = logging.getLogger()
+    root_logger.setLevel(
+        logging.DEBUG
+    )  # debug as the most verbose as root. Other loggers can filter upon it.
+
     logger_root = init_default_logger(
         log_level,
         output_file=file_path_libs,
         clear_handlers=True,
+        file_log_level=log_level,
     )
 
     log_tmp = logging.getLogger("rose_app")
@@ -39,19 +45,26 @@ def register_log_main(file_path_rose, file_path_libs, log_level=logging.INFO):
         output_file=file_path_rose,
         logger_name="rose_app",
         clear_handlers=True,
+        file_log_level=log_level,
     )
     return logger
 
 
 def register_log(env, log_level=logging.INFO):
     # workaround for preventing double logging:
-    log_tmp = logging.getLogger(env["TASK_NAME"])
-    log_tmp.propagate = False
+    # only for concurrent backend
+    # log_tmp = logging.getLogger(env["TASK_NAME"])
+    # log_tmp.propagate = False
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+
     logger = init_default_logger(
         log_level,
         output_file=env["LOG_DIR"] + f"/task_log.txt",
         logger_name=env["TASK_NAME"],
         clear_handlers=True,
+        file_log_level=log_level,
     )
     logger.info(f"Task {env["TASK_NAME"]} started!")
     return logger

@@ -34,6 +34,7 @@ import collections
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 import matplotlib
 
@@ -152,7 +153,7 @@ def build_workflow_tasks(events: list[dict], t0: float) -> dict[str, list[dict]]
         td[EVENT_TYPE_MAP[et]] = e["event_time"] - t0
         wid = e.get("attributes", {}).get("asyncflow.workflow_id")
         if wid:
-            td["workflow_id"] = wid
+            td["workflow_id"] = str(wid)
 
     by_wf: dict[str, list[dict]] = collections.defaultdict(list)
     for td in by_task.values():
@@ -496,7 +497,7 @@ def _panel_heatmap(ax, mat: np.ndarray, edges: np.ndarray, stage_names: list[str
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 
-def plot(jsonl: Path, out: str | None, dpi: int) -> None:
+def plot(jsonl: Path, out: Optional[str] = None, dpi: int = 140) -> None:
     events = load_events(jsonl)
     t0 = session_t0(events)
     name = jsonl.stem

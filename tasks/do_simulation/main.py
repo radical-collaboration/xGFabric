@@ -26,7 +26,7 @@ async def tk_do_simulation(config, sensor_point, sim_id):
     # config: dict
     # sensor_point: has wind_speed and wind_dir
 
-    return await tk_do_simulation_tmp(config, sensor_point, sim_id)
+    # return await tk_do_simulation_tmp(config, sensor_point, sim_id)
 
     # create directory for sims
     env = register_task(config, "do_simulation", sim_id)

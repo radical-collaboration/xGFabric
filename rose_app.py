@@ -32,6 +32,7 @@
 
 # Env must be first
 import glob
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -51,15 +52,15 @@ rhapsody.enable_logging(
 import asyncio
 import os
 from radical.asyncflow import WorkflowEngine
-from radical.asyncflow.logging import init_default_logger
 import logging
 from rose.al.active_learner import Learner
 
 from utils_architecture import verify_config, get_fdate
 
 # Load backends:
-from resources.local_cpu import LocalCPU as LocalCPU
-from resources.nersc_cpu import NerscCPU as NerscCPU
+from resources.local_cpu import LocalCPU
+from resources.nersc_cpu import NerscCPU
+from resources.nersc_gpu import NerscGPU
 
 # Tasks:
 from tasks.get_data import tk_get_data
@@ -71,6 +72,8 @@ from tasks.to_edge import tk_to_edge
 
 verify_config()
 
+ENABLE_TELEMETRY = True
+
 
 async def main():
     # Setup environment
@@ -80,16 +83,17 @@ async def main():
     os.environ["PLAYGROUND_DIR"] = os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}"
 
     # Get backends
-    nersc_cpu = LocalCPU()  # NerscCPU(node_count=1)
-    backend_nersc_cpu = await nersc_cpu.get_backend()
+    nersc_gpu = NerscCPU(node_count=18)
+    backend_nersc_cpu = await nersc_gpu.get_backend()
     asyncflow = await WorkflowEngine.create(
         backend=[backend_nersc_cpu],
     )
 
-    telemetry = await asyncflow.start_telemetry(
-        resource_poll_interval=0.5,
-        checkpoint_path=os.getenv("PLAYGROUND_DIR") + "/telemetry",
-    )
+    if ENABLE_TELEMETRY:
+        telemetry = await asyncflow.start_telemetry(
+            resource_poll_interval=0.5,
+            checkpoint_path=os.getenv("PLAYGROUND_DIR") + "/telemetry",
+        )
 
     logger = register_log_main(
         os.getenv("PLAYGROUND_DIR") + "/rose.log",
@@ -111,6 +115,10 @@ async def main():
 
     do_sim = acl.simulation_task(as_executable=False)(tk_do_simulation)
 
+    # policies = nersc_gpu.make_gpu_policy(2)
+    gpu_process_template1 = {}  # {"process_template": {"policy": policies[0]}}
+    gpu_process_template2 = {}  # {"process_template": {"policy": policies[1]}}
+
     do_pinn = acl.training_task(as_executable=False)(tk_do_pinn)
     do_fno = acl.training_task(as_executable=False)(tk_do_fno)
 
@@ -122,79 +130,94 @@ async def main():
 
     # Create pipeline
     async def pipeline(pipeline_id):
-        # if True:
-        logger.info("Start pipeline!")
+        async with asyncflow.workflow_scope(1):
+            # if True:
+            logger.info("Start pipeline!")
 
-        # Create directory to store logs and results
-        pipeline_playground = f"{os.getenv('PLAYGROUND_DIR')}/{pipeline_id}"
-        os.makedirs(pipeline_playground)
-        config = {
-            "PIPELINE_DIR": pipeline_playground,
-        }
+            # Create directory to store logs and results
+            pipeline_playground = f"{os.getenv('PLAYGROUND_DIR')}/{pipeline_id}"
+            os.makedirs(pipeline_playground)
+            config = {"PIPELINE_DIR": pipeline_playground}
 
-        sensor_data = await get_data(config.copy())
-        # sensor_data spits out 72 points. Run one sim per point.
+            sensor_data = await get_data(config.copy())
+            # sensor_data spits out 72 points. Run one sim per point.
 
-        sim_jobs = []
-        for i, data_point in enumerate(sensor_data):
-            sim_jobs.append(do_sim(config.copy(), data_point, i))
-            break
+            sim_jobs = []
+            for i, data_point in enumerate(sensor_data):
+                sim_jobs.append(do_sim(config.copy(), data_point, i))
+                # break
 
-        # barrier. Wait for all sims to complete
-        sims = await asyncio.gather(*sim_jobs)
-        sim_ids = ""
-        data_list = []
-        for sim_id, wind_speed, sim_csv in sims:
-            sim_ids = str(sim_id) + ","
-            data_list.append((wind_speed, sim_csv))
+            # barrier. Wait for all sims to complete
+            sims = await asyncio.gather(*sim_jobs)
+            sim_ids = ""
+            data_list = []
+            for sim_id, wind_speed, sim_csv in sims:
+                sim_ids = str(sim_id) + ","
+                data_list.append((wind_speed, sim_csv))
 
-        sim_ids = sim_ids[:-1]
+            sim_ids = sim_ids[:-1]
 
-        # now, train using the results form the sims
-        # then push to edge when complete
+            # now, train using the results form the sims
+            # then push to edge when complete
 
-        train_jobs = [
-            to_edge(config.copy(), do_fno(config.copy(), data_list), "fno"),
-            to_edge(config.copy(), do_pinn(config.copy(), data_list), "pinn"),
-        ]
+            train_jobs = [
+                to_edge(
+                    config.copy(),
+                    do_fno(
+                        config.copy(), data_list, task_description=gpu_process_template1
+                    ),
+                    "fno",
+                ),
+                to_edge(
+                    config.copy(),
+                    do_pinn(
+                        config.copy(), data_list, task_description=gpu_process_template2
+                    ),
+                    "pinn",
+                ),
+            ]
 
-        @asyncflow.block
-        async def pcr_block(config, data_list, sensor_data):
-            # do this independently of the workflow
-            partitions = await do_pcr_partition(
-                config.copy(),
-                data_list,
-                sensor_data,
-            )
-            pcr_jobs = []
-            for partition in partitions:
-                pcr_jobs.append(do_pcr(config.copy(), partition))
-            return await to_edge(
-                config.copy(), do_pcr_pack(config.copy(), *pcr_jobs), "pcr"
-            )
+            @asyncflow.block
+            async def pcr_block(config, data_list, sensor_data):
+                # do this independently of the workflow
+                partitions = await do_pcr_partition(
+                    config.copy(),
+                    data_list,
+                    sensor_data,
+                )
+                pcr_jobs = []
+                for partition in partitions:
+                    pcr_jobs.append(do_pcr(config.copy(), partition))
+                return await to_edge(
+                    config.copy(), do_pcr_pack(config.copy(), *pcr_jobs), "pcr"
+                )
 
-        train_jobs.append(pcr_block(config, data_list, sensor_data))
+            train_jobs.append(pcr_block(config, data_list, sensor_data))
 
-        edge_result = await asyncio.gather(*train_jobs)
+            edge_result = await asyncio.gather(*train_jobs)
 
-        logger.info(f"Pipeline completed: {edge_result}")
+            logger.info(f"Pipeline completed: {edge_result}")
 
-    async with asyncflow.workflow_scope(1):
-        results = await pipeline(1)
+    results = await pipeline(1)
 
     await asyncio.sleep(1)
     logger.info(f"Program complete! Results: {results}")
 
     logger.info(f"Telemetry summary: {telemetry.summary()}")
     await acl.shutdown()
-    await telemetry.stop()
+    if ENABLE_TELEMETRY:
+        await telemetry.stop()
 
-    # Call reports
-    for f in glob.glob(os.getenv("PLAYGROUND_DIR") + "/telemetry/*.telemetry.jsonl"):
-        plot_split(f)
+        # Call reports
+        for f in glob.glob(
+            os.getenv("PLAYGROUND_DIR") + "/telemetry/*.telemetry.jsonl"
+        ):
+            plot_split(f)
 
-    for f in glob.glob(os.getenv("PLAYGROUND_DIR") + "/telemetry/*.telemetry.jsonl"):
-        plot_gantt(f)
+        for f in glob.glob(
+            os.getenv("PLAYGROUND_DIR") + "/telemetry/*.telemetry.jsonl"
+        ):
+            plot_gantt(Path(f))
 
 
 if __name__ == "__main__":

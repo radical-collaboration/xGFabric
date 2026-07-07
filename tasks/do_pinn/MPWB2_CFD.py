@@ -41,7 +41,7 @@ from ..common.cfd_common import (
     expand_to_df,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("do_pinn")
 # -----------------------------
 # Reproducibility
 # -----------------------------

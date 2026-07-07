@@ -8,6 +8,10 @@ def verify_config():
     else:
         os.environ["INTERIM_DIR"] = "."
 
+    # if len(tf.config.list_physical_devices("GPU")) == 0:
+    #     print(tf.config.list_physical_devices("GPU"))
+    #     raise ValueError("Missing GPUs")
+
 
 def get_fdate():
     now = datetime.datetime.now()

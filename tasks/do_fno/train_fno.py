@@ -38,7 +38,6 @@ import pandas as pd
 from scipy.interpolate import griddata as scipy_griddata, LinearNDInterpolator
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-
 import tensorflow as tf  # noqa: E402
 from tensorflow.keras import layers  # noqa: E402
 
@@ -50,7 +49,7 @@ from ..common.cfd_common import (  # noqa: E402
     y_max,
 )
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger("do_fno")
 
 
 @dataclass
@@ -138,6 +137,7 @@ class FNO2D(tf.keras.Model):
 
 def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config):
     # Determine data format mode
+
     USE_ITERATION_MODE = (
         fno_config.iter_min is not None and fno_config.iter_max is not None
     )
@@ -149,8 +149,8 @@ def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config):
 
     # results dir will be for model
     # logs dir for plots
-    log = logger
-    logging.getLogger("tensorflow").setLevel(logging.ERROR)
+
+    # logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
     mode_str = (
         f"iterations [{ITER_MIN}, {ITER_MAX}]" if USE_ITERATION_MODE else "single-file"
@@ -159,9 +159,7 @@ def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config):
     log.info(f"FNO2D training  |  {mode_str}")
     log.info(f"Output dir : {OUTPUT_DIR}")
     log.info(f"TensorFlow : {tf.__version__}")
-    print("Here....")
-    # log.info(f'GPUs       : {tf.config.list_physical_devices("GPU")}')
-    print("Here22222....")
+    log.info(f'GPUs       : {tf.config.list_physical_devices("GPU")}')
     log.info("=" * 70)
 
     # =============================================================================

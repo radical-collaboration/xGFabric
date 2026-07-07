@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("do_pinn")
 
 # -----------------------------
 # Domain bounds (meters)
