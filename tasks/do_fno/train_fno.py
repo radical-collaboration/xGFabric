@@ -49,8 +49,6 @@ from ..common.cfd_common import (  # noqa: E402
     y_max,
 )
 
-log = logging.getLogger("do_fno")
-
 
 @dataclass
 class FNO_Config:
@@ -135,7 +133,7 @@ class FNO2D(tf.keras.Model):
         return self.proj2(self.proj1(v))
 
 
-def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config):
+def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config, log):
     # Determine data format mode
 
     USE_ITERATION_MODE = (

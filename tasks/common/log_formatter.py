@@ -1,5 +1,6 @@
 import os
 import logging
+import socket
 from radical.asyncflow.logging import init_default_logger
 import datetime
 
@@ -15,6 +16,7 @@ def register_task(env, task_name: str, task_number: int | str = 0):
     env["LOG_DIR"] = task_dir + "/logs"
     env["INTERIM_DIR"] = task_dir + "/interim"
     env["TASK_NAME"] = task_name
+    env["TASK_ID"] = str(task_number)
 
     env_main = os.environ.copy()
     env_main.update(env)
@@ -62,15 +64,15 @@ def register_log(env, log_level=logging.INFO):
     logger = init_default_logger(
         log_level,
         output_file=env["LOG_DIR"] + f"/task_log.txt",
-        logger_name=env["TASK_NAME"],
+        logger_name=env["TASK_NAME"] + "_" + env["TASK_ID"],
         clear_handlers=True,
         file_log_level=log_level,
     )
-    logger.info(f"Task {env["TASK_NAME"]} started!")
+    logger.info(f"Task {env["TASK_NAME"]} started on {socket.gethostname()}!")
     return logger
 
 
 def close_task(env):
-    logger = logging.getLogger(env["TASK_NAME"])
+    logger = logging.getLogger(env["TASK_NAME"] + "_" + env["TASK_ID"])
     logger.info(f"Task {env["TASK_NAME"]} finished!")
     os.chdir(env["PREVIOUS_CWD"])

@@ -9,8 +9,6 @@ import math
 from ..common.log_formatter import register_task, register_log, close_task
 import datetime
 
-logger = logging.getLogger(__name__)
-
 
 async def tk_do_simulation_tmp(config, sensor_point, sim_id):
     env = register_task(config, "do_simulation", sim_id)
@@ -77,6 +75,7 @@ async def tk_do_simulation(config, sensor_point, sim_id):
     if proc.returncode != 0:
         logger.warning(f"simulation script returned non-zero code: {stderr}")
 
+    task_dir = env["INTERIM_DIR"]
     with open(task_dir + "/stdout.txt", "w") as f:
         f.write(stdout)
     with open(task_dir + "/stderr.txt", "w") as f:

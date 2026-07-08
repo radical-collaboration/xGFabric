@@ -44,8 +44,6 @@ from scipy.spatial import cKDTree
 from tqdm import tqdm
 import logging
 
-logger = logging.getLogger(__name__)
-
 # Default proximity radius for averaging CFD data around each grid point
 # Will be overridden by value from pcr_partitions.json if available
 DEFAULT_AVERAGING_RADIUS = 1.5  # meters
@@ -112,6 +110,7 @@ def prepare_machine_data(
     sim_data,
     full_partitions_data,
     output_dir,
+    logger,
     n_components=12,
     sequence_length=12,
 ):

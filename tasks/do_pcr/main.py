@@ -20,8 +20,6 @@ from .prepare_pcr_data import prepare_machine_data
 # step 3
 from .train_pcr_chunk import train_chunk
 
-logger = logging.getLogger(__name__)
-
 
 async def tk_pcr_partition(config, sims_list, sensor_values):
     env = register_task(config, "do_pcr_partition", 0)
@@ -37,7 +35,7 @@ async def tk_pcr_partition(config, sims_list, sensor_values):
     sensor_df = pd.DataFrame(sensor_values)
 
     machine_data_outputs = prepare_machine_data(
-        sensor_df, sims_list, data_w_points, env["OUTPUT_DIR"]
+        sensor_df, sims_list, data_w_points, env["OUTPUT_DIR"], logger
     )
 
     close_task(env)
@@ -50,7 +48,7 @@ async def tk_do_pcr(config, machine_data_output):
     env = register_task(config, "do_pcr", u_id)
     logger = register_log(env, logging.INFO)
 
-    train_chunk(machine_data_output, env["OUTPUT_DIR"])
+    train_chunk(machine_data_output, env["OUTPUT_DIR"], logger)
 
     close_task(env)
     return env["OUTPUT_DIR"]

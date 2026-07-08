@@ -41,7 +41,6 @@ from ..common.cfd_common import (
     expand_to_df,
 )
 
-logger = logging.getLogger("do_pinn")
 # -----------------------------
 # Reproducibility
 # -----------------------------
@@ -123,6 +122,7 @@ def compute_physics_loss_3d(
 # ---------------------------------------------------------------------------
 def prepare_data_3d(
     data_list,
+    logger,
     max_points_per_file=5000,
     umag_min=0.0,
     test_size=0.20,
@@ -142,7 +142,7 @@ def prepare_data_3d(
     Each split has: X  (N,4)  [x_norm, y_norm, z_norm, ws_norm]
                     Y  (N,2)  [u_norm, v_norm]
     """
-    log = logger.info if logger else print
+    log = logger.info
 
     raw_x, raw_y, raw_z = [], [], []
     raw_u, raw_v = [], []
@@ -290,7 +290,9 @@ class PINN_Config:
     patience = 3
 
 
-def pinn_main_entry(simulation_data_list, output_directory, pinn_config: PINN_Config):
+def pinn_main_entry(
+    simulation_data_list, output_directory, pinn_config: PINN_Config, logger
+):
     # expand each csv into dataframes
 
     data_list = []
@@ -304,13 +306,14 @@ def pinn_main_entry(simulation_data_list, output_directory, pinn_config: PINN_Co
     try:
         splits = prepare_data_3d(
             data_list,
+            logger,
             max_points_per_file=pinn_config.max_points_per_file,
             umag_min=pinn_config.umag_min,
             test_size=pinn_config.test_size,
             val_size=pinn_config.val_size,
         )
     except RuntimeError as exc:
-        logger.exception("Training aborted — no data to train on.")
+        logger.error(f"Training aborted — no data to train on. {exc}")
         return
 
     VEL_MAX = splits["VEL_MAX"]

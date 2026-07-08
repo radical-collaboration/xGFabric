@@ -34,8 +34,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_squared_error
 import logging
 
-logger = logging.getLogger(__name__)
-
 
 def format_duration(seconds):
     """Format duration in seconds to human-readable string."""
@@ -158,7 +156,7 @@ def save_coefficients(result, sequence_length, output_file):
     out_df.to_csv(output_file, index=False, header=False)
 
 
-def train_chunk(chunk_data, output_dir):
+def train_chunk(chunk_data, output_dir, logger):
     """
     Train PCR models for all points in the chunk using sklearn.
 

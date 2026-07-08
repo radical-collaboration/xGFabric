@@ -11,9 +11,6 @@ from .sensor_to_sim_params import strip_cols
 
 from ..common.pyspot.pyspot.senspot import WooF
 
-logger = logging.getLogger(__name__)
-
-
 async def tk_get_data(config):
     env = register_task(config, "get_data", 0)
     logger = register_log(env, logging.INFO)

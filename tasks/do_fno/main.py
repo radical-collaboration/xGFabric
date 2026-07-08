@@ -9,8 +9,6 @@ import random
 from ..common.log_formatter import register_task, register_log, close_task
 from .train_fno import fno_main_entry, FNO_Config
 
-logger = logging.getLogger(__name__)
-
 
 def main():
     sims_list = [
@@ -39,7 +37,7 @@ async def tk_do_fno(config, sims_list):
     # quick train:
     # fno_config.epochs = 1
 
-    fno_main_entry(sims_list, env["OUTPUT_DIR"], fno_config)
+    fno_main_entry(sims_list, env["OUTPUT_DIR"], fno_config, logger)
 
     # results should be in env['OUTPUT_DIR']
     files_to_archive = list(glob.glob(env["OUTPUT_DIR"] + "/*.weights.h5"))

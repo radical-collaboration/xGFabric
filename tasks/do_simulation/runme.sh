@@ -81,7 +81,7 @@ mkdir -p "$working_dir" || {
 }
 
 # Trap to clean up working directory on exit (unless error)
-trap "rm -rf '$working_dir'" EXIT
+# trap "rm -rf '$working_dir'" EXIT
 
 start=$(date '+%s.%N')
 start_int=$(date '+%s')

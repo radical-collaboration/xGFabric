@@ -72,7 +72,10 @@ from tasks.to_edge import tk_to_edge
 
 verify_config()
 
+# Telemetry must be disabled for LocalCPU backend
 ENABLE_TELEMETRY = True
+NODE_COUNT = 18
+CONCURRENCY_LIMIT = 72
 
 
 async def main():
@@ -83,8 +86,8 @@ async def main():
     os.environ["PLAYGROUND_DIR"] = os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}"
 
     # Get backends
-    nersc_gpu = NerscCPU(node_count=18)
-    backend_nersc_cpu = await nersc_gpu.get_backend()
+    nersc_cpu = NerscCPU(node_count=NODE_COUNT)
+    backend_nersc_cpu = await nersc_cpu.get_backend()
     asyncflow = await WorkflowEngine.create(
         backend=[backend_nersc_cpu],
     )
@@ -115,10 +118,6 @@ async def main():
 
     do_sim = acl.simulation_task(as_executable=False)(tk_do_simulation)
 
-    # policies = nersc_gpu.make_gpu_policy(2)
-    gpu_process_template1 = {}  # {"process_template": {"policy": policies[0]}}
-    gpu_process_template2 = {}  # {"process_template": {"policy": policies[1]}}
-
     do_pinn = acl.training_task(as_executable=False)(tk_do_pinn)
     do_fno = acl.training_task(as_executable=False)(tk_do_fno)
 
@@ -143,12 +142,35 @@ async def main():
             # sensor_data spits out 72 points. Run one sim per point.
 
             sim_jobs = []
+            sims = []
+            counter = 0
+            policies = nersc_cpu.create_cpu_policies(policy_count=CONCURRENCY_LIMIT)
+            for policy in policies:
+                logger.debug(f"Policy: {policy}")
             for i, data_point in enumerate(sensor_data):
-                sim_jobs.append(do_sim(config.copy(), data_point, i))
-                # break
+                sim_jobs.append(
+                    do_sim(
+                        config.copy(),
+                        data_point,
+                        i,
+                        # task_description={
+                        #     "process_template": {"policy": policies[i % len(policies)]}
+                        # },
+                    )
+                )
+                counter += 1
+                if counter == CONCURRENCY_LIMIT:
+                    logger.info(f"Awaiting based on concurrency limit")
+                    sims += await asyncio.gather(*sim_jobs)
+                    logger.debug(f"Sims: {sims}")
+                    sim_jobs = []
+                    counter = 0
+
+            logger.debug(f"Awaiting remaining {sim_jobs}")
+            sims += await asyncio.gather(*sim_jobs)
 
             # barrier. Wait for all sims to complete
-            sims = await asyncio.gather(*sim_jobs)
+
             sim_ids = ""
             data_list = []
             for sim_id, wind_speed, sim_csv in sims:
@@ -160,18 +182,32 @@ async def main():
             # now, train using the results form the sims
             # then push to edge when complete
 
+            t_policy = nersc_cpu.create_cpu_policies(
+                policy_count=CONCURRENCY_LIMIT, core_count=128
+            )
+            for policy in policies:
+                logger.debug(f"Training Policy: {policy}")
+
             train_jobs = [
                 to_edge(
                     config.copy(),
                     do_fno(
-                        config.copy(), data_list, task_description=gpu_process_template1
+                        config.copy(),
+                        data_list,
+                        # task_description={
+                        #     "process_template": {"policy": t_policy[0 % len(t_policy)]}
+                        # },
                     ),
                     "fno",
                 ),
                 to_edge(
                     config.copy(),
                     do_pinn(
-                        config.copy(), data_list, task_description=gpu_process_template2
+                        config.copy(),
+                        data_list,
+                        # task_description={
+                        #     "process_template": {"policy": t_policy[0 % len(t_policy)]}
+                        # },
                     ),
                     "pinn",
                 ),
@@ -180,14 +216,27 @@ async def main():
             @asyncflow.block
             async def pcr_block(config, data_list, sensor_data):
                 # do this independently of the workflow
+
+                pcr_policy = nersc_cpu.create_cpu_policies(
+                    policy_count=int(os.getenv("PCR_MACHINE_SPLITS")), core_count=2
+                )
+
                 partitions = await do_pcr_partition(
                     config.copy(),
                     data_list,
                     sensor_data,
                 )
                 pcr_jobs = []
-                for partition in partitions:
-                    pcr_jobs.append(do_pcr(config.copy(), partition))
+                for i, partition in enumerate(partitions):
+                    pcr_jobs.append(
+                        do_pcr(
+                            config.copy(),
+                            partition,
+                            # task_description={
+                            #     "process_template": {"policy": pcr_policy[i]}
+                            # },
+                        )
+                    )
                 return await to_edge(
                     config.copy(), do_pcr_pack(config.copy(), *pcr_jobs), "pcr"
                 )

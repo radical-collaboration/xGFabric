@@ -9,8 +9,6 @@ import datetime
 
 from ..common.pyspot.pyspot.senspot import FileWooF, FileWooFItem
 
-logger = logging.getLogger(__name__)
-
 
 async def tk_to_edge(config, incoming_model, model_name) -> FileWooFItem:
     env = register_task(config, "to_edge", model_name)

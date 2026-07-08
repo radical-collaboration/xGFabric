@@ -9,8 +9,6 @@ import random
 from ..common.log_formatter import register_task, register_log, close_task
 from .MPWB2_CFD import PINN_Config, pinn_main_entry
 
-logger = logging.getLogger("do_pinn")
-
 
 async def tk_do_pinn(config, sims_list):
     env = register_task(config, "do_pinn", 0)
@@ -24,7 +22,7 @@ async def tk_do_pinn(config, sims_list):
     # pinn_config.max_points_per_file = 600
     # pinn_config.epochs = 1
 
-    pinn_main_entry(sims_list, env["OUTPUT_DIR"], pinn_config)
+    pinn_main_entry(sims_list, env["OUTPUT_DIR"], pinn_config, logger)
 
     # results should be in env['OUTPUT_DIR']
     files_to_archive = list(glob.glob(env["OUTPUT_DIR"] + "/*.weights.h5"))

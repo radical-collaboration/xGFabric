@@ -5,8 +5,6 @@ import tensorflow as tf
 from tensorflow.keras import layers
 import logging
 
-logger = logging.getLogger("do_pinn")
-
 # -----------------------------
 # Domain bounds (meters)
 # -----------------------------
@@ -60,27 +58,27 @@ def soft_gate(x, thresh=0.3, k=8.0):
     return 1.0 / (1.0 + np.exp(-k * (x - thresh)))
 
 
-def inflow_gates_from_uv(u, v, thresh=0.3, k=8.0):
-    """
-    u>0 eastward, v>0 southward (your convention). Inflow if velocity points into the domain:
-      - North edge inflow when v > +thresh (flow from north blowing southward into domain)
-      - South edge inflow when v < -thresh
-      - West  edge inflow when u > +thresh
-      - East  edge inflow when u < -thresh
-    Returns 4 arrays (N_times, 1) with gate values in [0,1].
-    """
-    u = np.asarray(u).reshape(-1, 1)
-    v = np.asarray(v).reshape(-1, 1)
-    gN = soft_gate(v, thresh, k)  # v > +thresh
-    gS = soft_gate(-v, thresh, k)  # v < -thresh
-    gW = soft_gate(u, thresh, k)  # u > +thresh
-    gE = soft_gate(-u, thresh, k)  # u < -thresh
-    # Note: Using print here to avoid logger dependency in utility function
-    logger.info(
-        f"[gate diag] mean gates: N={float(gN.mean()):.2f} S={float(gS.mean()):.2f} "
-        f"W={float(gW.mean()):.2f} E={float(gE.mean()):.2f} thr={thresh}"
-    )
-    return gN, gS, gW, gE
+# def inflow_gates_from_uv(u, v, thresh=0.3, k=8.0):
+#     """
+#     u>0 eastward, v>0 southward (your convention). Inflow if velocity points into the domain:
+#       - North edge inflow when v > +thresh (flow from north blowing southward into domain)
+#       - South edge inflow when v < -thresh
+#       - West  edge inflow when u > +thresh
+#       - East  edge inflow when u < -thresh
+#     Returns 4 arrays (N_times, 1) with gate values in [0,1].
+#     """
+#     u = np.asarray(u).reshape(-1, 1)
+#     v = np.asarray(v).reshape(-1, 1)
+#     gN = soft_gate(v, thresh, k)  # v > +thresh
+#     gS = soft_gate(-v, thresh, k)  # v < -thresh
+#     gW = soft_gate(u, thresh, k)  # u > +thresh
+#     gE = soft_gate(-u, thresh, k)  # u < -thresh
+#     # Note: Using print here to avoid logger dependency in utility function
+#     logger.info(
+#         f"[gate diag] mean gates: N={float(gN.mean()):.2f} S={float(gS.mean()):.2f} "
+#         f"W={float(gW.mean()):.2f} E={float(gE.mean()):.2f} thr={thresh}"
+#     )
+#     return gN, gS, gW, gE
 
 
 def cosine_dir_loss(u_pred, v_pred, u_true, v_true, w, speed_min=0.25):
