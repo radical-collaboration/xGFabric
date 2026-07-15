@@ -28,6 +28,9 @@ def tk_do_fno(config, sims_list):
     env = register_task(config, "do_fno", 0)
     logger = register_log(env, logging.INFO)
 
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.INFO)
+    logging.getLogger("matplotlib.colorbar").setLevel(logging.INFO)
+
     # Require conda cfdaai
 
     # Start conda and then call main()

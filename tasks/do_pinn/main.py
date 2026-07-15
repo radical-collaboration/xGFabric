@@ -14,6 +14,9 @@ def tk_do_pinn(config, sims_list):
     env = register_task(config, "do_pinn", 0)
     logger = register_log(env, logging.INFO)
 
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.INFO)
+    logging.getLogger("matplotlib.colorbar").setLevel(logging.INFO)
+
     # Require conda cfdaai
 
     pinn_config = PINN_Config()

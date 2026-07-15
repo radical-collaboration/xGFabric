@@ -71,9 +71,11 @@ import wrapper
 verify_config()
 
 # Telemetry must be disabled for LocalCPU backend
-ENABLE_TELEMETRY = True
+ENABLE_TELEMETRY = False
 NODE_COUNT = 1
 CONCURRENCY_LIMIT = 4
+
+PYTHON_CMD = "/global/homes/b/bcarter/miniconda3/envs/rhap_conda_env2/bin/python"
 
 
 async def main():
@@ -89,7 +91,7 @@ async def main():
         f.write("# Recorded exec calls: \n\n")
 
     # Get backends
-    nersc_cpu = NerscCPU(node_count=NODE_COUNT)
+    nersc_cpu = LocalCPU()  # NerscCPU(node_count=NODE_COUNT)
     backend_nersc_cpu = await nersc_cpu.get_backend()
     asyncflow = await WorkflowEngine.create(
         backend=[backend_nersc_cpu],
@@ -108,9 +110,6 @@ async def main():
     )
 
     # Setup environment
-    logging.getLogger("matplotlib.font_manager").setLevel(logging.INFO)
-    logging.getLogger("matplotlib.colorbar").setLevel(logging.INFO)
-
     logger.info("Warming up post engine creation....")
 
     # Define ROSE APP style
@@ -131,7 +130,7 @@ async def main():
         comm.close()
         # bash is required for the dragon backend as dragon messes with a plain
         # python executable.
-        cmd = f"bash -c python3 wrapper.py get_data {shlex.quote(input_url)}"
+        cmd = f"{PYTHON_CMD} wrapper.py get_data {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -150,7 +149,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"bash -c python3 wrapper.py do_sim {shlex.quote(input_url)}"
+        cmd = f"{PYTHON_CMD} wrapper.py do_sim {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -169,7 +168,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"bash -c python3 wrapper.py do_pinn {shlex.quote(input_url)}"
+        cmd = f"{PYTHON_CMD} wrapper.py do_pinn {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -189,7 +188,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"bash -c python3 wrapper.py do_fno {shlex.quote(input_url)}"
+        cmd = f"{PYTHON_CMD} wrapper.py do_fno {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -208,7 +207,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"bash -c python3 wrapper.py do_pcr_partition {shlex.quote(input_url)}"
+        cmd = f"{PYTHON_CMD} wrapper.py do_pcr_partition {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -227,7 +226,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"bash -c python3 wrapper.py do_pcr {shlex.quote(input_url)}"
+        cmd = f"{PYTHON_CMD} wrapper.py do_pcr {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -246,7 +245,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"bash -c python3 wrapper.py do_pcr_pack {shlex.quote(input_url)}"
+        cmd = f"{PYTHON_CMD} wrapper.py do_pcr_pack {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -265,16 +264,15 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"bash -c python3 wrapper.py to_edge {shlex.quote(input_url)}"
+        cmd = f"{PYTHON_CMD} wrapper.py to_edge {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
             f.write(cmd + "\n")
         return cmd
 
-    @acl.utility_task
+    @acl.utility_task(as_executable=False)
     async def async_fetch_url(ret):
-        ret = await ret
         return wrapper.fetch_url(ret)
 
     # Create pipeline
@@ -304,7 +302,9 @@ async def main():
             sim_jobs = []
             sims = []
             counter = 0
-            policies = nersc_cpu.create_cpu_policies(policy_count=CONCURRENCY_LIMIT)
+            policies = (
+                []
+            )  # nersc_cpu.create_cpu_policies(policy_count=CONCURRENCY_LIMIT)
             for policy in policies:
                 logger.debug(f"Policy: {policy}")
             for i, data_point in enumerate(sensor_data):
@@ -348,10 +348,10 @@ async def main():
             # now, train using the results form the sims
             # then push to edge when complete
 
-            t_policy = nersc_cpu.create_cpu_policies(
-                policy_count=CONCURRENCY_LIMIT, core_count=128
-            )
-            for policy in policies:
+            t_policy = []  # nersc_cpu.create_cpu_policies(
+            #     policy_count=CONCURRENCY_LIMIT, core_count=128
+            # )
+            for policy in t_policy:
                 logger.debug(f"Training Policy: {policy}")
 
             train_jobs = [
@@ -387,9 +387,9 @@ async def main():
             async def pcr_block(config, data_list, sensor_data_url):
                 # do this independently of the workflow
 
-                pcr_policy = nersc_cpu.create_cpu_policies(
-                    policy_count=int(os.getenv("PCR_MACHINE_SPLITS")), core_count=2
-                )
+                pcr_policy = []  # nersc_cpu.create_cpu_policies(
+                #     policy_count=int(os.getenv("PCR_MACHINE_SPLITS")), core_count=2
+                # )
 
                 partitions = await do_pcr_partition(
                     config,
@@ -427,10 +427,10 @@ async def main():
     await asyncio.sleep(1)
     logger.info(f"Program complete! Results: {results}")
 
-    logger.info(f"Telemetry summary: {telemetry.summary()}")
-    await acl.shutdown()
     if ENABLE_TELEMETRY:
+        logger.info(f"Telemetry summary: {telemetry.summary()}")
         await telemetry.stop()
+        await acl.shutdown()
 
         # Call reports
         for f in glob.glob(
@@ -442,6 +442,8 @@ async def main():
             os.getenv("PLAYGROUND_DIR") + "/telemetry/*.telemetry.jsonl"
         ):
             plot_gantt(Path(f))
+    else:
+        await acl.shutdown()
 
 
 if __name__ == "__main__":
