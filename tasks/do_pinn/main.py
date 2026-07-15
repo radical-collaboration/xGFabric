@@ -10,7 +10,7 @@ from ..common.log_formatter import register_task, register_log, close_task
 from .MPWB2_CFD import PINN_Config, pinn_main_entry
 
 
-async def tk_do_pinn(config, sims_list):
+def tk_do_pinn(config, sims_list):
     env = register_task(config, "do_pinn", 0)
     logger = register_log(env, logging.INFO)
 
@@ -19,8 +19,8 @@ async def tk_do_pinn(config, sims_list):
     pinn_config = PINN_Config()
 
     # quick train:
-    # pinn_config.max_points_per_file = 600
-    # pinn_config.epochs = 1
+    pinn_config.max_points_per_file = 600
+    pinn_config.epochs = 1
 
     pinn_main_entry(sims_list, env["OUTPUT_DIR"], pinn_config, logger)
 
@@ -57,4 +57,4 @@ async def tk_do_pinn(config, sims_list):
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
     close_task(env)
-    return env["OUTPUT_DIR"] + "/pinn.tar.gz"
+    return env["TK_DO_PINN"], env["OUTPUT_DIR"] + "/pinn.tar.gz"

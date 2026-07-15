@@ -2,7 +2,7 @@
 #
 # What should **not** be here: parsing the resources / tasks directories. This
 # is for the utils_architecture.py
-
+print("TOP OF FILE")
 
 #
 # # Example standalone implementation of RBF surrogate modeling from xGFabric project.
@@ -32,13 +32,16 @@
 
 # Env must be first
 import glob
+import inspect
 from pathlib import Path
+import shlex
 
 from dotenv import load_dotenv
 
 from reports.plot_workflow_dashboard import plot_split
 from reports.plot_workflow_gantt import plot as plot_gantt
 
+from tasks.common.communicator import CommunicatorOpen, DirectCommunicator, PyStorage
 from tasks.common.log_formatter import register_log_main
 
 load_dotenv("tasks/common/config.sh")
@@ -63,19 +66,14 @@ from resources.nersc_cpu import NerscCPU
 from resources.nersc_gpu import NerscGPU
 
 # Tasks:
-from tasks.get_data import tk_get_data
-from tasks.do_simulation import tk_do_simulation
-from tasks.do_pcr import tk_do_pcr, tk_pcr_partition, tk_do_pcr_pack
-from tasks.do_pinn import tk_do_pinn
-from tasks.do_fno import tk_do_fno
-from tasks.to_edge import tk_to_edge
+import wrapper
 
 verify_config()
 
 # Telemetry must be disabled for LocalCPU backend
 ENABLE_TELEMETRY = True
-NODE_COUNT = 18
-CONCURRENCY_LIMIT = 72
+NODE_COUNT = 1
+CONCURRENCY_LIMIT = 4
 
 
 async def main():
@@ -84,6 +82,11 @@ async def main():
     dt_str = get_fdate()
     os.makedirs(os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}")
     os.environ["PLAYGROUND_DIR"] = os.getenv("PLAYGROUND_DIR") + f"/run_{dt_str}"
+
+    workflow_file = os.environ["PLAYGROUND_DIR"] + "/workflow.sh"
+    with open(workflow_file, "w") as f:
+        f.write("#!/bin/bash\n\n")
+        f.write("# Recorded exec calls: \n\n")
 
     # Get backends
     nersc_cpu = NerscCPU(node_count=NODE_COUNT)
@@ -114,18 +117,165 @@ async def main():
     acl = Learner(asyncflow)
 
     # Define tasks
-    get_data = acl.utility_task(as_executable=False)(tk_get_data)
+    @acl.utility_task
+    async def get_data(*inputs):
+        inputs_complete = []
+        for input in inputs:
+            if inspect.isawaitable(input):
+                inputs_complete.append(await input)
+            else:
+                inputs_complete.append(input)
+        storage = PyStorage(inputs_complete)
+        comm = DirectCommunicator("")
+        input_url = comm.send(storage.serialize())
+        comm.close()
+        # bash is required for the dragon backend as dragon messes with a plain
+        # python executable.
+        cmd = f"bash -c python3 wrapper.py get_data {shlex.quote(input_url)}"
+        logger.info(f"Call {cmd}")
+        # write out
+        with open(workflow_file, "a") as f:
+            f.write(cmd + "\n")
+        return cmd
 
-    do_sim = acl.simulation_task(as_executable=False)(tk_do_simulation)
+    @acl.simulation_task
+    async def do_sim(*inputs):
+        inputs_complete = []
+        for input in inputs:
+            if inspect.isawaitable(input):
+                inputs_complete.append(await input)
+            else:
+                inputs_complete.append(input)
+        storage = PyStorage(inputs_complete)
+        comm = DirectCommunicator("")
+        input_url = comm.send(storage.serialize())
+        comm.close()
+        cmd = f"bash -c python3 wrapper.py do_sim {shlex.quote(input_url)}"
+        logger.info(f"Call {cmd}")
+        # write out
+        with open(workflow_file, "a") as f:
+            f.write(cmd + "\n")
+        return cmd
 
-    do_pinn = acl.training_task(as_executable=False)(tk_do_pinn)
-    do_fno = acl.training_task(as_executable=False)(tk_do_fno)
+    @acl.training_task
+    async def do_pinn(*inputs):
+        inputs_complete = []
+        for input in inputs:
+            if inspect.isawaitable(input):
+                inputs_complete.append(await input)
+            else:
+                inputs_complete.append(input)
+        storage = PyStorage(inputs_complete)
+        comm = DirectCommunicator("")
+        input_url = comm.send(storage.serialize())
+        comm.close()
+        cmd = f"bash -c python3 wrapper.py do_pinn {shlex.quote(input_url)}"
+        logger.info(f"Call {cmd}")
+        # write out
+        with open(workflow_file, "a") as f:
+            f.write(cmd + "\n")
+        return cmd
 
-    do_pcr_partition = acl.utility_task(as_executable=False)(tk_pcr_partition)
-    do_pcr = acl.training_task(as_executable=False)(tk_do_pcr)
-    do_pcr_pack = acl.utility_task(as_executable=False)(tk_do_pcr_pack)
+    @acl.training_task
+    async def do_fno(*inputs):
+        inputs_complete = []
+        for input in inputs:
+            if inspect.isawaitable(input):
+                inputs_complete.append(await input)
+            else:
+                inputs_complete.append(input)
 
-    to_edge = acl.training_task(as_executable=False)(tk_to_edge)
+        storage = PyStorage(inputs_complete)
+        comm = DirectCommunicator("")
+        input_url = comm.send(storage.serialize())
+        comm.close()
+        cmd = f"bash -c python3 wrapper.py do_fno {shlex.quote(input_url)}"
+        logger.info(f"Call {cmd}")
+        # write out
+        with open(workflow_file, "a") as f:
+            f.write(cmd + "\n")
+        return cmd
+
+    @acl.training_task
+    async def do_pcr_partition(*inputs):
+        inputs_complete = []
+        for input in inputs:
+            if inspect.isawaitable(input):
+                inputs_complete.append(await input)
+            else:
+                inputs_complete.append(input)
+        storage = PyStorage(inputs_complete)
+        comm = DirectCommunicator("")
+        input_url = comm.send(storage.serialize())
+        comm.close()
+        cmd = f"bash -c python3 wrapper.py do_pcr_partition {shlex.quote(input_url)}"
+        logger.info(f"Call {cmd}")
+        # write out
+        with open(workflow_file, "a") as f:
+            f.write(cmd + "\n")
+        return cmd
+
+    @acl.training_task
+    async def do_pcr(*inputs):
+        inputs_complete = []
+        for input in inputs:
+            if inspect.isawaitable(input):
+                inputs_complete.append(await input)
+            else:
+                inputs_complete.append(input)
+        storage = PyStorage(inputs_complete)
+        comm = DirectCommunicator("")
+        input_url = comm.send(storage.serialize())
+        comm.close()
+        cmd = f"bash -c python3 wrapper.py do_pcr {shlex.quote(input_url)}"
+        logger.info(f"Call {cmd}")
+        # write out
+        with open(workflow_file, "a") as f:
+            f.write(cmd + "\n")
+        return cmd
+
+    @acl.training_task
+    async def do_pcr_pack(*inputs):
+        inputs_complete = []
+        for input in inputs:
+            if inspect.isawaitable(input):
+                inputs_complete.append(await input)
+            else:
+                inputs_complete.append(input)
+        storage = PyStorage(inputs_complete)
+        comm = DirectCommunicator("")
+        input_url = comm.send(storage.serialize())
+        comm.close()
+        cmd = f"bash -c python3 wrapper.py do_pcr_pack {shlex.quote(input_url)}"
+        logger.info(f"Call {cmd}")
+        # write out
+        with open(workflow_file, "a") as f:
+            f.write(cmd + "\n")
+        return cmd
+
+    @acl.utility_task
+    async def to_edge(*inputs):
+        inputs_complete = []
+        for input in inputs:
+            if inspect.isawaitable(input):
+                inputs_complete.append(await input)
+            else:
+                inputs_complete.append(input)
+        storage = PyStorage(inputs_complete)
+        comm = DirectCommunicator("")
+        input_url = comm.send(storage.serialize())
+        comm.close()
+        cmd = f"bash -c python3 wrapper.py to_edge {shlex.quote(input_url)}"
+        logger.info(f"Call {cmd}")
+        # write out
+        with open(workflow_file, "a") as f:
+            f.write(cmd + "\n")
+        return cmd
+
+    @acl.utility_task
+    async def async_fetch_url(ret):
+        ret = await ret
+        return wrapper.fetch_url(ret)
 
     # Create pipeline
     async def pipeline(pipeline_id):
@@ -136,9 +286,19 @@ async def main():
             # Create directory to store logs and results
             pipeline_playground = f"{os.getenv('PLAYGROUND_DIR')}/{pipeline_id}"
             os.makedirs(pipeline_playground)
-            config = {"PIPELINE_DIR": pipeline_playground}
+            config = {"PIPELINE_DIR": pipeline_playground, "PIPELINE_ID": pipeline_id}
 
-            sensor_data = await get_data(config.copy())
+            # Pass in data to get_data
+            ret = await get_data(config)
+            url_to_sensor_data = wrapper.fetch_url(ret)
+
+            # Extract sensor data and split into individual jobs
+
+            comm = CommunicatorOpen(url_to_sensor_data)
+            storage = PyStorage.loads(comm.recv())
+            sensor_data = storage.retrieve()
+            comm.close()
+
             # sensor_data spits out 72 points. Run one sim per point.
 
             sim_jobs = []
@@ -150,7 +310,7 @@ async def main():
             for i, data_point in enumerate(sensor_data):
                 sim_jobs.append(
                     do_sim(
-                        config.copy(),
+                        config,
                         data_point,
                         i,
                         # task_description={
@@ -158,6 +318,7 @@ async def main():
                         # },
                     )
                 )
+                break
                 counter += 1
                 if counter == CONCURRENCY_LIMIT:
                     logger.info(f"Awaiting based on concurrency limit")
@@ -173,11 +334,16 @@ async def main():
 
             sim_ids = ""
             data_list = []
-            for sim_id, wind_speed, sim_csv in sims:
+            for ret in sims:
+                url = wrapper.fetch_url(ret)
+
+                comm = CommunicatorOpen(url)
+                storage = PyStorage.loads(comm.recv())
+                sim_id, wind_speed, sim_csv = storage.retrieve()
+                comm.close()
+
                 sim_ids = str(sim_id) + ","
                 data_list.append((wind_speed, sim_csv))
-
-            sim_ids = sim_ids[:-1]
 
             # now, train using the results form the sims
             # then push to edge when complete
@@ -190,31 +356,35 @@ async def main():
 
             train_jobs = [
                 to_edge(
-                    config.copy(),
-                    do_fno(
-                        config.copy(),
-                        data_list,
-                        # task_description={
-                        #     "process_template": {"policy": t_policy[0 % len(t_policy)]}
-                        # },
+                    config,
+                    async_fetch_url(
+                        do_fno(
+                            config,
+                            data_list,
+                            # task_description={
+                            #     "process_template": {"policy": t_policy[0 % len(t_policy)]}
+                            # },
+                        )
                     ),
                     "fno",
                 ),
                 to_edge(
-                    config.copy(),
-                    do_pinn(
-                        config.copy(),
-                        data_list,
-                        # task_description={
-                        #     "process_template": {"policy": t_policy[0 % len(t_policy)]}
-                        # },
+                    config,
+                    async_fetch_url(
+                        do_pinn(
+                            config,
+                            data_list,
+                            # task_description={
+                            #     "process_template": {"policy": t_policy[0 % len(t_policy)]}
+                            # },
+                        )
                     ),
                     "pinn",
                 ),
             ]
 
             @asyncflow.block
-            async def pcr_block(config, data_list, sensor_data):
+            async def pcr_block(config, data_list, sensor_data_url):
                 # do this independently of the workflow
 
                 pcr_policy = nersc_cpu.create_cpu_policies(
@@ -222,26 +392,31 @@ async def main():
                 )
 
                 partitions = await do_pcr_partition(
-                    config.copy(),
+                    config,
                     data_list,
-                    sensor_data,
+                    sensor_data_url,
                 )
+                partitions = wrapper.fetch_url(partitions)
                 pcr_jobs = []
                 for i, partition in enumerate(partitions):
                     pcr_jobs.append(
-                        do_pcr(
-                            config.copy(),
-                            partition,
-                            # task_description={
-                            #     "process_template": {"policy": pcr_policy[i]}
-                            # },
+                        async_fetch_url(
+                            do_pcr(
+                                config.copy(),
+                                partition,
+                                # task_description={
+                                #     "process_template": {"policy": pcr_policy[i]}
+                                # },
+                            )
                         )
                     )
                 return await to_edge(
-                    config.copy(), do_pcr_pack(config.copy(), *pcr_jobs), "pcr"
+                    config.copy(),
+                    async_fetch_url(do_pcr_pack(config.copy(), *pcr_jobs)),
+                    "pcr",
                 )
 
-            train_jobs.append(pcr_block(config, data_list, sensor_data))
+            # train_jobs.append(pcr_block(config, data_list, url_to_sensor_data))
 
             edge_result = await asyncio.gather(*train_jobs)
 

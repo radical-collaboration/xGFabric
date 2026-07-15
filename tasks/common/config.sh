@@ -102,4 +102,17 @@ SENSPOT_KEEP_ARCHIVES=true
 
 
 
+#############################
+# Task Communication URL's
+#############################
 
+# All woofs are 256K size elements with history of 1000, 
+#     except do_pcr_partition which is 1MB size elements with history of 100
+TK_GET_DATA="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-get-data.woof"
+TK_DO_SIMULATION="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-simulation.woof"
+TK_DO_PINN="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pinn.woof"
+TK_DO_FNO="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-fno.woof"
+TK_DO_PCR_PARTITION="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr-partition.woof"
+TK_DO_PCR="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr.woof"
+TK_DO_PCR_PACK="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr-pack.woof"
+TK_TO_EDGE="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr-pack.woof"

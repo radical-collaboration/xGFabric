@@ -10,7 +10,7 @@ import datetime
 from ..common.pyspot.pyspot.senspot import FileWooF, FileWooFItem
 
 
-async def tk_to_edge(config, incoming_model, model_name) -> FileWooFItem:
+def tk_to_edge(config, incoming_model, model_name) -> FileWooFItem:
     env = register_task(config, "to_edge", model_name)
     logger = register_log(env, logging.INFO)
     # create directory for sims
@@ -31,4 +31,4 @@ async def tk_to_edge(config, incoming_model, model_name) -> FileWooFItem:
 
     # return array of filenames of parameters
     close_task(env)
-    return result
+    return env["TK_TO_EDGE"], result

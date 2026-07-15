@@ -9,26 +9,32 @@ import math
 from ..common.log_formatter import register_task, register_log, close_task
 import datetime
 
+from ..common.communicator import CommunicatorOpen, PyStorage
 
-async def tk_do_simulation_tmp(config, sensor_point, sim_id):
-    env = register_task(config, "do_simulation", sim_id)
-    logger = register_log(env, logging.INFO)
+
+def tk_do_simulation_tmp(env, sensor_point, sim_id):
 
     skip_dir = "/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations"
 
     close_task(env)
-    return sim_id, 0.0, skip_dir + f"/sim_{sim_id}.csv"
+    return env["TK_DO_SIMULATION"], (
+        sim_id,
+        0.0,
+        skip_dir + f"/sim_{sim_id}.csv",
+    )
 
 
-async def tk_do_simulation(config, sensor_point, sim_id):
+def tk_do_simulation(config, sensor_point, sim_id):
     # config: dict
     # sensor_point: has wind_speed and wind_dir
 
-    # return await tk_do_simulation_tmp(config, sensor_point, sim_id)
+    # Load data
 
     # create directory for sims
     env = register_task(config, "do_simulation", sim_id)
     logger = register_log(env, logging.INFO)
+
+    return tk_do_simulation_tmp(env, sensor_point, sim_id)
 
     # sim_id
 
@@ -82,5 +88,12 @@ async def tk_do_simulation(config, sensor_point, sim_id):
         f.write(stderr)
 
     # search for sims in OUTPUT_DIR
+
+    # Save data
+
     close_task(env)
-    return sim_id, wind_speed, env["OUTPUT_DIR"] + f"/sim_{sim_id}.csv"
+    return env["TK_DO_SIMULATION"], (
+        sim_id,
+        wind_speed,
+        env["OUTPUT_DIR"] + f"/sim_{sim_id}.csv",
+    )

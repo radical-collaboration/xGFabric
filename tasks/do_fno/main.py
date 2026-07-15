@@ -24,7 +24,7 @@ def main():
     fno_main_entry(sims_list, out_dir, fno_config)
 
 
-async def tk_do_fno(config, sims_list):
+def tk_do_fno(config, sims_list):
     env = register_task(config, "do_fno", 0)
     logger = register_log(env, logging.INFO)
 
@@ -35,7 +35,7 @@ async def tk_do_fno(config, sims_list):
     fno_config = FNO_Config()
 
     # quick train:
-    # fno_config.epochs = 1
+    fno_config.epochs = 1
 
     fno_main_entry(sims_list, env["OUTPUT_DIR"], fno_config, logger)
 
@@ -72,4 +72,4 @@ async def tk_do_fno(config, sims_list):
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
     close_task(env)
-    return env["OUTPUT_DIR"] + "/fno.tar.gz"
+    return env["TK_DO_FNO"], env["OUTPUT_DIR"] + "/fno.tar.gz"

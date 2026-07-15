@@ -21,7 +21,7 @@ from .prepare_pcr_data import prepare_machine_data
 from .train_pcr_chunk import train_chunk
 
 
-async def tk_pcr_partition(config, sims_list, sensor_values):
+def tk_pcr_partition(config, sims_list, sensor_values):
     env = register_task(config, "do_pcr_partition", 0)
     logger = register_log(env, logging.INFO)
 
@@ -39,10 +39,10 @@ async def tk_pcr_partition(config, sims_list, sensor_values):
     )
 
     close_task(env)
-    return machine_data_outputs
+    return env["TK_DO_PCR_PARTITION"], machine_data_outputs
 
 
-async def tk_do_pcr(config, machine_data_output):
+def tk_do_pcr(config, machine_data_output):
     u_id = machine_data_output["machine_id"]
 
     env = register_task(config, "do_pcr", u_id)
@@ -51,10 +51,10 @@ async def tk_do_pcr(config, machine_data_output):
     train_chunk(machine_data_output, env["OUTPUT_DIR"], logger)
 
     close_task(env)
-    return env["OUTPUT_DIR"]
+    return env["TK_DO_PCR"], env["OUTPUT_DIR"]
 
 
-async def tk_do_pcr_pack(config, *pcr_output_dirs):
+def tk_do_pcr_pack(config, *pcr_output_dirs):
     env = register_task(config, "do_pcr_pack", 0)
     logger = register_log(env, logging.INFO)
 
@@ -88,4 +88,4 @@ async def tk_do_pcr_pack(config, *pcr_output_dirs):
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
     close_task(env)
-    return env["OUTPUT_DIR"] + "/pcr.tar.gz"
+    return env["TK_DO_PCR_PACK"], env["OUTPUT_DIR"] + "/pcr.tar.gz"

@@ -3,6 +3,11 @@ import logging
 import socket
 from radical.asyncflow.logging import init_default_logger
 import datetime
+from dotenv import load_dotenv
+
+SCRIPT_DIR = os.path.dirname(__file__)
+
+load_dotenv(SCRIPT_DIR + "/config.sh")
 
 
 def register_task(env, task_name: str, task_number: int | str = 0):
@@ -76,3 +81,7 @@ def close_task(env):
     logger = logging.getLogger(env["TASK_NAME"] + "_" + env["TASK_ID"])
     logger.info(f"Task {env["TASK_NAME"]} finished!")
     os.chdir(env["PREVIOUS_CWD"])
+    task_name = env["TASK_NAME"]
+    task_number = env["TASK_ID"]
+    pipeline_number = env["PIPELINE_ID"]
+    # print(f"\n\nRETURN_VALUE: {pipeline_number},{task_name},{task_number},{retval}")
