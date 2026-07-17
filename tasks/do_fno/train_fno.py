@@ -37,7 +37,6 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import griddata as scipy_griddata, LinearNDInterpolator
 from sklearn.model_selection import train_test_split
-from tqdm import tqdm
 import tensorflow as tf  # noqa: E402
 from tensorflow.keras import layers  # noqa: E402
 
@@ -202,7 +201,10 @@ def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config, log):
 
     # Load CSVs
     data_list: list[tuple[float, pd.DataFrame]] = []
-    for ws, csv_path in tqdm(file_pairs, desc="Loading CSVs"):
+    counter = 0
+    for ws, csv_path in file_pairs:
+        print(f"Loading CSVs Progress: {counter / len(file_pairs)}")
+        counter += 1
         df = pd.read_csv(csv_path, usecols=["x", "y", "z", "U_0", "U_1", "U_Magnitude"])
         df_f = filter_spatial_bounds(df)
         del df
@@ -262,8 +264,9 @@ def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config, log):
     _z_pts_hash: dict[float, int] = {}  # hash of pts shape to detect mesh changes
 
     query_pts = np.column_stack([xx.ravel(), yy.ravel()])
-
-    for ws, df in tqdm(data_list, desc="Building grids"):
+    counter = 0
+    for ws, df in data_list:
+        print(f"Building grids: {counter / len(data_list)}")
         ws_n = float(ws / (WS_MAX + 1e-8))
         for z_s in Z_SLICES:
             z_n = float((z_s - Z_MIN) / (Z_MAX - Z_MIN + 1e-12))

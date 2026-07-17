@@ -41,8 +41,6 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
-from tqdm import tqdm
-import logging
 
 # Default proximity radius for averaging CFD data around each grid point
 # Will be overridden by value from pcr_partitions.json if available
@@ -195,8 +193,9 @@ def prepare_machine_data(
 
     # Create machine-specific data files
     machine_data_outputs = []
-
-    for partition in tqdm(partitions, desc="Creating machine files", unit="machine"):
+    counter = 0
+    for partition in partitions:
+        print(f"Creating machine files: {counter / len(partitions)}")
         machine_id = partition["machine_id"]
         points = partition["points"]
         num_points = partition["num_points"]

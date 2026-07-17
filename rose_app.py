@@ -71,11 +71,11 @@ import wrapper
 verify_config()
 
 # Telemetry must be disabled for LocalCPU backend
-ENABLE_TELEMETRY = False
+ENABLE_TELEMETRY = True
 NODE_COUNT = 1
 CONCURRENCY_LIMIT = 4
 
-PYTHON_CMD = "/global/homes/b/bcarter/miniconda3/envs/rhap_conda_env2/bin/python"
+WRAPPER_CMD = "python3 wrapper.py"
 
 
 async def main():
@@ -91,7 +91,7 @@ async def main():
         f.write("# Recorded exec calls: \n\n")
 
     # Get backends
-    nersc_cpu = LocalCPU()  # NerscCPU(node_count=NODE_COUNT)
+    nersc_cpu = NerscCPU(node_count=NODE_COUNT)
     backend_nersc_cpu = await nersc_cpu.get_backend()
     asyncflow = await WorkflowEngine.create(
         backend=[backend_nersc_cpu],
@@ -130,7 +130,7 @@ async def main():
         comm.close()
         # bash is required for the dragon backend as dragon messes with a plain
         # python executable.
-        cmd = f"{PYTHON_CMD} wrapper.py get_data {shlex.quote(input_url)}"
+        cmd = f"{WRAPPER_CMD} get_data {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -149,7 +149,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"{PYTHON_CMD} wrapper.py do_sim {shlex.quote(input_url)}"
+        cmd = f"{WRAPPER_CMD} do_sim {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -168,7 +168,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"{PYTHON_CMD} wrapper.py do_pinn {shlex.quote(input_url)}"
+        cmd = f"{WRAPPER_CMD} do_pinn {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -188,7 +188,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"{PYTHON_CMD} wrapper.py do_fno {shlex.quote(input_url)}"
+        cmd = f"{WRAPPER_CMD} do_fno {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -207,7 +207,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"{PYTHON_CMD} wrapper.py do_pcr_partition {shlex.quote(input_url)}"
+        cmd = f"{WRAPPER_CMD} do_pcr_partition {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -226,7 +226,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"{PYTHON_CMD} wrapper.py do_pcr {shlex.quote(input_url)}"
+        cmd = f"{WRAPPER_CMD} do_pcr {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -245,7 +245,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"{PYTHON_CMD} wrapper.py do_pcr_pack {shlex.quote(input_url)}"
+        cmd = f"{WRAPPER_CMD} do_pcr_pack {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
@@ -264,7 +264,7 @@ async def main():
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
-        cmd = f"{PYTHON_CMD} wrapper.py to_edge {shlex.quote(input_url)}"
+        cmd = f"{WRAPPER_CMD} to_edge {shlex.quote(input_url)}"
         logger.info(f"Call {cmd}")
         # write out
         with open(workflow_file, "a") as f:
