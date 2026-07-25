@@ -1,9 +1,9 @@
 #!/bin/python3
-import asyncio, os, subprocess, time, sys, threading
+import asyncio, os, subprocess, time, sys, threading, argparse
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Optional
-from create_makeflow import create_makeflow, detect_system
+from create_makeflow import create_makeflow
 
 start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
 
@@ -15,6 +15,8 @@ config = {
     "number_of_cores"          : 32,     # cores per simulation / per node
     "number_of_simulations"    : 72,      # OpenFOAM simulations per workflow (== number of nodes)
     "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
+    "scheduler"                : "SLURM",
+    "mode"                     : "full",
     # --- Node allocation ---
     "wq_project_name"          : "xgfabric",   # -N name shared by workers and makeflow
     "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
@@ -60,6 +62,39 @@ def log_warn(msg: str) -> None:
     with open(global_vars['coordinator_output'], 'a') as f:
         f.write(s + "\n")
 
+def sanitize_input(value: str, expected_type: type) -> bool:
+    """Validate that the input matches the expected type and constraints."""
+
+    if not value:
+        return True
+
+    if expected_type is int:
+        try:
+            number = int(value)
+        except ValueError:
+            raise ValueError(
+                f'Input "{value}" does not match expected type "{expected_type.__name__}".'
+            )
+
+        if number <= 0:
+            raise ValueError("Input must be greater than zero.")
+
+    elif expected_type is float:
+        try:
+            float(value)
+        except ValueError:
+            raise ValueError(
+                f'Input "{value}" does not match expected type "{expected_type.__name__}".'
+            )
+
+    elif expected_type is str:
+        # Non-empty check already performed
+        pass
+
+    else:
+        raise TypeError(f"Unsupported expected type: {expected_type}")
+
+    return True
 # ---------------------------------------------------------------------------
 # Node allocation
 # ---------------------------------------------------------------------------
@@ -388,17 +423,19 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
             await asyncio.sleep(config["time_check_workflows"])
             continue
 
-        # ---- Step 1: ensure nodes are allocated ----
-        await node_allocator.ensure_alive()
 
-        # ---- Step 2: wait until the SLURM job is in state R ----
-        nodes_ready = await wait_for_nodes_running(node_allocator)
-        if not nodes_ready:
-            # Job never started, vanished, or timed out – cancel and retry
-            node_allocator.cancel()
-            log_warn("Will re-allocate nodes and try again...")
-            await asyncio.sleep(config["time_check_workflows"])
-            continue
+        if config["scheduler"] == "SLURM":
+            # ---- Step 1: ensure nodes are allocated ----
+            await node_allocator.ensure_alive()
+
+            # ---- Step 2: wait until the SLURM job is in state R ----
+            nodes_ready = await wait_for_nodes_running(node_allocator)
+            if not nodes_ready:
+                # Job never started, vanished, or timed out – cancel and retry
+                node_allocator.cancel()
+                log_warn("Will re-allocate nodes and try again...")
+                await asyncio.sleep(config["time_check_workflows"])
+                continue
 
         # ---- Step 3: build workflow directory + Makeflow file ----
         log_action(f"Submitting workflow {global_vars['workflow_counter']}...")
@@ -489,6 +526,102 @@ async def main():
 
 
 if __name__ == "__main__":
+    args = sys.argv[1:]
+
+    if len(args) == 0:
+        print("Which workflow mode would you like to run in?")
+        print("(1) Work Queue (default)")
+        print("(2) Makeflow")
+        mode = input("==> ") or "1"
+        sanitize_input(mode, int)
+        if mode == "2":
+            config["workqueue_mode"] = False
+
+        print("Which mode would you like to run in?")
+        print("(1) full (default)")
+        print("(2) sim-only")
+        print("(3) train-only")
+        mode = input("==> ") or "1"
+        sanitize_input(mode, int)
+        modes = ["full", "sim-only", "train-only"]
+        config["mode"] = modes[int(mode) - 1]
+        print(config["mode"])
+        sys.exit(0)
+
+        print("Which scheduler are you using?")
+        print("(1) SLURM (default)")
+        print("(2) HTCondor")
+        print("(3) UGE")
+        scheduler = input("==> ") or "1"
+        sanitize_input(scheduler, int)
+        if scheduler == "2":
+            config["scheduler"] = "HTCondor"
+        elif scheduler == "3":
+            config["scheduler"] = "UGE"
+
+        print("How many simulations do you want to run? (default=72)")
+        num_sims = input("==> ") or "72"
+        sanitize_input(num_sims, int)
+        config["number_of_simulations"] = num_sims
+        
+        print("How many cores-per-simulation do you want to have? (default=32)")
+        num_cores = input("==> ") or "32"
+        sanitize_input(num_cores, int)
+        config["number_of_cores"] = num_cores
+
+    else:
+        parser = argparse.ArgumentParser(description='Coordinator for running xGFabric workflows.')
+
+        parser.add_argument(
+            "--mode",
+            choices=["sim-only", "train-only", "full"],
+            default="full",
+            help="Execution mode (default: workqueue)"
+        )
+
+        parser.add_argument(
+            "--workflow",
+            choices=["workqueue", "makeflow"],
+            default="workqueue",
+            help="Execution mode (default: workqueue)"
+        )
+
+        parser.add_argument(
+            "--scheduler",
+            choices=["slurm", "htcondor", "uge"],
+            default="slurm",
+            help="Scheduler to use (default: slurm)"
+        )
+
+        parser.add_argument(
+            "--num-sims",
+            type=int,
+            default=72,
+            help="Number of simulations (default: 72)"
+        )
+
+        parser.add_argument(
+            "--num-cores",
+            type=int,
+            default=32,
+            help="Number of cores per simulation (default: 32)"
+        )
+
+        args = parser.parse_args()
+
+        config["workqueue_mode"] = args.workflow == "workqueue"
+        config["mode"] = args.mode
+
+        scheduler_map = {
+            "slurm": "SLURM",
+            "htcondor": "HTCondor",
+            "uge": "UGE",
+        }
+        config["scheduler"] = scheduler_map[args.scheduler]
+
+        config["number_of_simulations"] = args.num_sims
+        config["number_of_cores"] = args.num_cores
+      
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

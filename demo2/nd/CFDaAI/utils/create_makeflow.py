@@ -149,30 +149,33 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
         file.write("\n")
 
         # phase 2
-        print_phase(file, "Phase 2: Simulations")
-        print_simulations(file, system, config)
-        file.write("\n\n")
+        if config["mode"] == "sim-only" or config["mode"] == "full":
+            print_phase(file, "Phase 2: Simulations")
+            print_simulations(file, system, config)
+            file.write("\n\n")
 
         # phase 3
-        print_phase(file, "Phase 3: Training")
-        print_training(file, system, models, config)
-        file.write("\n\n")
+        if config["mode"] == "train-only" or config["mode"] == "full":
+            print_phase(file, "Phase 3: Training")
+            print_training(file, system, models, config)
+            file.write("\n\n")
 	
         # phase 4
-        print_phase(file, "Phase 4: Evaluation")
-        if config['workqueue_mode']:
-            file.write("CATEGORY=\"evaluation\"\n")
-            file.write("CORES=1\n")
-            file.write("GPUS=0\n")
-        file.write("$(WORKFLOW_LOCATION)/pipeline.3: bin")
-        for model in models:
+        if config["mode"] == "full":
+            print_phase(file, "Phase 4: Evaluation")
             if config['workqueue_mode']:
-                file.write(f" $(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz")
-            else:
-                file.write(f" $(WORKFLOW_LOCATION)/training/{model}_train.log")
-        file.write("\n")
-        file.write("\tLOCAL ./utils/evaluation.sh > $(WORKFLOW_LOCATION)/pipeline.3 2>&1\n")
-        file.write("\n")
+                file.write("CATEGORY=\"evaluation\"\n")
+                file.write("CORES=1\n")
+                file.write("GPUS=0\n")
+            file.write("$(WORKFLOW_LOCATION)/pipeline.3: bin")
+            for model in models:
+                if config['workqueue_mode']:
+                    file.write(f" $(RESULTS_DIR)/models/{model}/archives/{model}.tar.gz")
+                else:
+                    file.write(f" $(WORKFLOW_LOCATION)/training/{model}_train.log")
+            file.write("\n")
+            file.write("\tLOCAL ./utils/evaluation.sh > $(WORKFLOW_LOCATION)/pipeline.3 2>&1\n")
+            file.write("\n")
 
 
 if __name__ == "__main__":

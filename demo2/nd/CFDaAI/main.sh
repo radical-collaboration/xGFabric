@@ -1,4 +1,6 @@
 #!/bin/bash
+source ~/miniconda3/etc/profile.d/conda.sh
+
 WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UTILS_DIR="${WORK_DIR}/utils"
 ENV_DIR="${WORK_DIR}/env"
@@ -10,4 +12,4 @@ source $ENV_DIR/env_coordinator.sh
 conda activate cfdaai
 
 # launch the coordinator
-python3 $UTILS_DIR/coordinator.py
+python3 $UTILS_DIR/coordinator.py --mode sim-only --workflow workqueue --scheduler htcondor --num-sims 72 --num-cores 64
