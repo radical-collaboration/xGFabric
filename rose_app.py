@@ -41,7 +41,12 @@ from dotenv import load_dotenv
 from reports.plot_workflow_dashboard import plot_split
 from reports.plot_workflow_gantt import plot as plot_gantt
 
-from tasks.common.communicator import CommunicatorOpen, DirectCommunicator, PyStorage
+from tasks.common.communicator import (
+    CommunicatorOpen,
+    DirectCommunicator,
+    FileWooFCommunicator,
+    PyStorage,
+)
 from tasks.common.log_formatter import register_log_main
 
 load_dotenv("tasks/common/config.sh")
@@ -76,6 +81,9 @@ NODE_COUNT = 1
 CONCURRENCY_LIMIT = 4
 
 WRAPPER_CMD = "python3 wrapper.py"
+
+# for testing the entire pipeline but only on 1 sim for speed
+SHORT_RUN = True
 
 
 async def main():
@@ -223,7 +231,9 @@ async def main():
             else:
                 inputs_complete.append(input)
         storage = PyStorage(inputs_complete)
-        comm = DirectCommunicator("")
+        # inputs are too large for direct - assumes log can handle at least 72
+        # PCR inputs
+        comm = FileWooFCommunicator(os.getenv("TK_DO_PCR_SRC"))
         input_url = comm.send(storage.serialize())
         comm.close()
         cmd = f"{WRAPPER_CMD} do_pcr {shlex.quote(input_url)}"
@@ -242,7 +252,9 @@ async def main():
             else:
                 inputs_complete.append(input)
         storage = PyStorage(inputs_complete)
-        comm = DirectCommunicator("")
+        # inputs are too large for direct
+        comm = FileWooFCommunicator(os.getenv("TK_DO_PCR_PACK_SRC"))
+        assert len(os.getenv("TK_DO_PCR_PACK_SRC")) > 0
         input_url = comm.send(storage.serialize())
         comm.close()
         cmd = f"{WRAPPER_CMD} do_pcr_pack {shlex.quote(input_url)}"
@@ -254,13 +266,8 @@ async def main():
 
     @acl.utility_task
     async def to_edge(*inputs):
-        inputs_complete = []
-        for input in inputs:
-            if inspect.isawaitable(input):
-                inputs_complete.append(await input)
-            else:
-                inputs_complete.append(input)
-        storage = PyStorage(inputs_complete)
+        logger.debug(f"Inputs to_edge: {inputs}")
+        storage = PyStorage(inputs)
         comm = DirectCommunicator("")
         input_url = comm.send(storage.serialize())
         comm.close()
@@ -270,10 +277,6 @@ async def main():
         with open(workflow_file, "a") as f:
             f.write(cmd + "\n")
         return cmd
-
-    @acl.utility_task(as_executable=False)
-    async def async_fetch_url(ret):
-        return wrapper.fetch_url(ret)
 
     # Create pipeline
     async def pipeline(pipeline_id):
@@ -302,23 +305,22 @@ async def main():
             sim_jobs = []
             sims = []
             counter = 0
-            policies = (
-                []
-            )  # nersc_cpu.create_cpu_policies(policy_count=CONCURRENCY_LIMIT)
+            policies = nersc_cpu.create_cpu_policies(policy_count=CONCURRENCY_LIMIT)
             for policy in policies:
-                logger.debug(f"Policy: {policy}")
+                logger.info(f"Simulation Policy: {policy}")
             for i, data_point in enumerate(sensor_data):
                 sim_jobs.append(
                     do_sim(
                         config,
                         data_point,
                         i,
-                        # task_description={
-                        #     "process_template": {"policy": policies[i % len(policies)]}
-                        # },
+                        task_description={
+                            "process_template": {"policy": policies[i % len(policies)]}
+                        },
                     )
                 )
-                break
+                if SHORT_RUN:
+                    break
                 counter += 1
                 if counter == CONCURRENCY_LIMIT:
                     logger.info(f"Awaiting based on concurrency limit")
@@ -348,79 +350,107 @@ async def main():
             # now, train using the results form the sims
             # then push to edge when complete
 
-            t_policy = []  # nersc_cpu.create_cpu_policies(
-            #     policy_count=CONCURRENCY_LIMIT, core_count=128
-            # )
-            for policy in t_policy:
-                logger.debug(f"Training Policy: {policy}")
+            train_jobs = []
 
-            train_jobs = [
-                to_edge(
+            @asyncflow.block
+            async def fno_block(config, data_list, sensor_data_url):
+                t_policy = nersc_cpu.create_cpu_policies(
+                    policy_count=CONCURRENCY_LIMIT, core_count=128
+                )
+                for policy in t_policy:
+                    logger.info(f"FNO Policy: {policy}")
+
+                fno = await do_fno(
                     config,
-                    async_fetch_url(
-                        do_fno(
-                            config,
-                            data_list,
-                            # task_description={
-                            #     "process_template": {"policy": t_policy[0 % len(t_policy)]}
-                            # },
-                        )
-                    ),
+                    data_list,
+                    task_description={
+                        "process_template": {"policy": t_policy[0 % len(t_policy)]}
+                    },
+                )
+                fno_out = wrapper.fetch_url(fno)
+
+                return await to_edge(
+                    config,
+                    fno_out,
                     "fno",
-                ),
-                to_edge(
+                )
+
+            train_jobs.append(fno_block(config, data_list, url_to_sensor_data))
+
+            @asyncflow.block
+            async def pinn_block(config, data_list, sensor_data_url):
+                t_policy = nersc_cpu.create_cpu_policies(
+                    policy_count=CONCURRENCY_LIMIT, core_count=128
+                )
+                for policy in t_policy:
+                    logger.info(f"PINN Policy: {policy}")
+
+                pinn = await do_pinn(
                     config,
-                    async_fetch_url(
-                        do_pinn(
-                            config,
-                            data_list,
-                            # task_description={
-                            #     "process_template": {"policy": t_policy[0 % len(t_policy)]}
-                            # },
-                        )
-                    ),
+                    data_list,
+                    task_description={
+                        "process_template": {"policy": t_policy[0 % len(t_policy)]}
+                    },
+                )
+                pinn_out = wrapper.fetch_url(pinn)
+
+                return await to_edge(
+                    config,
+                    pinn_out,
                     "pinn",
-                ),
-            ]
+                )
+
+            train_jobs.append(pinn_block(config, data_list, url_to_sensor_data))
 
             @asyncflow.block
             async def pcr_block(config, data_list, sensor_data_url):
                 # do this independently of the workflow
 
-                pcr_policy = []  # nersc_cpu.create_cpu_policies(
-                #     policy_count=int(os.getenv("PCR_MACHINE_SPLITS")), core_count=2
-                # )
+                pcr_policy = nersc_cpu.create_cpu_policies(
+                    policy_count=int(os.getenv("PCR_MACHINE_SPLITS")), core_count=2
+                )
 
                 partitions = await do_pcr_partition(
                     config,
                     data_list,
                     sensor_data_url,
                 )
-                partitions = wrapper.fetch_url(partitions)
+
+                url = wrapper.fetch_url(partitions)
+                comm = CommunicatorOpen(url)
+                storage = PyStorage.loads(comm.recv())
+                partitions = storage.retrieve()
+
                 pcr_jobs = []
+                logger.info(f"{len(partitions)} jobs created by partitioned")
+                # logger.info(f"{len(pcr_policy)} policies created")
                 for i, partition in enumerate(partitions):
                     pcr_jobs.append(
-                        async_fetch_url(
-                            do_pcr(
-                                config.copy(),
-                                partition,
-                                # task_description={
-                                #     "process_template": {"policy": pcr_policy[i]}
-                                # },
-                            )
+                        do_pcr(
+                            config,
+                            partition,
+                            task_description={
+                                "process_template": {"policy": pcr_policy[i]}
+                            },
                         )
                     )
-                return await to_edge(
-                    config.copy(),
-                    async_fetch_url(do_pcr_pack(config.copy(), *pcr_jobs)),
-                    "pcr",
-                )
+                    if SHORT_RUN:
+                        break
 
-            # train_jobs.append(pcr_block(config, data_list, url_to_sensor_data))
+                all_jobs = await asyncio.gather(*pcr_jobs)
+                out = []
+                for i in all_jobs:
+                    out.append(wrapper.fetch_url(i))
+
+                pcr_finish = await do_pcr_pack(config, *out)
+                pcr_out = wrapper.fetch_url(pcr_finish)
+                return await to_edge(config, pcr_out, "pcr")
+
+            train_jobs.append(pcr_block(config, data_list, url_to_sensor_data))
 
             edge_result = await asyncio.gather(*train_jobs)
 
-            logger.info(f"Pipeline completed: {edge_result}")
+            logger.info(f"Pipeline completed!")
 
     results = await pipeline(1)
 

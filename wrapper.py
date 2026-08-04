@@ -36,7 +36,6 @@ if __name__ == "__main__":
     comm = CommunicatorOpen(input_url)
     storage = PyStorage.loads(comm.recv())
     inputs = storage.retrieve()
-
     comm.close()  # direct://fCZHW000000001t0b!Ib
 
     # The inputs themselves may be more URLs

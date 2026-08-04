@@ -116,3 +116,7 @@ TK_DO_PCR_PARTITION="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr-partiti
 TK_DO_PCR="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr.woof"
 TK_DO_PCR_PACK="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr-pack.woof"
 TK_TO_EDGE="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr-pack.woof"
+
+# I need source woofs.... 1MB size element, 100 history
+TK_DO_PCR_SRC="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr-src.woof"
+TK_DO_PCR_PACK_SRC="fwoof://169.231.229.75/sharedfs/ucsb-data/tk-do-pcr-pack-src.woof"

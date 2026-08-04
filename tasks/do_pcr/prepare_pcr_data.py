@@ -195,7 +195,8 @@ def prepare_machine_data(
     machine_data_outputs = []
     counter = 0
     for partition in partitions:
-        print(f"Creating machine files: {counter / len(partitions)}")
+        print(f"Creating machine files: {counter} / {len(partitions)}")
+        counter += 1
         machine_id = partition["machine_id"]
         points = partition["points"]
         num_points = partition["num_points"]

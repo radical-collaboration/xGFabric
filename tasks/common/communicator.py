@@ -1,3 +1,4 @@
+import time
 from typing import cast
 
 from .pyspot.pyspot.senspot import (
@@ -96,10 +97,14 @@ class FileWooFCommunicator(AbstractCommunicator):
         self.fwoof = FileWooF(self.woof_url, bin_path)
 
     def send(self, data: bytes):
+        # weird bug with file woofs.... flooding the server causes it to freeze
+        time.sleep(0.05)
         version, end_seq_no = self.fwoof.put(data)
         return self.url + f"?v={version}"
 
     def recv(self) -> bytes:
+        # weird bug with file woofs.... flooding the server causes it to freeze
+        time.sleep(0.05)
         item = self.fwoof.get(self.version)
         return item.data  # type: ignore
 

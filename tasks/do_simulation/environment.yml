@@ -30,6 +30,5 @@ dependencies:
    - meshio
    - tensorflow
    - keras
-   - tqdm
    - numpy
    - python-dotenv
