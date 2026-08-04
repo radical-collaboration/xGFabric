@@ -1,4 +1,4 @@
-name: rhap_conda_env2
+name: rhap_main
 channels:
   - defaults
 dependencies:
