@@ -59,9 +59,9 @@ This runs the entire workflow. (fetch + sim + train + deploy)
 > above and activates the conda environemnt. 
 
 ## Runtime artifacts
-- All artifacts produced by the pipeline are in the `PLAYGROUND_DIR`. See `config.sh`
+- All artifacts produced by the pipeline are in the `PLAYGROUND_DIR`. See `tasks/common/config.sh`
 
-## Architecture
+## Architecture + Layout
 Coming soon... but some highlights:
 
 - This contains an abstract Data Communicator for transferring data between
@@ -70,4 +70,5 @@ Coming soon... but some highlights:
 - All tasks run as executables
 - Refactored / cleaned up original sim + training scripts to make it more
   modular
+- Every task has its own directory. 
 
