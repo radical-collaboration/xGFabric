@@ -9,7 +9,8 @@ import datetime
 
 import pandas as pd
 
-from ..common.log_formatter import register_task, register_log, close_task
+from utils_architecture import register_task, close_task
+from ..common.log_formatter import register_log
 
 # step 1
 from .partition_pcr_grid import PCR_Partition_Grid
@@ -22,8 +23,17 @@ from .train_pcr_chunk import train_chunk
 
 
 def tk_pcr_partition(config, sims_list, sensor_values):
-    env = register_task(config, "do_pcr_partition", 0)
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        config["INVESTIGATOR_NAME"],
+        config["TASK_NAME"],
+        config["TASK_COUNTER"],
+    )
     logger = register_log(env, logging.INFO)
+
+    close_task(env)
+    return [1, 2, 3]
 
     # partition PCR grid
     machinecount = int(env["PCR_MACHINE_SPLITS"])
@@ -39,10 +49,22 @@ def tk_pcr_partition(config, sims_list, sensor_values):
     )
 
     close_task(env)
-    return env["TK_DO_PCR_PARTITION"], machine_data_outputs
+    return machine_data_outputs
 
 
 def tk_do_pcr(config, machine_data_output):
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        config["INVESTIGATOR_NAME"],
+        config["TASK_NAME"],
+        config["TASK_COUNTER"],
+    )
+    logger = register_log(env, logging.INFO)
+
+    close_task(env)
+    return env["OUTPUT_DIR"]
+
     u_id = machine_data_output["machine_id"]
 
     env = register_task(config, "do_pcr", u_id)
@@ -55,8 +77,17 @@ def tk_do_pcr(config, machine_data_output):
 
 
 def tk_do_pcr_pack(config, *pcr_output_dirs):
-    env = register_task(config, "do_pcr_pack", 0)
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        config["INVESTIGATOR_NAME"],
+        config["TASK_NAME"],
+        config["TASK_COUNTER"],
+    )
     logger = register_log(env, logging.INFO)
+
+    close_task(env)
+    return env["OUTPUT_DIR"] + "/pcr.tar.gz"
 
     # results should be in env['OUTPUT_DIR']
     files_to_archive = []

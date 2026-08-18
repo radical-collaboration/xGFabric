@@ -1,17 +1,25 @@
-import asyncio
-import datetime
 import glob
-import os
 import subprocess
-import time
 import logging
-import random
-from ..common.log_formatter import register_task, register_log, close_task
+
+from utils_architecture import register_task, close_task
+from ..common.log_formatter import register_log
 from .MPWB2_CFD import PINN_Config, pinn_main_entry
 
 
 def tk_do_pinn(config, sims_list):
-    env = register_task(config, "do_pinn", 0)
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        config["INVESTIGATOR_NAME"],
+        "",
+        config["TASK_COUNTER"],
+    )
+
+    # Short
+    close_task(env)
+    return env["OUTPUT_DIR"] + "/pinn.tar.gz"
+
     logger = register_log(env, logging.INFO)
 
     logging.getLogger("matplotlib.font_manager").setLevel(logging.INFO)
@@ -60,4 +68,4 @@ def tk_do_pinn(config, sims_list):
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
     close_task(env)
-    return env["TK_DO_PINN"], env["OUTPUT_DIR"] + "/pinn.tar.gz"
+    return env["OUTPUT_DIR"] + "/pinn.tar.gz"

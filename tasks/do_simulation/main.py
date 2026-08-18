@@ -6,35 +6,46 @@ import random
 import logging
 import os
 import math
-from ..common.log_formatter import register_task, register_log, close_task
+from ..common.log_formatter import register_log
+from utils_architecture import close_task, register_task
 import datetime
 
 from ..common.communicator import CommunicatorOpen, PyStorage
 
+# def tk_do_simulation_tmp(env, sensor_point, sim_id):
 
-def tk_do_simulation_tmp(env, sensor_point, sim_id):
+#     skip_dir = "/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations"
 
-    skip_dir = "/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations"
-
-    close_task(env)
-    return env["TK_DO_SIMULATION"], (
-        sim_id,
-        0.0,
-        skip_dir + f"/sim_{sim_id}.csv",
-    )
+#     return env["TK_DO_SIMULATION"], (
+#         sim_id,
+#         0.0,
+#         skip_dir + f"/sim_{sim_id}.csv",
+#     )
 
 
-def tk_do_simulation(config, sensor_point, sim_id):
+def tk_do_simulation(config, sensor_point):
     # config: dict
     # sensor_point: has wind_speed and wind_dir
 
     # Load data
 
     # create directory for sims
-    env = register_task(config, "do_simulation", sim_id)
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        "",
+        "sim",
+        config["TASK_COUNTER"],
+    )
     logger = register_log(env, logging.INFO)
 
-    return tk_do_simulation_tmp(env, sensor_point, sim_id)
+    close_task(env)
+    return (
+        random.random(),
+        env["OUTPUT_DIR"] + f"/sim.csv",
+    )
+
+    # return tk_do_simulation_tmp(env, sensor_point, sim_id)
 
     # sim_id
 
@@ -58,7 +69,7 @@ def tk_do_simulation(config, sensor_point, sim_id):
         str(x),
         str(y),
         "0.0",
-        env["OUTPUT_DIR"],
+        config["OUTPUT_DIR"],
         "1 4 1",
         str(sim_id),
         str(wind_direction),
@@ -71,7 +82,7 @@ def tk_do_simulation(config, sensor_point, sim_id):
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=env,
+        env=config,
         text=True,
         cwd=script_dir,
     )
@@ -91,9 +102,7 @@ def tk_do_simulation(config, sensor_point, sim_id):
 
     # Save data
 
-    close_task(env)
-    return env["TK_DO_SIMULATION"], (
-        sim_id,
+    return (
         wind_speed,
         env["OUTPUT_DIR"] + f"/sim_{sim_id}.csv",
     )

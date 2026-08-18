@@ -1,7 +1,18 @@
 #/bin/bash
 
+#####################################
+# TWIN CONFIG
+#####################################
+
+DT_STREAM_PUB_ADDR="tcp://127.0.0.1:5000"
+DT_STREAM_SUB_ADDR="tcp://127.0.0.1:5001"
+
+NODE_COUNT=1
+#####################################
+
+
 # ROSE / Python config
-PLAYGROUND_DIR=/pscratch/sd/b/bcarter/playground
+PLAYGROUND_DIR=/tmp/pscratch
 
 COMMON_DIR="../common"
 
@@ -38,7 +49,7 @@ CSPOT_ENDPOINT="woof://128.111.45.61/davisstations/daviscupsout"
 # Number of CSPOT records to fetch (default: 50)
 # When combined with DATA_CUTOFF_DATE: fetches up to N records AFTER the cutoff date
 # When used alone: fetches the N most recent records
-CSPOT_LIMIT="72"
+CSPOT_LIMIT="4"
 
 # Cutoff date for sensor data.
 # Format: YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DD

@@ -1,35 +1,29 @@
-import asyncio
-import datetime
 import glob
-import os
 import subprocess
-import time
 import logging
-import random
-from ..common.log_formatter import register_task, register_log, close_task
+
+from utils_architecture import register_task, close_task
+from ..common.log_formatter import register_log
 from .train_fno import fno_main_entry, FNO_Config
 
 
-def main():
-    sims_list = [
-        (
-            0.0,
-            "/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations/sim_0.csv",
-        )
-    ]
-    out_dir = (
-        "/pscratch/sd/b/bcarter/playground/run_07-02-2026_12_50_05/1/do_fno/0/results"
-    )
-    fno_config = FNO_Config()
-    fno_main_entry(sims_list, out_dir, fno_config)
-
-
 def tk_do_fno(config, sims_list):
-    env = register_task(config, "do_fno", 0)
+
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        config["INVESTIGATOR_NAME"],
+        "",
+        config["TASK_COUNTER"],
+    )
     logger = register_log(env, logging.INFO)
 
     logging.getLogger("matplotlib.font_manager").setLevel(logging.INFO)
     logging.getLogger("matplotlib.colorbar").setLevel(logging.INFO)
+
+    # Short
+    close_task(env)
+    return env["OUTPUT_DIR"] + "/fno.tar.gz"
 
     # Require conda cfdaai
 
@@ -75,4 +69,4 @@ def tk_do_fno(config, sims_list):
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
     close_task(env)
-    return env["TK_DO_FNO"], env["OUTPUT_DIR"] + "/fno.tar.gz"
+    return env["OUTPUT_DIR"] + "/fno.tar.gz"
