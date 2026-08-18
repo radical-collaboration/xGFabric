@@ -75,17 +75,19 @@ async def main():
     field = WindFieldAgent(flow, config)
     sink = CUPS_Sink(flow, config)
 
-    runtime.add_task(wind_sensor, TRUTHY, DAVIS_WIND_SENSOR, is_persistent=True)
-    runtime.add_agent(field, DAVIS_WIND_SENSOR, WIND_FIELD)
-    runtime.add_task(sink, WIND_FIELD, NULL_DTYPE)
+    async with flow.workflow_scope(1):
 
-    runtime.print_graph()
-    runtime.start()
+        runtime.add_task(wind_sensor, TRUTHY, DAVIS_WIND_SENSOR, is_persistent=True)
+        runtime.add_agent(field, DAVIS_WIND_SENSOR, WIND_FIELD)
+        runtime.add_task(sink, WIND_FIELD, NULL_DTYPE)
 
-    # let it run
-    await asyncio.sleep(20)
-    print("DONE======================")
-    await runtime.stop()
+        runtime.print_graph()
+        runtime.start()
+
+        # let it run
+        await asyncio.sleep(20)
+        print("DONE======================")
+        await runtime.stop()
 
     if ENABLE_TELEMETRY:
         logger.info(f"Telemetry summary: {telemetry.summary()}")
