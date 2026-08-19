@@ -43,6 +43,7 @@ def register_task(
     investigator_name: str,
     task_name: str,
     task_number: int | str = 0,
+    exist_ok: bool = False,
 ):
     fpath = "/"
     if agent_name != "":
@@ -61,10 +62,10 @@ def register_task(
     env["FULL_TASK_NAME"] = fpath
 
     task_dir = env["PLAYGROUND_DIR"] + fpath
-    os.makedirs(task_dir)
-    os.makedirs(task_dir + "/results")
-    os.makedirs(task_dir + "/logs")
-    os.makedirs(task_dir + "/interim")
+    os.makedirs(task_dir, exist_ok=exist_ok)
+    os.makedirs(task_dir + "/results", exist_ok=exist_ok)
+    os.makedirs(task_dir + "/logs", exist_ok=exist_ok)
+    os.makedirs(task_dir + "/interim", exist_ok=exist_ok)
 
     env["OUTPUT_DIR"] = task_dir + "/results"
     env["LOG_DIR"] = task_dir + "/logs"
@@ -79,7 +80,11 @@ def register_task(
     return env_main
 
 
-def close_task(env):
+def close_task(env, clean=False):
     logger = logging.getLogger(env["FULL_TASK_NAME"])
     logger.info(f"Task {env['FULL_TASK_NAME']} finished!")
     os.chdir(env["PREVIOUS_CWD"])
+
+    # clean up interim!
+    if clean:
+        os.unlink(env["INTERIM_DIR"])

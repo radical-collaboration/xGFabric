@@ -44,7 +44,7 @@ async def main():
     logger = register_log_main(config, logging.INFO)
     logging.getLogger("radical.asyncflow").setLevel(logging.WARNING)
     logging.getLogger("rhapsody").setLevel(logging.WARNING)
-    logging.getLogger("font_manager").setLevel(logging.WARNING)
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
 
     # Get backends
     exe = LocalCPU()  # node_count=config["NODE_COUNT"]

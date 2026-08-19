@@ -4,7 +4,7 @@ import types
 from radical.asyncflow import WorkflowEngine
 from digitaltwin.components import Any, ModelInvestigator, TypedData
 from digitaltwin.runtime import RuntimeAPI
-from .main import tk_do_pinn
+from .main import tk_do_pinn, tk_pinn_eval
 
 from rose.al.active_learner import Learner
 
@@ -21,13 +21,6 @@ class PINNInvestigator(ModelInvestigator):
         self.flow = flow
 
         self.learner = Learner(flow)
-
-        @self.flow.function_task
-        async def do_inference(in_data: TypedData, model=-1):
-            print(f"PINN Inference. Using: {model}")
-            return TypedData(WIND_FIELD, in_data.data)
-
-        self.inference_task = do_inference
 
         # callback: trigger event
         self.incoming = asyncio.Event()
@@ -46,8 +39,22 @@ class PINNInvestigator(ModelInvestigator):
                 self.batch = []
 
         self.incoming_callback = incoming_cb
-        # Training Pipeline
 
+        @self.flow.function_task
+        async def do_inference(in_data: TypedData, config=None, model="na"):
+            if model == "na" or config is None:
+                # pass through, no model yet
+                return TypedData(WIND_FIELD, {"arch": "na"})
+
+            # model available!
+            wind = in_data.data["wind_speed"]
+            result = tk_pinn_eval(config, model, wind)
+
+            return TypedData(WIND_FIELD, {"arch": "pinn", "result": result, "w": wind})
+
+        self.inference_task = do_inference
+
+    # Training Pipeline
     async def do_train(self, runtime: RuntimeAPI, batch):
         # train: I need to simulate each of the points
 
@@ -75,7 +82,7 @@ class PINNInvestigator(ModelInvestigator):
 
         # register callback
         runtime.subscribe_to_topic(runtime.ON_INPUT, self.incoming_callback)
-        runtime.publish_new_model({"model": "not ready"})
+        runtime.publish_new_model({"config": None, "model": "na"})
 
         # Main loop: drain on the queue
         while True:
@@ -83,5 +90,6 @@ class PINNInvestigator(ModelInvestigator):
             batch = self.batch_out
 
             model = await self.do_train(runtime, batch)
-            runtime.publish_new_model(model)
+            cpy = self.config.copy()
+            runtime.publish_new_model({"config": cpy, "model": model})
             self.incoming.clear()

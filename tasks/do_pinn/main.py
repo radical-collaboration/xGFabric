@@ -2,9 +2,21 @@ import glob
 import subprocess
 import logging
 
+import numpy as np
+
 from utils_architecture import register_task, close_task
 from ..common.log_formatter import register_log
 from .MPWB2_CFD import PINN_Config, pinn_main_entry
+from .inference import (
+    pinn_predict_field,
+    prepare,
+    x_min,
+    x_max,
+    y_min,
+    y_max,
+    z_min,
+    z_max,
+)
 
 
 def tk_do_pinn(config, sims_list):
@@ -69,3 +81,46 @@ def tk_do_pinn(config, sims_list):
 
     close_task(env)
     return env["OUTPUT_DIR"] + "/pinn.tar.gz"
+
+
+def tk_pinn_eval(config, path_to_pinn_tar, wind):
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        config["INVESTIGATOR_NAME"],
+        "INFERENCE",
+        "",
+        exist_ok=True,
+    )
+    logger = register_log(env, logging.INFO)
+
+    cmd_tar = ["tar", "-xf", path_to_pinn_tar, "-C", env["INTERIM_DIR"]]
+
+    tarproc = subprocess.Popen(
+        cmd_tar,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    if tarproc.returncode != 0:
+        logger.warning(f"Error executing tar!")
+        raise ValueError(f"Error executing tar! {' '.join(cmd_tar)}")
+
+    # Now, files are in env['INTERIM_DIR']
+    model, metadata = prepare(
+        env["INTERIM_DIR"] + "/model.weights.h5",
+        env["INTERIM_DIR"] + "/model_meta.json",
+    )
+
+    # wind = (np.random.rand(1) * metadata["WS_MAX"])[0]
+
+    x = np.linspace(x_min, x_max, 85)  # PCR counts
+    y = np.linspace(y_min, y_max, 38)  # PCR counts
+    pts_interested = np.meshgrid(x, y)
+    out = []
+    out.append(pinn_predict_field(model, metadata, pts_interested, wind, z=1.0))
+    out.append(pinn_predict_field(model, metadata, pts_interested, wind, z=3.0))
+    out.append(pinn_predict_field(model, metadata, pts_interested, wind, z=5.0))
+
+    close_task(env, clean=True)
+    return out

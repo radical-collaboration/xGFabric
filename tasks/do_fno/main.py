@@ -2,6 +2,17 @@ import glob
 import subprocess
 import logging
 
+import numpy as np
+
+from .inference import (
+    fno_predict_field,
+    precompute_static,
+    prepare,
+    x_min,
+    x_max,
+    y_min,
+    y_max,
+)
 from utils_architecture import register_task, close_task
 from ..common.log_formatter import register_log
 from .train_fno import fno_main_entry, FNO_Config
@@ -70,3 +81,84 @@ def tk_do_fno(config, sims_list):
 
     close_task(env)
     return env["OUTPUT_DIR"] + "/fno.tar.gz"
+
+
+def tk_fno_eval(config, path_to_fno_tar, wind):
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        config["INVESTIGATOR_NAME"],
+        "INFERENCE",
+        "",
+        exist_ok=True,
+    )
+    logger = register_log(env, logging.INFO)
+
+    cmd_tar = ["tar", "-xf", path_to_fno_tar, "-C", env["INTERIM_DIR"]]
+
+    tarproc = subprocess.Popen(
+        cmd_tar,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    tarproc.communicate()
+
+    if tarproc.returncode != 0:
+        logger.warning(f"Error executing tar!")
+        raise ValueError(f"Error executing tar! {' '.join(cmd_tar)}")
+
+    # Now, files are in env['INTERIM_DIR']
+    model, meta = prepare(
+        env["INTERIM_DIR"] + "/model.weights.h5",
+        env["INTERIM_DIR"] + "/model_meta.json",
+    )
+
+    x_norm_grid, y_norm_grid, x_lin, y_lin = precompute_static(meta)
+
+    x = np.linspace(x_min, x_max, 85)  # PCR counts
+    y = np.linspace(y_min, y_max, 38)  # PCR counts
+    pts_interested = np.meshgrid(x, y)
+    out = []
+    out.append(
+        fno_predict_field(
+            model,
+            meta,
+            x_norm_grid,
+            y_norm_grid,
+            x_lin,
+            y_lin,
+            pts_interested,
+            wind,
+            1,
+        )
+    )
+    out.append(
+        fno_predict_field(
+            model,
+            meta,
+            x_norm_grid,
+            y_norm_grid,
+            x_lin,
+            y_lin,
+            pts_interested,
+            wind,
+            3,
+        )
+    )
+    out.append(
+        fno_predict_field(
+            model,
+            meta,
+            x_norm_grid,
+            y_norm_grid,
+            x_lin,
+            y_lin,
+            pts_interested,
+            wind,
+            5,
+        )
+    )
+
+    close_task(env, clean=True)
+    return out

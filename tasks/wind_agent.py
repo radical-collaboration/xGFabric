@@ -49,6 +49,18 @@ class WindFieldAgent(SciAgent):
 
         self.model_selector = model_select
 
+    async def model_publish_cb(
+        self, investigator: ModelInvestigator, model_args: dict, acc_metrics: dict
+    ):
+        if investigator == self.fno:
+            logger.info(f"Agent received model publish from FNO: {model_args['model']}")
+        elif investigator == self.pcr:
+            logger.info(f"Agent received model publish from PCR: {model_args['model']}")
+        elif investigator == self.pinn:
+            logger.info(
+                f"Agent received model publish from PINN: {model_args['model']}"
+            )
+
     async def main_loop(self, runtime: RuntimeAPI):
 
         runtime.start_investigator(self.fno)
@@ -59,7 +71,8 @@ class WindFieldAgent(SciAgent):
         runtime.register_shared_subtask(
             SIM_MASTER, self.sim_master, int(self.config["CSPOT_LIMIT"]) * 4
         )
+        runtime.subscribe_to_topic(runtime.ON_MODEL_PUBLISH, self.model_publish_cb)
 
         # set model selector. Set FNO as first.
         runtime.set_model_selection_task(self.model_selector)
-        runtime.update_model_selector(i=self.pcr.get_id())
+        runtime.update_model_selector(i=self.fno.get_id())

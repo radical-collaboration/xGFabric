@@ -8,6 +8,7 @@ import random
 import datetime
 
 import cloudpickle
+import numpy as np
 import pandas as pd
 
 from utils_architecture import register_task, close_task
@@ -21,6 +22,9 @@ from .prepare_pcr_data import prepare_machine_data
 
 # step 3
 from .train_pcr_chunk import train_chunk
+
+# inference
+from .inference import predict_at_z, prepare
 
 
 def tk_pcr_partition(config, sims_list, sensor_values):
@@ -122,3 +126,38 @@ def tk_do_pcr_pack(config, *pcr_output_dirs):
 
     close_task(env)
     return env["OUTPUT_DIR"] + "/pcr.tar.gz"
+
+
+def tk_pcr_eval(config, path_to_pcr_tar, wind):
+    env = register_task(
+        config,
+        config["AGENT_NAME"],
+        config["INVESTIGATOR_NAME"],
+        "INFERENCE",
+        "",
+        exist_ok=True,
+    )
+    logger = register_log(env, logging.INFO)
+
+    cmd_tar = ["tar", "-xf", path_to_pcr_tar, "-C", env["INTERIM_DIR"]]
+
+    tarproc = subprocess.Popen(
+        cmd_tar,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    tarproc.communicate()
+
+    if tarproc.returncode != 0:
+        logger.warning(f"Error executing tar!")
+        raise ValueError(f"Error executing tar! {' '.join(cmd_tar)}")
+
+    df = prepare(env["INTERIM_DIR"] + "/pcr_coefficients", logger)
+
+    out = []
+    out.append(predict_at_z(df, wind, 1))
+    out.append(predict_at_z(df, wind, 3))
+    out.append(predict_at_z(df, wind, 5))
+    close_task(env, clean=True)
+    return out

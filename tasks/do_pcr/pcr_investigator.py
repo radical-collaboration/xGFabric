@@ -1,11 +1,12 @@
 import asyncio
 import types
 
+import numpy as np
 from radical.asyncflow import WorkflowEngine
 from digitaltwin.components import Any, ModelInvestigator, TypedData
 from digitaltwin.runtime import RuntimeAPI
 
-from .main import tk_pcr_partition
+from .main import tk_pcr_eval, tk_pcr_partition
 from .main import tk_do_pcr
 from .main import tk_do_pcr_pack
 
@@ -24,9 +25,20 @@ class PCRInvestigator(ModelInvestigator):
         self.flow = flow
 
         @self.flow.function_task
-        async def do_inference(in_data: TypedData, model=-1):
-            print(f"PCR Inference. Using: {model}")
-            return TypedData(WIND_FIELD, in_data.data)
+        async def do_inference(in_data: TypedData, config=None, model="na"):
+            if model == "na" or config is None:
+                # pass through, no model yet
+                return TypedData(WIND_FIELD, {"arch": "na"})
+
+            # PCR works on a range rather than a single data point.
+            # for now, assume the wind is stable.
+            wind_single = in_data.data["wind_speed"]
+            wind = np.ones(13) * wind_single
+            result = tk_pcr_eval(config, model, wind)
+
+            return TypedData(
+                WIND_FIELD, {"arch": "pcr", "result": result, "w": wind_single}
+            )
 
         self.inference_task = do_inference
 
@@ -103,7 +115,7 @@ class PCRInvestigator(ModelInvestigator):
 
         # register callback
         runtime.subscribe_to_topic(runtime.ON_INPUT, self.incoming_callback)
-        runtime.publish_new_model({"model": "not ready"})
+        runtime.publish_new_model({"config": None, "model": "na"})
 
         # Main loop: drain on the queue
         while True:
@@ -111,5 +123,6 @@ class PCRInvestigator(ModelInvestigator):
             batch = self.batch_out
 
             model = await self.do_train(runtime, batch)
-            runtime.publish_new_model(model)
+            cpy = self.config.copy()
+            runtime.publish_new_model({"config": cpy, "model": model})
             self.incoming.clear()
