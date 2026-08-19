@@ -64,7 +64,7 @@ class FNOInvestigator(ModelInvestigator):
             return tk_do_fno(config, sims)
 
         self.config["TASK_COUNTER"] = self.task_counter
-        fno_tar = await do_fno(self.config, sim_fnames)
+        fno_tar = await do_fno(self.config.copy(), sim_fnames)
         self.task_counter += 1
 
         return {"model": fno_tar}

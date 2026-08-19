@@ -44,7 +44,7 @@ def register_task(
     task_name: str,
     task_number: int | str = 0,
 ):
-    fpath = ""
+    fpath = "/"
     if agent_name != "":
         fpath += agent_name + "/"
 

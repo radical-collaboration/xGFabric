@@ -22,8 +22,8 @@ def tk_do_fno(config, sims_list):
     logging.getLogger("matplotlib.colorbar").setLevel(logging.INFO)
 
     # Short
-    close_task(env)
-    return env["OUTPUT_DIR"] + "/fno.tar.gz"
+    # close_task(env)
+    # return env["OUTPUT_DIR"] + "/fno.tar.gz"
 
     # Require conda cfdaai
 

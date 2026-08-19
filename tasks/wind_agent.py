@@ -23,7 +23,7 @@ class WindFieldAgent(SciAgent):
         self.flow = flow
         self.config = config.copy()
         self.config["AGENT_NAME"] = "WindField"
-        self.sim_counter = 0
+        self.sim_counter = -1
 
         @self.flow.function_task
         async def simulate(config, sensor_pt):
@@ -32,10 +32,9 @@ class WindFieldAgent(SciAgent):
             return wind, fname
 
         async def wrapper(sensor_pt):
-            ct = self.sim_counter
             self.sim_counter += 1
             self.config["TASK_COUNTER"] = self.sim_counter
-            return await simulate(self.config, sensor_pt)
+            return await simulate(self.config.copy(), sensor_pt)
 
         self.sim_master = wrapper
 
@@ -56,10 +55,11 @@ class WindFieldAgent(SciAgent):
         runtime.start_investigator(self.pinn)
         runtime.start_investigator(self.pcr)
 
+        # allow up to 4 full runs before stop dropping.
         runtime.register_shared_subtask(
-            SIM_MASTER, self.sim_master, int(self.config["CSPOT_LIMIT"])
+            SIM_MASTER, self.sim_master, int(self.config["CSPOT_LIMIT"]) * 4
         )
 
         # set model selector. Set FNO as first.
         runtime.set_model_selection_task(self.model_selector)
-        runtime.update_model_selector(i=self.fno.get_id())
+        runtime.update_model_selector(i=self.pcr.get_id())

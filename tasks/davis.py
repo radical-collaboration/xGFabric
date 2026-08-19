@@ -1,5 +1,7 @@
 import asyncio
+import datetime
 import json
+import random
 
 from digitaltwin import PubSubConfig, RuntimeAPI
 from digitaltwin.components import UtilityTask
@@ -75,15 +77,26 @@ class DavisWind(UtilityTask):
                     continue
 
                 # Now, format.
-                wind_data = parse(latest)  # type: ignore
-                outputs = strip_cols(wind_data)
-                logger.info(
-                    f"Davis emit: {json.dumps(outputs.to_dict(orient='records'), indent=1, default=lambda o: str(o))}"
-                )
-                await psclient.publish(
-                    DAVIS_WIND_SENSOR, outputs.to_dict(orient="records")[0]
-                )
-                await asyncio.sleep(1)
+                # wind_data = parse(latest)  # type: ignore
+
+                # fake: replaces wind_data
+                for _ in range(int(config["CSPOT_LIMIT"])):
+                    r = random.random()
+                    fake = [(datetime.datetime.now(), r * 20, r * 15, r * 360)]
+                    df = pd.DataFrame(
+                        fake, columns=["dt", "wind_speed", "wind_avg", "wind_dir"]
+                    )
+
+                    outputs = strip_cols(df)
+                    logger.info(
+                        f"Davis emit: {json.dumps(outputs.to_dict(orient='records'), indent=1, default=lambda o: str(o))}"
+                    )
+                    await psclient.publish(
+                        DAVIS_WIND_SENSOR, outputs.to_dict(orient="records")[0]
+                    )
+                    # wait 5 seconds.
+                    await asyncio.sleep(0.1)
+                await asyncio.sleep(3 * 60)
 
         self.sensor_loop = sensor_loop
 

@@ -40,10 +40,8 @@ def tk_do_simulation(config, sensor_point):
     logger = register_log(env, logging.INFO)
 
     close_task(env)
-    return (
-        random.random(),
-        env["OUTPUT_DIR"] + f"/sim.csv",
-    )
+    skip_dir = f"/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations/sim_{random.randint(0,71)}.csv"
+    return (random.random(), skip_dir)
 
     # return tk_do_simulation_tmp(env, sensor_point, sim_id)
 
@@ -71,18 +69,23 @@ def tk_do_simulation(config, sensor_point):
         "0.0",
         config["OUTPUT_DIR"],
         "1 4 1",
-        str(sim_id),
+        str(config["TASK_COUNTER"]),
         str(wind_direction),
         str(wind_speed),
     ]
 
-    print(" ".join(cmd))
+    logger.info("Run: " + " ".join(cmd))
+
+    # ensure all items in config are str
+    config_cpy = {}
+    for k, v in config.items():
+        config_cpy[k] = str(v)
 
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=config,
+        env=config_cpy,
         text=True,
         cwd=script_dir,
     )
@@ -101,8 +104,8 @@ def tk_do_simulation(config, sensor_point):
     # search for sims in OUTPUT_DIR
 
     # Save data
-
+    close_task(env)
     return (
         wind_speed,
-        env["OUTPUT_DIR"] + f"/sim_{sim_id}.csv",
+        env["OUTPUT_DIR"] + f"/sim_{config["TASK_COUNTER"]}.csv",
     )

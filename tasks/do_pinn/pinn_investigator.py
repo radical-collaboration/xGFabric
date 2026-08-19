@@ -64,7 +64,7 @@ class PINNInvestigator(ModelInvestigator):
             return tk_do_pinn(config, sims)
 
         self.config["TASK_COUNTER"] = self.task_counter
-        fno_tar = await do_pinn(self.config, sim_fnames)
+        fno_tar = await do_pinn(self.config.copy(), sim_fnames)
         self.task_counter += 1
 
         return {"model": fno_tar}

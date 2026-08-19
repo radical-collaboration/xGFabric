@@ -22,11 +22,11 @@ import dotenv
 
 logger = logging.getLogger(__name__)
 
-dotenv.load_dotenv("tasls/common/config.sh")
+dotenv.load_dotenv("tasks/common/config.sh")
 
 import rhapsody
 
-rhapsody.enable_logging(level=logging.DEBUG)
+rhapsody.enable_logging(level=logging.INFO)
 from utils_architecture import register_master_run, verify_config, get_fdate
 from tasks.common.log_formatter import register_log_main
 
@@ -41,9 +41,10 @@ ENABLE_TELEMETRY = True
 
 async def main():
     config = register_master_run()
-    logger = register_log_main(config, logging.DEBUG)
+    logger = register_log_main(config, logging.INFO)
     logging.getLogger("radical.asyncflow").setLevel(logging.WARNING)
     logging.getLogger("rhapsody").setLevel(logging.WARNING)
+    logging.getLogger("font_manager").setLevel(logging.WARNING)
 
     # Get backends
     exe = LocalCPU()  # node_count=config["NODE_COUNT"]
@@ -85,7 +86,7 @@ async def main():
         runtime.start()
 
         # let it run
-        await asyncio.sleep(20)
+        await asyncio.sleep(5 * 60)  # 5 minutes
         print("DONE======================")
         await runtime.stop()
 

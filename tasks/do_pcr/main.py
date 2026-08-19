@@ -7,6 +7,7 @@ import logging
 import random
 import datetime
 
+import cloudpickle
 import pandas as pd
 
 from utils_architecture import register_task, close_task
@@ -32,8 +33,8 @@ def tk_pcr_partition(config, sims_list, sensor_values):
     )
     logger = register_log(env, logging.INFO)
 
-    close_task(env)
-    return [1, 2, 3]
+    # close_task(env)
+    # return [1, 2, 3]
 
     # partition PCR grid
     machinecount = int(env["PCR_MACHINE_SPLITS"])
@@ -49,6 +50,10 @@ def tk_pcr_partition(config, sims_list, sensor_values):
     )
 
     close_task(env)
+    # with open(
+    #     "/global/homes/b/bcarter/pppl/repos/xGFabric-radical/debug.pkl", "wb"
+    # ) as f:
+    #     cloudpickle.dump((config, machine_data_outputs), f)
     return machine_data_outputs
 
 
@@ -62,18 +67,15 @@ def tk_do_pcr(config, machine_data_output):
     )
     logger = register_log(env, logging.INFO)
 
-    close_task(env)
-    return env["OUTPUT_DIR"]
+    # close_task(env)
+    # return env["OUTPUT_DIR"]
 
     u_id = machine_data_output["machine_id"]
-
-    env = register_task(config, "do_pcr", u_id)
-    logger = register_log(env, logging.INFO)
 
     train_chunk(machine_data_output, env["OUTPUT_DIR"], logger)
 
     close_task(env)
-    return env["TK_DO_PCR"], env["OUTPUT_DIR"]
+    return env["OUTPUT_DIR"]
 
 
 def tk_do_pcr_pack(config, *pcr_output_dirs):
@@ -86,8 +88,8 @@ def tk_do_pcr_pack(config, *pcr_output_dirs):
     )
     logger = register_log(env, logging.INFO)
 
-    close_task(env)
-    return env["OUTPUT_DIR"] + "/pcr.tar.gz"
+    # close_task(env)
+    # return env["OUTPUT_DIR"] + "/pcr.tar.gz"
 
     # results should be in env['OUTPUT_DIR']
     files_to_archive = []
@@ -119,4 +121,4 @@ def tk_do_pcr_pack(config, *pcr_output_dirs):
         raise ValueError(f"Error executing tar! Files: {files_to_archive}")
 
     close_task(env)
-    return env["TK_DO_PCR_PACK"], env["OUTPUT_DIR"] + "/pcr.tar.gz"
+    return env["OUTPUT_DIR"] + "/pcr.tar.gz"

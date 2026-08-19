@@ -17,8 +17,8 @@ def tk_do_pinn(config, sims_list):
     )
 
     # Short
-    close_task(env)
-    return env["OUTPUT_DIR"] + "/pinn.tar.gz"
+    # close_task(env)
+    # return env["OUTPUT_DIR"] + "/pinn.tar.gz"
 
     logger = register_log(env, logging.INFO)
 

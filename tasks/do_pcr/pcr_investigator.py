@@ -79,7 +79,7 @@ class PCRInvestigator(ModelInvestigator):
 
         self.config["TASK_NAME"] = "partition"
         self.config["TASK_COUNTER"] = self.task_counter
-        parts = await partition(self.config, sim_fnames, batch)
+        parts = await partition(self.config.copy(), sim_fnames, batch)
 
         self.config["TASK_NAME"] = f"do_pcr/{self.task_counter}"
 
@@ -92,7 +92,7 @@ class PCRInvestigator(ModelInvestigator):
 
         self.config["TASK_NAME"] = "pack"
         self.config["TASK_COUNTER"] = self.task_counter
-        finish = do_pack(self.config, *results)
+        finish = do_pack(self.config.copy(), *results)
         self.task_counter += 1
 
         return {"model": finish}
@@ -103,6 +103,7 @@ class PCRInvestigator(ModelInvestigator):
 
         # register callback
         runtime.subscribe_to_topic(runtime.ON_INPUT, self.incoming_callback)
+        runtime.publish_new_model({"model": "not ready"})
 
         # Main loop: drain on the queue
         while True:
