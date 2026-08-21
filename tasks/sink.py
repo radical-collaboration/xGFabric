@@ -1,7 +1,8 @@
 import asyncio
 
 from radical.asyncflow import WorkflowEngine
-from digitaltwin.components import UtilityTask
+from digitaltwin.components import UtilityTask, TypedData
+
 from .common.dtypes import *
 import logging
 import matplotlib.pyplot as plt
@@ -36,15 +37,22 @@ class CUPS_Sink(UtilityTask):
         self.flow = flow
         self.config = config
 
-    async def main_loop(self, runtime, in_data):
-        print(f"Received Inference: {in_data['arch']}")
+    async def main_loop(self, runtime, in_data: TypedData):
+        print(f"Received Inference: {in_data.data['arch']}")
 
-        if in_data["arch"] == "na":
+        if in_data.data["arch"] == "na":
             print("No surrogate ready yet")
             return
 
         # create graph
 
-        fname = self.config["OUTPUT_PHOTO"]
+        fname = self.config["PLAYGROUND_DIR"] + "/out.png"
 
-        graph(in_data["result"], fname, in_data["arch"], 3, w=in_data["w"])
+        graph(
+            in_data.data["result"][1],
+            fname,
+            in_data.data["arch"],
+            3,
+            w=in_data.data["w"],
+        )
+        print("\n\n" + "=" * 30 + "\n" + str(fname) + "\n" + "=" * 30)

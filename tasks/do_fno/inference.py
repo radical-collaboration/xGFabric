@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import tensorflow as tf
 from scipy.interpolate import RegularGridInterpolator
-from train_fno import *
+from .train_fno import *
 
 # Global config vals:
 x_min, x_max = 8.3, 176.5  # Based on the CFD domain bounds

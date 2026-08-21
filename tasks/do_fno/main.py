@@ -2,6 +2,7 @@ import glob
 import subprocess
 import logging
 
+import cloudpickle
 import numpy as np
 
 from .inference import (
@@ -43,7 +44,7 @@ def tk_do_fno(config, sims_list):
     fno_config = FNO_Config()
 
     # quick train:
-    fno_config.epochs = 1
+    # fno_config.epochs = 1
 
     fno_main_entry(sims_list, env["OUTPUT_DIR"], fno_config, logger)
 
@@ -94,6 +95,14 @@ def tk_fno_eval(config, path_to_fno_tar, wind):
     )
     logger = register_log(env, logging.INFO)
 
+    # capture and save debugging
+
+    # save = (config, path_to_fno_tar, wind)
+    # with open(
+    #     "/global/homes/b/bcarter/pppl/repos/xGFabric-radical/debug.pkl", "wb"
+    # ) as f:
+    #     cloudpickle.dump(save, f)
+
     cmd_tar = ["tar", "-xf", path_to_fno_tar, "-C", env["INTERIM_DIR"]]
 
     tarproc = subprocess.Popen(
@@ -112,6 +121,7 @@ def tk_fno_eval(config, path_to_fno_tar, wind):
     model, meta = prepare(
         env["INTERIM_DIR"] + "/model.weights.h5",
         env["INTERIM_DIR"] + "/model_meta.json",
+        logger,
     )
 
     x_norm_grid, y_norm_grid, x_lin, y_lin = precompute_static(meta)

@@ -2,6 +2,7 @@ import glob
 import subprocess
 import logging
 
+import cloudpickle
 import numpy as np
 
 from utils_architecture import register_task, close_task
@@ -42,8 +43,8 @@ def tk_do_pinn(config, sims_list):
     pinn_config = PINN_Config()
 
     # quick train:
-    pinn_config.max_points_per_file = 600
-    pinn_config.epochs = 1
+    # pinn_config.max_points_per_file = 600
+    # pinn_config.epochs = 1
 
     pinn_main_entry(sims_list, env["OUTPUT_DIR"], pinn_config, logger)
 
@@ -110,6 +111,7 @@ def tk_pinn_eval(config, path_to_pinn_tar, wind):
     model, metadata = prepare(
         env["INTERIM_DIR"] + "/model.weights.h5",
         env["INTERIM_DIR"] + "/model_meta.json",
+        logger,
     )
 
     # wind = (np.random.rand(1) * metadata["WS_MAX"])[0]

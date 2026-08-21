@@ -51,9 +51,17 @@ class PCRInvestigator(ModelInvestigator):
         self.task_counter = 0
 
         async def incoming_cb(in_data: TypedData):
-            self.batch.append(in_data.data)
-            logger.info(f"PCR batch: {len(self.batch)} / {config['CSPOT_LIMIT']}")
-            if len(self.batch) == int(config["CSPOT_LIMIT"]):
+            if not self.incoming.is_set():
+                self.batch.append(in_data.data)
+                logger.info(f"PCR batch: {len(self.batch)} / {config['CSPOT_LIMIT']}")
+            else:
+                logger.info(f"PCR batch: Drop... already training...")
+                return
+
+            if (
+                len(self.batch) == int(config["CSPOT_LIMIT"])
+                and not self.incoming.is_set()
+            ):
                 self.incoming.set()
                 self.batch_out = tuple(self.batch)
                 self.batch = []
@@ -107,7 +115,7 @@ class PCRInvestigator(ModelInvestigator):
         finish = do_pack(self.config.copy(), *results)
         self.task_counter += 1
 
-        return {"model": finish}
+        return finish
 
     async def main_loop(self, runtime: RuntimeAPI):
         # runtime

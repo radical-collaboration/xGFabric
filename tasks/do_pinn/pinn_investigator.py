@@ -31,9 +31,17 @@ class PINNInvestigator(ModelInvestigator):
         self.task_counter = 0
 
         async def incoming_cb(in_data: TypedData):
-            self.batch.append(in_data.data)
-            logger.info(f"PINN batch: {len(self.batch)} / {config['CSPOT_LIMIT']}")
-            if len(self.batch) == int(config["CSPOT_LIMIT"]):
+            if not self.incoming.is_set():
+                self.batch.append(in_data.data)
+                logger.info(f"PINN batch: {len(self.batch)} / {config['CSPOT_LIMIT']}")
+            else:
+                logger.info(f"PINN batch: Drop... already training...")
+                return
+
+            if (
+                len(self.batch) == int(config["CSPOT_LIMIT"])
+                and not self.incoming.is_set()
+            ):
                 self.incoming.set()
                 self.batch_out = tuple(self.batch)
                 self.batch = []
@@ -71,10 +79,10 @@ class PINNInvestigator(ModelInvestigator):
             return tk_do_pinn(config, sims)
 
         self.config["TASK_COUNTER"] = self.task_counter
-        fno_tar = await do_pinn(self.config.copy(), sim_fnames)
+        pinn_tar = await do_pinn(self.config.copy(), sim_fnames)
         self.task_counter += 1
 
-        return {"model": fno_tar}
+        return pinn_tar
 
     async def main_loop(self, runtime: RuntimeAPI):
         # runtime

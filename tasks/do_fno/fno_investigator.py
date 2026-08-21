@@ -3,7 +3,7 @@ import types
 
 from radical.asyncflow import WorkflowEngine
 from digitaltwin.components import Any, ModelInvestigator, TypedData
-from digitaltwin.runtime import RuntimeAPI
+from digitaltwin.runtime import DTRuntime, RuntimeAPI
 from .main import tk_do_fno, tk_fno_eval
 
 from rose.al.active_learner import Learner
@@ -31,9 +31,16 @@ class FNOInvestigator(ModelInvestigator):
         self.task_counter = 0
 
         async def incoming_cb(in_data: TypedData):
-            self.batch.append(in_data.data)
-            logger.info(f"FNO batch: {len(self.batch)} / {config['CSPOT_LIMIT']}")
-            if len(self.batch) == int(config["CSPOT_LIMIT"]):
+            if not self.incoming.is_set():
+                self.batch.append(in_data.data)
+                logger.info(f"FNO batch: {len(self.batch)} / {config['CSPOT_LIMIT']}")
+            else:
+                logger.info(f"FNO batch: Drop... already training...")
+                return
+            if (
+                len(self.batch) == int(config["CSPOT_LIMIT"])
+                and not self.incoming.is_set()
+            ):
                 self.incoming.set()
                 self.batch_out = tuple(self.batch)
                 self.batch = []
@@ -47,6 +54,7 @@ class FNOInvestigator(ModelInvestigator):
                 return TypedData(WIND_FIELD, {"arch": "na"})
 
             # model available!
+            logger.info(f"Do FNO inference: {model}")
             wind = in_data.data["wind_speed"]
             result = tk_fno_eval(config, model, wind)
 
@@ -75,7 +83,7 @@ class FNOInvestigator(ModelInvestigator):
         fno_tar = await do_fno(self.config.copy(), sim_fnames)
         self.task_counter += 1
 
-        return {"model": fno_tar}
+        return fno_tar
 
     async def main_loop(self, runtime: RuntimeAPI):
         # runtime
@@ -94,3 +102,9 @@ class FNOInvestigator(ModelInvestigator):
             cpy = self.config.copy()
             runtime.publish_new_model({"config": cpy, "model": model})
             self.incoming.clear()
+
+
+# Dry Run
+
+# if __name__ == "__main__":
+#     fno = FNOInvestigator(None,)

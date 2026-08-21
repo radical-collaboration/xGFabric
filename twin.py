@@ -1,6 +1,5 @@
 import asyncio
 import glob
-import os
 from pathlib import Path
 from radical.asyncflow import WorkflowEngine
 
@@ -16,7 +15,8 @@ from tasks.common.dtypes import *
 from tasks.sink import CUPS_Sink
 from tasks.wind_agent import WindFieldAgent
 
-from radical.asyncflow.logging import init_default_logger
+from radical.asyncflow import WorkflowEngine
+import rhapsody
 import logging
 import dotenv
 
@@ -24,10 +24,8 @@ logger = logging.getLogger(__name__)
 
 dotenv.load_dotenv("tasks/common/config.sh")
 
-import rhapsody
-
 rhapsody.enable_logging(level=logging.INFO)
-from utils_architecture import register_master_run, verify_config, get_fdate
+from utils_architecture import register_master_run
 from tasks.common.log_formatter import register_log_main
 
 # Load backends:
@@ -86,7 +84,7 @@ async def main():
         runtime.start()
 
         # let it run
-        await asyncio.sleep(5 * 60)  # 5 minutes
+        await asyncio.sleep(40 * 60)  # 10 minutes
         print("DONE======================")
         await runtime.stop()
 

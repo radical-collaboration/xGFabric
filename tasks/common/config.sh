@@ -4,8 +4,8 @@
 # TWIN CONFIG
 #####################################
 
-DT_STREAM_PUB_ADDR="tcp://127.0.0.1:5000"
-DT_STREAM_SUB_ADDR="tcp://127.0.0.1:5001"
+DT_STREAM_PUB_ADDR="tcp://login26:5000"
+DT_STREAM_SUB_ADDR="tcp://login26:5001"
 
 NODE_COUNT=1
 #####################################
@@ -24,12 +24,12 @@ NERSC_PROJECT_ID="m5290"
 CUPS_STRUCTURE_ZIP="/pscratch/sd/b/bcarter/playground/cups_structure.zip"
 
 # how many processors to spawn when running a sim
-SIM_THREADS=8
+SIM_THREADS=32
 
 
 # Training 
 TF_CPP_MIN_LOG_LEVEL=2
-PCR_MACHINE_SPLITS=4
+PCR_MACHINE_SPLITS=8
 
 # PUBLISH endpoints
 PINN_ENDPOINT="woof://169.231.229.75/sharedfs/ucsb-data/pinn.nersc.woof"
@@ -49,7 +49,7 @@ CSPOT_ENDPOINT="woof://128.111.45.61/davisstations/daviscupsout"
 # Number of CSPOT records to fetch (default: 50)
 # When combined with DATA_CUTOFF_DATE: fetches up to N records AFTER the cutoff date
 # When used alone: fetches the N most recent records
-CSPOT_LIMIT=16
+CSPOT_LIMIT=72
 
 # Cutoff date for sensor data.
 # Format: YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DD
@@ -69,8 +69,8 @@ SIM_PARAM_MODE="sensor_direct"
 # Number of simulations (meaning depends on mode):
 #   interpolated mode: number of evenly-spaced points to generate
 #   sensor_direct mode: maximum number of unique sensor measurements to use
-NUM_SIMULATIONS=16
-NUM_OF_CORES_PER_SIM=8
+NUM_SIMULATIONS=72
+NUM_OF_CORES_PER_SIM=32
 
 ################################################################################
 # Workqueue and Workflow Configuration 

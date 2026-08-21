@@ -2,7 +2,6 @@ import os
 import logging
 import socket
 from radical.asyncflow.logging import init_default_logger
-import datetime
 from dotenv import load_dotenv
 
 SCRIPT_DIR = os.path.dirname(__file__)

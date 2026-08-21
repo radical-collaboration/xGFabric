@@ -1,6 +1,7 @@
 import logging
 import os
 import datetime
+import shutil
 
 
 def verify_config():
@@ -87,4 +88,4 @@ def close_task(env, clean=False):
 
     # clean up interim!
     if clean:
-        os.unlink(env["INTERIM_DIR"])
+        shutil.rmtree(env["INTERIM_DIR"])

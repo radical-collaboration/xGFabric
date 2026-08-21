@@ -1,16 +1,10 @@
-import asyncio
-import glob
 import subprocess
-import time
 import random
 import logging
 import os
 import math
 from ..common.log_formatter import register_log
 from utils_architecture import close_task, register_task
-import datetime
-
-from ..common.communicator import CommunicatorOpen, PyStorage
 
 # def tk_do_simulation_tmp(env, sensor_point, sim_id):
 
