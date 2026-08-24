@@ -17,15 +17,14 @@ log_info "Loading NERSC environment..."
 # Purge existing modules for clean slate
 module purge 2>/dev/null || true
 
-# Load required modules (continue on failure)
-module load gcc/12.2.0 2>/dev/null || true
+# Load required modules
+module load gcc-native/12 2>/dev/null || true
 module load cmake/3.30.2 2>/dev/null || true
-
-# Only load spack/openmpi for simulation jobs, not training
-if [[ "${SKIP_SPACK_LOAD:-false}" != "true" ]]; then
+# OpenMPI with SLURM/PMIx support — built with schedulers=slurm so srun can init MPI
     module load spack 2>/dev/null || true
+spack load "openmpi@4.1.5 schedulers=slurm" 2>/dev/null || \
     spack load openmpi@4.1.5 2>/dev/null || true
-fi
+export PMIX_MCA_psec=native   # skip munge auth — not available on Perlmutter nodes
 
 # Paraview (optional, for visualization)
 module load paraview 2>/dev/null || true
@@ -85,17 +84,14 @@ fi
 # OpenFOAM Setup
 ################################################################################
 
-# OpenFOAM bashrc references ZSH_NAME which may be unset
+# OpenFOAM Setup — OF-11-cray built against Cray MPICH for native srun support
+# Clear any stale OF environment from a previous source
+unset WM_PROJECT_DIR WM_PROJECT_VERSION WM_MPLIB FOAM_MPI MPI_ARCH_PATH 2>/dev/null || true
 export ZSH_NAME=""
 
-# Temporarily disable strict mode for OpenFOAM sourcing
 set +u
-if [[ -f "${OPENFOAM_ROOT}/OpenFOAM-dev/etc/bashrc" ]]; then
-    source "${OPENFOAM_ROOT}/OpenFOAM-dev/etc/bashrc" 2>/dev/null || true
-    log_info "OpenFOAM loaded from: ${OPENFOAM_ROOT}"
-else
-    log_warn "OpenFOAM bashrc not found at: ${OPENFOAM_ROOT}/OpenFOAM-dev/etc/bashrc"
-fi
+source "${OPENFOAM_ROOT}/OpenFOAM-11-ompi/etc/bashrc" 2>/dev/null || true
+log_info "OpenFOAM loaded from: ${OPENFOAM_ROOT}/OpenFOAM-11-ompi"
 set -u
 
 ################################################################################
@@ -118,6 +114,10 @@ fi
 
 # Set MPI runner for SLURM environment
 export MPI_RUNNER="srun"
+
+# Job logs directory
+export JOBS_LOG_DIR="${NERSC_JOBS_LOG_DIR:-${HOME}/jobs_logs}"
+mkdir -p "$JOBS_LOG_DIR" 2>/dev/null || true
 
 ################################################################################
 # Verify Setup

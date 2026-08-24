@@ -9,7 +9,7 @@ Usage: convert_cspot_to_csv.py <input_file> [output_file]
        If output_file is omitted, writes to stdout.
 """
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def convert(input_file, out):
@@ -28,7 +28,7 @@ def convert(input_file, out):
                 if len(fields) < 6:
                     continue
                 timestamp_str = meta_part.split()[0]
-                dt = datetime.fromtimestamp(float(timestamp_str)).isoformat()
+                dt = datetime.fromtimestamp(float(timestamp_str), tz=timezone.utc).isoformat()
                 windspeed = float(fields[3]) * 0.44704  # mph -> m/s
                 windavg   = float(fields[4]) * 0.44704  # mph -> m/s
                 winddir   = float(fields[5])

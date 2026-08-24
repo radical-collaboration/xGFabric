@@ -114,6 +114,11 @@ SENSPOT_SEND_MODELS=true
 # WOOF endpoint for model storage
 SENSPOT_MODELS_ENDPOINT="woof://YOUR_SENSPOT_HOST/sharedfs/models"
 
+# Woof channel suffix appended to model name: <model>.<suffix>.woof
+# Use "nersc2" when sending from NERSC, "sb" when sending from UCSB/racelab.
+# This lets the receiver distinguish the origin site.
+SENSPOT_WOOF_SUFFIX="nersc2"
+
 # Keep local archives after sending (true) or remove them (false)
 SENSPOT_KEEP_ARCHIVES=false
 
@@ -149,6 +154,7 @@ NERSC_USER="YOUR_NERSC_USERNAME"
 NERSC_SSH_KEY="${WORK_DIR}/nersc"
 NERSC_REMOTE_WORK_DIR="/global/homes/X/YOUR_NERSC_USERNAME/intheloop"
 NERSC_SCRATCH_DIR="/pscratch/sd/X/YOUR_NERSC_USERNAME"
+NERSC_LOGS_DIR="/global/homes/X/YOUR_NERSC_USERNAME/jobs_logs"
 # Read-only system installation containing training Python scripts
 NERSC_TRAIN_WORK_DIR="/global/homes/X/YOUR_NERSC_USERNAME/common/kurl_system/intheloop"
 
@@ -158,6 +164,7 @@ RACELAB_SSH_HOST="rw-gpu1.cs.ucsb.edu"
 RACELAB_USER="YOUR_RACELAB_USERNAME"
 RACELAB_SSH_KEY="${WORK_DIR}/racelabgpu"
 RACELAB_REMOTE_WORK_DIR="/home/YOUR_RACELAB_USERNAME/intheloop_hybrid"
+RACELAB_LOGS_DIR="/home/YOUR_RACELAB_USERNAME/jobs_logs"
 
 # Per-module system routing for hybrid mode.
 # "ucsb"    = run locally on UCSB cluster (SSH-distributed or local)

@@ -23,6 +23,7 @@ SSH_HOST="${RACELAB_SSH_HOST:-rw-gpu1.cs.ucsb.edu}"
 SSH_USER="${RACELAB_USER:-liubov_kurafeeva}"
 SSH_KEY="${RACELAB_SSH_KEY:-${WORK_DIR}/racelabgpu}"
 REMOTE_WORK="${RACELAB_REMOTE_WORK_DIR:-/local/home/liubov_kurafeeva/intheloop_hybrid}"
+LOGS_DIR="${RACELAB_LOGS_DIR:-/local/home/liubov_kurafeeva/jobs_logs}"
 CONDA_ENV="${CONDA_ENV:-cfdai_tf310}"
 ENV_FILE="${WORK_DIR}/utils/environment.yml"
 

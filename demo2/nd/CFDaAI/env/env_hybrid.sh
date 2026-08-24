@@ -105,6 +105,7 @@ export NERSC_USER="${NERSC_USER:-kurl}"
 export NERSC_SSH_KEY="${NERSC_SSH_KEY:-${WORK_DIR}/id_rsa}"
 export NERSC_REMOTE_WORK_DIR="${NERSC_REMOTE_WORK_DIR:-/global/homes/k/kurl/intheloop}"
 export NERSC_SCRATCH_DIR="${NERSC_SCRATCH_DIR:-/pscratch/sd/k/kurl}"
+export NERSC_LOGS_DIR="${NERSC_LOGS_DIR:-/global/homes/k/kurl/jobs_logs}"
 
 # Ensure NERSC SSH key has correct permissions
 if [[ -f "$NERSC_SSH_KEY" ]]; then

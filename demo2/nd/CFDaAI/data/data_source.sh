@@ -25,7 +25,7 @@ fetch_sensor_data() {
             # Exit code 2 from the loader means CSPOT doesn't store data that old.
             # Use || to prevent set -e from killing the script on non-zero exit.
             local cspot_exit=0
-            _fetch_from_cspot "$output_dir" "$cutoff_date" || cspot_exit=$?
+            _fetch_from_cspot_with_retry "$output_dir" "$cutoff_date" || cspot_exit=$?
 
             if [[ $cspot_exit -eq 2 ]]; then
                 _warn_historical_fallback "$cutoff_date"
@@ -38,14 +38,14 @@ fetch_sensor_data() {
                     return 1
                 }
             elif [[ $cspot_exit -ne 0 ]]; then
-                log_error "CSPOT fetch failed (exit ${cspot_exit}) - aborting"
+                log_error "CSPOT fetch failed after retries - aborting"
                 log_error "Set HAS_CSPOT=false to use DATA_SOURCE_DIR fallback"
                 return 1
             fi
         else
-            # Online mode: any CSPOT failure is fatal
-            _fetch_from_cspot "$output_dir" "$cutoff_date" || {
-                log_error "CSPOT fetch failed and HAS_CSPOT=true - aborting"
+            # Online mode: retry for up to CSPOT_RETRY_SECS (default 2h) on transient failures
+            _fetch_from_cspot_with_retry "$output_dir" "$cutoff_date" || {
+                log_error "CSPOT fetch failed after retries and HAS_CSPOT=true - aborting"
                 log_error "Set HAS_CSPOT=false to use DATA_SOURCE_DIR fallback"
                 return 1
             }
@@ -98,6 +98,42 @@ fetch_sensor_data() {
 ################################################################################
 # CSPOT Fetching
 ################################################################################
+
+# Retry wrapper: retries _fetch_from_cspot on transient failures (exit 1) for up
+# to CSPOT_RETRY_SECS seconds (default 7200 = 2h), sleeping 60s between attempts.
+# Returns immediately on success (0) or data-not-available (2); returns 1 on timeout.
+_fetch_from_cspot_with_retry() {
+    local output_dir="$1"
+    local cutoff_date="${2:-}"
+    local max_retry_secs="${CSPOT_RETRY_SECS:-7200}"
+    local retry_interval=60
+
+    local deadline=$(( $(date +%s) + max_retry_secs ))
+    local attempt=0
+
+    while true; do
+        attempt=$(( attempt + 1 ))
+        local cspot_exit=0
+        _fetch_from_cspot "$output_dir" "$cutoff_date" || cspot_exit=$?
+
+        if [[ $cspot_exit -eq 0 ]]; then
+            [[ $attempt -gt 1 ]] && log_info "CSPOT fetch succeeded on attempt ${attempt}"
+            return 0
+        elif [[ $cspot_exit -eq 2 ]]; then
+            return 2
+        fi
+
+        local now=$(date +%s)
+        local remaining=$(( deadline - now ))
+        if [[ $remaining -le 0 ]]; then
+            log_error "CSPOT unreachable for ${max_retry_secs}s — giving up after ${attempt} attempt(s)"
+            return 1
+        fi
+        local wait=$(( remaining < retry_interval ? remaining : retry_interval ))
+        log_warn "CSPOT fetch failed (attempt ${attempt}) — retrying in ${wait}s  (${remaining}s left before 2h timeout)"
+        sleep "$wait"
+    done
+}
 
 _fetch_from_cspot() {
     local output_dir="$1"

@@ -283,7 +283,16 @@ archive_results() {
     log_info "[ARCHIVE] Archiving results → ${archive_dest}"
     mkdir -p "$archive_base"
 
-    if cp -r "$results_dir" "$archive_dest"; then
+    # Use mv when source and dest are on the same filesystem (instant rename, no data copy)
+    # Fall back to cp+rm when crossing filesystems
+    if [[ "$(stat -c %d "$results_dir" 2>/dev/null)" == "$(stat -c %d "$archive_base" 2>/dev/null)" ]]; then
+        if mv "$results_dir" "$archive_dest"; then
+            log_info "[ARCHIVE] Done (renamed): ${archive_dest}"
+        else
+            log_warn "[ARCHIVE] Rename failed — source kept at: ${results_dir}"
+            return 1
+        fi
+    elif cp -r "$results_dir" "$archive_dest"; then
         log_info "[ARCHIVE] Copy complete — removing source: ${results_dir}"
         rm -rf "$results_dir"
         log_info "[ARCHIVE] Done: ${archive_dest}"

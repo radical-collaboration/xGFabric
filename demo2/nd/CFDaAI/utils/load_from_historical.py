@@ -138,14 +138,29 @@ def main():
     sample_row = selected[0][1]
     cols = list(sample_row.keys())
 
-    # Detect format: pre-parsed CSV vs raw CSPOT archive (seqno, dt, ip, data)
+    # Detect format:
+    #   "parsed"  - simplified column names (dt,windspeed,windavg,winddir)
+    #   "davis"   - raw Davis station export (rtWindSpeed,rtWindAvgSpeed,rtWindDir)
+    #               as found in cups_historical/ CSVs on pscratch
+    #   "raw"     - raw CSPOT archive with a single packed 'data' field
     has_parsed = all(c in cols for c in ('windspeed', 'windavg', 'winddir'))
+    has_davis  = all(c in cols for c in ('rtWindSpeed', 'rtWindAvgSpeed', 'rtWindDir'))
     has_raw    = 'data' in cols
 
-    if not has_parsed and not has_raw:
+    if not has_parsed and not has_davis and not has_raw:
         log_error(f"Historical CSV has unrecognised columns: {cols}")
-        log_error(f"Expected either (dt,windspeed,windavg,winddir) or (seqno,dt,ip,data)")
+        log_error(f"Expected one of:")
+        log_error(f"  (dt,windspeed,windavg,winddir)          - pre-parsed")
+        log_error(f"  (dt,rtWindSpeed,rtWindAvgSpeed,rtWindDir) - Davis station raw")
+        log_error(f"  (seqno,dt,ip,data)                      - CSPOT raw")
         sys.exit(1)
+
+    if has_davis:
+        log_info("Detected Davis station column format (rtWindSpeed/rtWindAvgSpeed/rtWindDir)")
+    elif has_raw:
+        log_info("Detected raw CSPOT data field format")
+    else:
+        log_info("Detected pre-parsed windspeed/windavg/winddir format")
 
     with open(output_path, 'w', newline='') as f:
         f.write('dt,windspeed_ms,windavg_ms,winddir\n')
@@ -156,6 +171,16 @@ def main():
                 windavg   = float(row['windavg'])   * 0.44704
                 f.write(f"{row['dt']},{windspeed},{windavg},{row['winddir']}\n")
                 written += 1
+            elif has_davis:
+                # Davis station raw export: mph -> m/s
+                try:
+                    windspeed = float(row['rtWindSpeed'])    * 0.44704
+                    windavg   = float(row['rtWindAvgSpeed']) * 0.44704
+                    winddir   = float(row['rtWindDir'])
+                    f.write(f"{row['dt']},{windspeed},{windavg},{winddir}\n")
+                    written += 1
+                except (ValueError, KeyError):
+                    continue
             else:
                 # Raw CSPOT format: parse data field (fields[3]=windspeed, [4]=windavg, [5]=winddir)
                 try:

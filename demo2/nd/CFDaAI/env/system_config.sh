@@ -64,8 +64,11 @@ detect_system() {
     # Set system-specific path defaults
     case "${SYSTEM_TYPE}" in
         nersc)
-            export OPENFOAM_ROOT="${OPENFOAM_ROOT:-/global/common/software/m5290/openfoam}"
-            export SCRATCH_DIR="${PSCRATCH:-/pscratch/sd/${USER:0:1}/${USER}}"
+            # Load NERSC site defaults first so their vars feed into the paths below
+            # shellcheck source=env/nersc_site.sh
+            [[ -f "${SCRIPT_DIR}/nersc_site.sh" ]] && source "${SCRIPT_DIR}/nersc_site.sh"
+            export OPENFOAM_ROOT="${OPENFOAM_ROOT:-${NERSC_OPENFOAM_ROOT:-/global/common/software/m5290/openfoam}}"
+            export SCRATCH_DIR="${NERSC_SCRATCH_DIR:-${PSCRATCH:-/pscratch/sd/${USER:0:1}/${USER}}}"
             export ARCHIVE_BASE="${SCRATCH_DIR}/experiment_archive"
             ;;
         nd)
@@ -199,11 +202,18 @@ check_racelab_connectivity() {
         return 1
     fi
 
-    ssh -q -i "$key" \
+    local attempt
+    for attempt in 1 2 3; do
+        if ssh -q -i "$key" \
         -o ConnectTimeout=10 \
         -o BatchMode=yes \
         -o StrictHostKeyChecking=no \
-        "${user}@${host}" "echo ok" &>/dev/null
+               "${user}@${host}" "echo ok" &>/dev/null; then
+            return 0
+        fi
+        [[ $attempt -lt 3 ]] && sleep 5
+    done
+    return 1
 }
 
 # validate_hybrid_nersc

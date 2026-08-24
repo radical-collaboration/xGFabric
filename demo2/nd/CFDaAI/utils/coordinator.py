@@ -9,7 +9,7 @@ start_time = datetime.now().strftime("%y-%m-%d_%H_%M_%S")
 
 config = {
     "max_concurrent_workflows" : None,   # total number of workflows that can run concurrently
-    "max_number_of_workflows"  : None,   # total number of workflows that will be submitted (None = endless)
+    "max_number_of_workflows"  : 1,   # total number of workflows that will be submitted (None = endless)
     "time_between_workflows"   : 60,      # minimum time (in seconds) between workflow submissions
     "time_check_workflows"     : 60,      # how often the program checks if it can submit new workflows (seconds)
     "number_of_cores"          : 32,     # cores per simulation / per node

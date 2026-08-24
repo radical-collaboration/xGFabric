@@ -25,13 +25,23 @@ def log_warn(msg):
     from datetime import datetime
     print(f"[WARN] {datetime.now().strftime('%H:%M:%S')} {msg}")
 
-def run_command(cmd):
-    """Execute a shell command and return output"""
-    try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        raise Exception(f"Command failed: {cmd}\nError: {e.stderr}")
+def run_command(cmd, retries=3, retry_delay=60):
+    """Execute a shell command and return output, retrying on transient CSPOT errors."""
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
+            return result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            last_exc = Exception(f"Command failed: {cmd}\nError: {e.stderr}")
+            stderr_lower = (e.stderr or "").lower()
+            transient = "temporarily unavailable" in stderr_lower or "couldn't recv msg" in stderr_lower
+            if transient and attempt < retries:
+                log_warn(f"CSPOT transient error (attempt {attempt}/{retries}), retrying in {retry_delay}s ...")
+                time.sleep(retry_delay)
+            else:
+                raise last_exc
+    raise last_exc
 
 def find_senspot_get():
     """
@@ -109,9 +119,46 @@ def fetch_data_from_woof(woof_url, seq_no=None):
     except Exception as e:
         raise e
 
+def fetch_batch_from_woof(woof_url, start_seq, count):
+    """
+    Fetch up to `count` consecutive records starting at start_seq (senspot-get's
+    -C walks FORWARD in seq_no) in a single subprocess call, instead of one
+    call per record. Same linear scan as fetch_data_from_woof(), just batched
+    to cut subprocess-call count (and exposure to occasional slow/transient
+    CSPOT responses) by ~`count`x for wide windows.
+
+    Returns a list of (data_string, timestamp_unix, seq_no) tuples, ascending
+    by seq_no. May return fewer than `count` if start_seq+count-1 exceeds the
+    latest available record.
+    """
+    senspot_path = find_senspot_get()
+    cmd = f"{senspot_path} -W {woof_url} -S {start_seq} -C {count}"
+
+    output = run_command(cmd)
+
+    records = []
+    for line in output.splitlines():
+        match = re.search(r'time:\s+([\d.]+)\s+[\d.]+\s+seq_no:\s+(\d+)', line)
+        if match:
+            records.append((line, float(match.group(1)), int(match.group(2))))
+    return records
+
 def unix_to_datetime(unix_timestamp):
     """Convert Unix timestamp to datetime"""
     return datetime.fromtimestamp(unix_timestamp, timezone.utc)
+
+def parse_flexible_dt(s):
+    """Parse 'YYYY-MM-DD HH:MM[:SS][ UTC]' or ISO8601 into a UTC-aware datetime."""
+    s = s.strip()
+    if s.upper().endswith(" UTC"):
+        s = s[:-4].strip()
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 def binary_search_cutoff_seq(woof_url, cutoff_date, latest_seq_no):
     """
@@ -144,7 +191,11 @@ def binary_search_cutoff_seq(woof_url, cutoff_date, latest_seq_no):
             if consecutive_failures >= 10:
                 log_warn(f"Binary search: {consecutive_failures} consecutive failures near seq {mid}, aborting early")
                 break
-            hi = mid - 1        # treat failure as "too new", look earlier
+            # A failed fetch within [0, latest_seq_no] only happens because mid
+            # has been evicted from the circular buffer (too old) -- latest_seq_no
+            # itself is already confirmed valid, so "too new" can't be the cause.
+            # Search higher, same direction as the timestamp_unix-is-None case above.
+            lo = mid + 1
 
     return best
 
@@ -237,6 +288,126 @@ def load_data_at_or_before_cutoff(woof_url, cutoff_date, output_dir="./data", li
     log_info(f"  sensor_data.txt: {total_records} records ({sensor_file.stat().st_size} bytes)")
 
     all_files = {"sensor_data": ["sensor_data.txt"], "run_dir": str(output_path)}
+    print(f"\nRUN_DIR={output_path}")
+    print(f"SENSOR_FILES={json.dumps(all_files['sensor_data'])}")
+    return all_files
+
+
+def load_data_in_window(woof_url, t_start, t_end, output_dir="./data", safety_cap=5000,
+                        batch_size=50):
+    """
+    Fetch ALL records in [t_start, t_end] from CSPOT -- nothing older, nothing newer.
+
+    Pure linear walk backward from the latest seq_no: skip (don't save) records
+    newer than t_end, then once time <= t_end save records one by one until
+    time < t_start, then stop. No binary search -- just a single backward pass.
+
+    Fetched in batches of `batch_size` consecutive records per subprocess call
+    (via senspot-get's -C) rather than one record per call: for wide windows
+    this is still exactly the same record-by-record scan, just far fewer
+    subprocess calls, which matters because each call has some independent
+    chance of hitting a multi-second CSPOT-side stall -- O(N) calls each with
+    a small stall probability adds up to minutes of dead time for N in the
+    hundreds, while O(N/batch_size) calls do not.
+
+    Exit codes:
+        0 - success (sensor_data.txt written, possibly with 0 records)
+        2 - CSPOT has no data reaching back to t_start, or the window is entirely
+            after the newest CSPOT record, or t_end is older than the whole
+            retained buffer
+    """
+    now = datetime.now()
+    run_name = now.strftime("%Y%m%d_%H%M%S")
+    output_path = Path(output_dir) / f"run_{run_name}"
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    log_info(f"Loading CSPOT data in window: {t_start} -> {t_end}")
+    log_info(f"Run directory: {output_path}")
+
+    try:
+        _, timestamp_unix, latest_seq_no = fetch_data_from_woof(woof_url)
+        if not latest_seq_no:
+            log_error("Could not get latest sequence number from CSPOT")
+            sys.exit(1)
+        latest_time = unix_to_datetime(timestamp_unix)
+        log_info(f"Latest CSPOT record: seq_no={latest_seq_no}, time={latest_time}")
+    except Exception as e:
+        log_error(f"Failed to reach CSPOT: {e}")
+        sys.exit(1)
+
+    if latest_time < t_start:
+        log_error(f"CSPOT's newest record ({latest_time}) predates window start ({t_start})")
+        sys.exit(2)
+
+    sensor_file = output_path / "sensor_data.txt"
+    total_records = 0
+    skipped_after_window = 0
+    reached_window = False
+    current_seq = latest_seq_no
+    consecutive_failures = 0
+    max_consecutive_failures = 50
+
+    log_info(f"Walking backward from the latest record in batches of {batch_size} "
+             f"(linear, no binary search) ...")
+    while current_seq >= 0 and consecutive_failures < max_consecutive_failures:
+        if total_records >= safety_cap:
+            log_warn(f"Hit safety cap of {safety_cap} records -- window wider than "
+                     f"expected, stopping early")
+            break
+
+        batch_start = max(current_seq - batch_size + 1, 0)
+        try:
+            batch = fetch_batch_from_woof(woof_url, batch_start, current_seq - batch_start + 1)
+        except Exception:
+            # Whole batch call failed -- fall back to a single-record probe so
+            # eviction is detected at record granularity, same as before.
+            consecutive_failures += 1
+            current_seq -= 1
+            continue
+
+        if not batch:
+            consecutive_failures += 1
+            current_seq = batch_start - 1
+            continue
+        consecutive_failures = 0
+
+        hit_window_start = False
+        for data, timestamp_unix, seq in sorted(batch, key=lambda r: r[2], reverse=True):
+            data_time = unix_to_datetime(timestamp_unix)
+
+            if data_time > t_end:
+                # Still newer than the window -- skip and keep walking back.
+                skipped_after_window += 1
+                continue
+
+            reached_window = True
+
+            if data_time < t_start:
+                log_info(f"Reached data before window start at seq {seq}: "
+                         f"{data_time} < {t_start}")
+                hit_window_start = True
+                break
+
+            with open(sensor_file, 'a') as f:
+                f.write(data + '\n')
+            total_records += 1
+            if total_records >= safety_cap:
+                break
+
+        if hit_window_start or total_records >= safety_cap:
+            break
+        current_seq = batch_start - 1
+
+    log_info(f"Window fetch complete: {total_records} records in [{t_start}, {t_end}] "
+             f"(skipped {skipped_after_window} newer than window end)")
+
+    if not reached_window:
+        log_error(f"CSPOT has no data at or before window end: {t_end} "
+                  f"(buffer evicted past this point)")
+        sys.exit(2)
+
+    created = total_records > 0 and sensor_file.exists()
+    all_files = {"sensor_data": ["sensor_data.txt"] if created else [], "run_dir": str(output_path)}
     print(f"\nRUN_DIR={output_path}")
     print(f"SENSOR_FILES={json.dumps(all_files['sensor_data'])}")
     return all_files
@@ -444,9 +615,31 @@ def main():
         help="Fetch N records AT OR BEFORE --cutoff-date (historical mode). "
              "Exits with code 2 if CSPOT has no data that old."
     )
+    parser.add_argument(
+        "--window-start",
+        help="Start of a bounded time window (ISO8601 or 'YYYY-MM-DD HH:MM[:SS]'[ UTC]). "
+             "Requires --window-end. Fetches ONLY records inside [window-start, window-end]."
+    )
+    parser.add_argument(
+        "--window-end",
+        help="End of a bounded time window. See --window-start."
+    )
+    parser.add_argument(
+        "--window-safety-cap",
+        type=int, default=5000,
+        help="Max records to collect in windowed mode before aborting early (default: 5000)."
+    )
+    parser.add_argument(
+        "--window-batch-size",
+        type=int, default=200,
+        help="Consecutive records fetched per senspot-get call in windowed mode "
+             "(default: 200). Higher-rate sensors need more subprocess calls for "
+             "the same time window, so a bigger batch keeps the call count (and "
+             "exposure to occasional slow CSPOT responses) down."
+    )
 
     args = parser.parse_args()
-    
+
     # Determine cutoff date (can be used with or without limit)
     cutoff_date = None
     if args.cutoff_date:
@@ -463,8 +656,23 @@ def main():
             cutoff_date = cutoff_date.astimezone(timezone.utc)
     elif args.days_back:
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=args.days_back)
-    
+
     log_info(f"WOOF URL: {args.woof_url}")
+
+    # Windowed mode: fetch ONLY records in [window_start, window_end]
+    if args.window_start and args.window_end:
+        w_start = parse_flexible_dt(args.window_start)
+        w_end   = parse_flexible_dt(args.window_end)
+        log_info(f"Mode: window — fetching records in [{w_start}, {w_end}]")
+        load_data_in_window(
+            args.woof_url,
+            w_start,
+            w_end,
+            args.output_dir,
+            safety_cap=args.window_safety_cap,
+            batch_size=args.window_batch_size,
+        )
+        return  # load_data_in_window prints RUN_DIR/SENSOR_FILES and exits on error
 
     # Historical mode: fetch N records AT OR BEFORE cutoff_date
     if args.historical:
