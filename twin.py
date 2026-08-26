@@ -12,6 +12,12 @@ from reports.plot_workflow_gantt import plot as plot_gantt
 
 from tasks.davis import DavisWind
 from tasks.common.dtypes import *
+from tasks.profiler.components import (
+    PROFILE_RESULTS,
+    TASK_DESCRIPTION_DTYPE,
+    EndpointInvestigator,
+    ProfilerInvestigator,
+)
 from tasks.sink import CUPS_Sink
 from tasks.wind_agent import WindFieldAgent
 
@@ -73,12 +79,24 @@ async def main():
     wind_sensor = DavisWind(flow, config)
     field = WindFieldAgent(flow, config)
     sink = CUPS_Sink(flow, config)
+    base_profiler = ProfilerInvestigator(
+        flow, config["PLAYGROUND_DIR"] + "/profiler/nersc_profiler"
+    )
+    pi_profiler = EndpointInvestigator(
+        flow, "pi", config["PLAYGROUND_DIR"] + "/profiler/pi_profiler"
+    )
 
     async with flow.workflow_scope(1):
 
         runtime.add_task(wind_sensor, TRUTHY, DAVIS_WIND_SENSOR, is_persistent=True)
         runtime.add_agent(field, DAVIS_WIND_SENSOR, WIND_FIELD)
         runtime.add_task(sink, WIND_FIELD, NULL_DTYPE)
+
+        # add profiling tasks
+        runtime.add_investigator(base_profiler, TASK_DESCRIPTION_DTYPE, PROFILE_RESULTS)
+        runtime.add_investigator(
+            pi_profiler, PROFILE_RESULTS, DataType("pi_PREDICT_RUNTIME")
+        )
 
         runtime.print_graph()
         runtime.start()
