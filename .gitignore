@@ -4,6 +4,10 @@ VERSION
 ve/
 test_config.sh
 
+tmp.py
+*.csv
+*.pkl
+
 .vscode/
 .mypy_cache/
 rose/

@@ -1,9 +1,16 @@
 import asyncio
+import datetime
+import random
 
 
+import cloudpickle
+import pandas as pd
 from radical.asyncflow import WorkflowEngine
-from digitaltwin.components import ModelInvestigator, TypedData, SciAgent
+from digitaltwin.components import ModelInvestigator, TypedData, SciAgent, DataType
 from digitaltwin.runtime import RuntimeAPI
+
+from .davis import strip_cols
+from .profiler.components import PROFILE_RESULTS, TASK_DESCRIPTION_DTYPE
 
 from .do_pinn.pinn_investigator import PINNInvestigator
 from .do_fno.fno_investigator import FNOInvestigator
@@ -44,22 +51,31 @@ class WindFieldAgent(SciAgent):
         self.pcr = PCRInvestigator(flow, self.config)
 
         @self.flow.function_task
-        async def model_select(in_data: TypedData, i):
-            return i  # default to latest model
+        async def model_select(in_data: TypedData, models):
+            # select the model with the shortest compute time.
+            shortest = models[0]
+            for model in models:
+                if model["pi_runtime"] < shortest["pi_runtime"]:
+                    shortest = model
+
+            return shortest["investigator"]  # default to latest model
 
         self.model_selector = model_select
 
+        # resource allocation vars
+        self.model_to_process = asyncio.Queue()
+        self.models = []
+
     async def model_publish_cb(
-        self, investigator: ModelInvestigator, model_args: dict, acc_metrics: dict
+        self, inv: ModelInvestigator, model_args: dict, acc_metrics: dict
     ):
-        if investigator == self.fno:
-            logger.info(f"Agent received model publish from FNO: {model_args['model']}")
-        elif investigator == self.pcr:
-            logger.info(f"Agent received model publish from PCR: {model_args['model']}")
-        elif investigator == self.pinn:
-            logger.info(
-                f"Agent received model publish from PINN: {model_args['model']}"
-            )
+        await self.model_to_process.put(
+            {
+                "investigator": inv.get_id(),
+                "model_args": model_args,
+                "metrics": acc_metrics,
+            }
+        )
 
     async def main_loop(self, runtime: RuntimeAPI):
 
@@ -75,4 +91,47 @@ class WindFieldAgent(SciAgent):
 
         # set model selector. Set FNO as first.
         runtime.set_model_selection_task(self.model_selector)
-        runtime.update_model_selector(i=self.fno.get_id())
+
+        # now, for model selection, do an analysis
+
+        while True:
+            item = await self.model_to_process.get()
+
+            infs = runtime.get_inference_tasks()
+
+            raw_inference_task = infs[item["investigator"]].__wrapped__
+
+            # fake sensor
+            r = random.random()
+            fake = [(datetime.datetime.now(), r * 20, r * 15, r * 360)]
+            df = pd.DataFrame(
+                fake, columns=["dt", "wind_speed", "wind_avg", "wind_dir"]
+            )
+
+            outputs = strip_cols(df)
+            example_data = TypedData(
+                DAVIS_WIND_SENSOR, outputs.to_dict(orient="records")[0]
+            )
+
+            task_description = (
+                cloudpickle.dumps(raw_inference_task),
+                example_data,
+                item["model_args"],
+            )
+            profile = await runtime.get_inference(
+                TypedData(TASK_DESCRIPTION_DTYPE, task_description), PROFILE_RESULTS
+            )
+
+            # now, get Pi reading
+            pi_runtime = await runtime.get_inference(
+                profile, DataType("pi_PREDICT_RUNTIME")
+            )
+
+            item["pi_runtime"] = pi_runtime.data
+            self.models.append(item)
+
+            if len(self.models) < 10:
+                runtime.update_model_selector(models=self.models)
+            else:
+                # send only last ten.
+                runtime.update_model_selector(models=self.models[-10:])
