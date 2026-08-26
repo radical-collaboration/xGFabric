@@ -112,7 +112,7 @@ class PCRInvestigator(ModelInvestigator):
 
         self.config["TASK_NAME"] = "pack"
         self.config["TASK_COUNTER"] = self.task_counter
-        finish = do_pack(self.config.copy(), *results)
+        finish = await do_pack(self.config.copy(), *results)
         self.task_counter += 1
 
         return finish

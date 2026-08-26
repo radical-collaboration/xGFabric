@@ -4,8 +4,8 @@
 # TWIN CONFIG
 #####################################
 
-DT_STREAM_PUB_ADDR="tcp://login26:5000"
-DT_STREAM_SUB_ADDR="tcp://login26:5001"
+DT_STREAM_PUB_ADDR="tcp://login02:5000"
+DT_STREAM_SUB_ADDR="tcp://login02:5001"
 
 NODE_COUNT=1
 #####################################

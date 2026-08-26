@@ -1,6 +1,7 @@
 import asyncio
 import glob
 from pathlib import Path
+import shutil
 from radical.asyncflow import WorkflowEngine
 
 from digitaltwin.runtime import DTRuntime, PubSubClient
@@ -79,11 +80,17 @@ async def main():
     wind_sensor = DavisWind(flow, config)
     field = WindFieldAgent(flow, config)
     sink = CUPS_Sink(flow, config)
+
     base_profiler = ProfilerInvestigator(
         flow, config["PLAYGROUND_DIR"] + "/profiler/nersc_profiler"
     )
     pi_profiler = EndpointInvestigator(
         flow, "pi", config["PLAYGROUND_DIR"] + "/profiler/pi_profiler"
+    )
+    # copy dataset for predictor
+    shutil.copy(
+        "./tasks/profiler/pi_profiler/data.csv",
+        config["PLAYGROUND_DIR"] + "/profiler/pi_profiler/data.csv",
     )
 
     async with flow.workflow_scope(1):

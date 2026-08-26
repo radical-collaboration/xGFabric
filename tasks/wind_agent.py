@@ -53,6 +53,10 @@ class WindFieldAgent(SciAgent):
         @self.flow.function_task
         async def model_select(in_data: TypedData, models):
             # select the model with the shortest compute time.
+            if len(models) == 0:
+                # assume first investigator
+                return 0
+
             shortest = models[0]
             for model in models:
                 if model["pi_runtime"] < shortest["pi_runtime"]:
@@ -63,8 +67,8 @@ class WindFieldAgent(SciAgent):
         self.model_selector = model_select
 
         # resource allocation vars
-        self.model_to_process = asyncio.Queue()
-        self.models = []
+        self.model_to_process: asyncio.Queue[dict] = asyncio.Queue()
+        self.models: list[dict] = []
 
     async def model_publish_cb(
         self, inv: ModelInvestigator, model_args: dict, acc_metrics: dict
@@ -91,11 +95,15 @@ class WindFieldAgent(SciAgent):
 
         # set model selector. Set FNO as first.
         runtime.set_model_selection_task(self.model_selector)
+        runtime.update_model_selector(models=[])
 
         # now, for model selection, do an analysis
 
         while True:
             item = await self.model_to_process.get()
+
+            if item["model_args"]["model"] == "na":
+                continue  # ignore null
 
             infs = runtime.get_inference_tasks()
 

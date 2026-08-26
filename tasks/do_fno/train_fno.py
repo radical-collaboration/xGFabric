@@ -267,6 +267,7 @@ def fno_main_entry(file_pairs, output_directory, fno_config: FNO_Config, log):
     counter = 0
     for ws, df in data_list:
         print(f"Building grids: {counter / len(data_list)}")
+        counter += 1
         ws_n = float(ws / (WS_MAX + 1e-8))
         for z_s in Z_SLICES:
             z_n = float((z_s - Z_MIN) / (Z_MAX - Z_MIN + 1e-12))

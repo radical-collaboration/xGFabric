@@ -153,7 +153,7 @@ def tk_pcr_eval(config, path_to_pcr_tar, wind):
         logger.warning(f"Error executing tar!")
         raise ValueError(f"Error executing tar! {' '.join(cmd_tar)}")
 
-    df = prepare(env["INTERIM_DIR"] + "/pcr_coefficients", logger)
+    df = prepare(env["INTERIM_DIR"], logger)
 
     out = []
     out.append(predict_at_z(df, wind, 1))
