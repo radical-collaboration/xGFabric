@@ -17,10 +17,12 @@ config = {
     "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
     "scheduler"                : "SLURM",
     "mode"                     : "full",
-    # --- Node allocation ---
+    # --- SLURM allocation ---
     "wq_project_name"          : "xgfabric",   # -N name shared by workers and makeflow
     "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
     "node_ready_timeout"       : 72000,   # seconds to wait for all workers before giving up (20 h)
+    # --- HTCondor allocation ---
+    "min_num_workers"          : 10,
 }
 
 global_vars = {
@@ -31,35 +33,49 @@ global_vars = {
     "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log",
 }
 
-def log_info(msg: str) -> None:
-    s = f"[INFO]   {datetime.now().strftime('%H:%M:%S')} {msg}"
-    print(s)
-    with open(global_vars['coordinator_output'], 'a') as f:
-        f.write(s + "\n")
+_is_inline_status = False
 
-def log_status(msg: str) -> None:
-    s = f"[Status] {datetime.now().strftime('%H:%M:%S')} {msg}"
+def _flush_status_newline() -> None:
+    global _is_inline_status
+    if _is_inline_status:
+        sys.stdout.write('\n')
+        _is_inline_status = False
+
+def log_status(msg: str, file: str = global_vars['coordinator_output']) -> None:
+    global _is_inline_status
+    s = f"{datetime.now().strftime('%H:%M:%S')} [Status] {msg}"
     sys.stdout.write(f"\r{s}")
     sys.stdout.flush()
-    with open(global_vars['coordinator_output'], 'a') as f:
+    _is_inline_status = True
+    with open(file, 'a') as f:
         f.write(s + "\n")
 
-def log_action(msg: str) -> None:
-    s = f"[ACTION] {datetime.now().strftime('%H:%M:%S')} {msg}"
+def log_info(msg: str, file: str = global_vars['coordinator_output']) -> None:
+    _flush_status_newline()
+    s = f"{datetime.now().strftime('%H:%M:%S')} [INFO]   {msg}"
     print(s)
-    with open(global_vars['coordinator_output'], 'a') as f:
+    with open(file, 'a') as f:
         f.write(s + "\n")
 
-def log_update(msg: str) -> None:
-    s = f"[UPDATE] {datetime.now().strftime('%H:%M:%S')} {msg}"
+def log_action(msg: str, file: str = global_vars['coordinator_output']) -> None:
+    _flush_status_newline()
+    s = f"{datetime.now().strftime('%H:%M:%S')} [ACTION] {msg}"
     print(s)
-    with open(global_vars['coordinator_output'], 'a') as f:
+    with open(file, 'a') as f:
         f.write(s + "\n")
 
-def log_warn(msg: str) -> None:
-    s = f"[WARN]   {datetime.now().strftime('%H:%M:%S')} {msg}"
+def log_update(msg: str, file: str = global_vars['coordinator_output']) -> None:
+    _flush_status_newline()
+    s = f"{datetime.now().strftime('%H:%M:%S')} [UPDATE] {msg}"
     print(s)
-    with open(global_vars['coordinator_output'], 'a') as f:
+    with open(file, 'a') as f:
+        f.write(s + "\n")
+
+def log_warn(msg: str, file: str = global_vars['coordinator_output']) -> None:
+    _flush_status_newline()
+    s = f"{datetime.now().strftime('%H:%M:%S')} [WARN]   {msg}"
+    print(s)
+    with open(file, 'a') as f:
         f.write(s + "\n")
 
 def sanitize_input(value: str, expected_type: type) -> bool:
@@ -290,6 +306,90 @@ async def wait_for_nodes_running(node_allocator: NodeAllocator) -> bool:
 
         await asyncio.sleep(poll_interval)
 
+class HTCondorFactoryManager:
+    """Manages the background work_queue_factory process for HTCondor."""
+
+    def __init__(self):
+        self._proc: Optional[subprocess.Popen] = None
+
+    def is_alive(self) -> bool:
+        """Returns True if the factory process is running."""
+        return self._proc is not None and self._proc.poll() is None
+
+    def get_worker_count(self) -> int:
+        """Query work_queue_status for active workers connected to the project."""
+        project = config["wq_project_name"]
+        try:
+            res = subprocess.run(
+                ["work_queue_status", "-M", project],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if res.returncode == 0:
+                lines = res.stdout.strip().splitlines()
+                # Parse output lines (skipping table header)
+                for line in lines[1:]:
+                    parts = line.split()
+                    if len(parts) >= 4 and parts[0] == project:
+                        return int(parts[6])  # Workers column
+        except Exception as e:
+            log_warn(f"Could not retrieve worker status: {e}")
+        return 0
+
+    def submit(self) -> None:
+        n_workers = config["number_of_simulations"]
+        n_cores = config["number_of_cores"]
+        project = config["wq_project_name"]
+        mem = 1024 * 30
+        disk = 1024 * 30
+
+        cmd = [
+            "work_queue_factory",
+            f"--min-workers={n_workers}",
+            f"--max-workers={n_workers}",
+            "--timeout=86400",
+            "--factory-timeout=86400",
+            "-T",
+            "condor",
+            "--cores",
+            str(n_cores),
+            f"--memory={mem}",
+            f"--disk={disk}",
+            "-N",
+            project,
+            "-d",
+            "all",
+        ]
+
+        log_action(f"Submitting HTCondor Factory: {' '.join(cmd)}")
+
+        self._proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    def cancel(self) -> None:
+        """Terminates the factory process when the coordinator stops."""
+        if self.is_alive():
+            assert self._proc is not None
+            log_action("Terminating Work Queue Factory process.")
+            self._proc.terminate()
+            try:
+                self._proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+        self._proc = None
+
+    async def ensure_alive(self) -> None:
+        if not self.is_alive():
+            log_warn("Work Queue Factory is not active. Submitting...")
+            self.submit()
+        else:
+            workers = self.get_worker_count()
+            log_status(f"Work Queue Factory is active with {workers} worker(s) connected.")
+
 # ---------------------------------------------------------------------------
 # Workflow dataclass + coordinator
 # ---------------------------------------------------------------------------
@@ -389,18 +489,16 @@ async def monitor_logs(log_file_path: str, coordinator: WorkflowCoordinator):
                 continue
 
             parts = line.split(",")
-            if len(parts) < 3:
-                continue
+            if len(parts) >= 3:
+                workflow_id = int(parts[0])
+                curr_task   = str(parts[1]).strip()
+                status      = str(parts[2]).strip()
 
-            workflow_id = int(parts[0])
-            curr_task   = str(parts[1]).strip()
-            status      = str(parts[2]).strip()
-
-            coordinator.process_log_update(workflow_id, curr_task, status)
-            log_update(f"Workflow {workflow_id} ==> {curr_task} ==> {status}")
+                coordinator.process_log_update(workflow_id, curr_task, status)
+                log_update(f"Workflow {workflow_id} ==> {curr_task} ==> {status}")
 
 
-async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_allocator: NodeAllocator):
+async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_allocator):
     """
     Endless loop:
       1. Ensure SLURM nodes are allocated (re-submit if dead).
@@ -423,7 +521,6 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
             await asyncio.sleep(config["time_check_workflows"])
             continue
 
-
         if config["scheduler"] == "SLURM":
             # ---- Step 1: ensure nodes are allocated ----
             await node_allocator.ensure_alive()
@@ -436,6 +533,8 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
                 log_warn("Will re-allocate nodes and try again...")
                 await asyncio.sleep(config["time_check_workflows"])
                 continue
+        elif config["scheduler"] == "HTCondor":
+            await node_allocator.ensure_alive()
 
         # ---- Step 3: build workflow directory + Makeflow file ----
         log_action(f"Submitting workflow {global_vars['workflow_counter']}...")
@@ -451,6 +550,7 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
         )
 
         # ---- Step 4: launch Makeflow non-blocking ----
+        wf_id = global_vars['workflow_counter']
         proc = subprocess.Popen(
             [
                 "makeflow",
@@ -460,19 +560,26 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
                 "-d", "all",
                 "--fast-abort=1000",
                 "--retry-count=5",
-                "-P", str(global_vars['workflow_counter']),
+                "-P", str(wf_id),
                 "-o", makeflow_log,
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
 
-        coordinator.submit_workflow(global_vars['workflow_counter'], proc)
-        wf_id = global_vars['workflow_counter']
-        global_vars['workflow_counter'] += 1
+        coordinator.submit_workflow(wf_id, proc)
+
+        if config["scheduler"] == "HTCondor" and wf_id == 1:
+            log_update("Waiting for workers...")
+            curr_workers = node_allocator.get_worker_count()
+            while curr_workers < config["min_num_workers"]:
+                log_status(f"{curr_workers}/{config["min_num_workers"]} worker(s) are connected.")
+                curr_workers = node_allocator.get_worker_count()
+                await asyncio.sleep(5)
+            log_update(f"{curr_workers} worker(s) have connected.")
+
 
         # ---- Step 5: wait for this Makeflow to finish ----
-        log_info(f"Waiting for workflow {wf_id} Makeflow process to complete...")
         while True:
             if wf_id not in coordinator.active_workflows:
                 log_info(f"Workflow {wf_id} complete.")
@@ -499,6 +606,8 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
         # Brief pause before the next iteration
         await asyncio.sleep(config["time_between_workflows"])
 
+        wf_id += 1
+
 
 # ---------------------------------------------------------------------------
 # Entry point
@@ -515,14 +624,25 @@ async def main():
     if not os.path.exists(global_vars['coordinator_output']):
         open(global_vars['coordinator_output'], 'a').close()
 
-    coordinator    = WorkflowCoordinator(config["time_between_workflows"], global_vars['workflow_status_file'])
-    node_allocator = NodeAllocator()
+    coordinator = WorkflowCoordinator(config["time_between_workflows"], global_vars['workflow_status_file'])
 
-    await asyncio.gather(
-        monitor_logs(global_vars['workflow_status_file'], coordinator),
-        workflow_submission_loop(coordinator, node_allocator),
-        return_exceptions=True,
-    )
+    if config["scheduler"] == "SLURM":
+        node_allocator = NodeAllocator()
+    elif config["scheduler"] == "HTCondor":
+        node_allocator = HTCondorFactoryManager()
+    else:
+        node_allocator = None
+
+    try:
+        await asyncio.gather(
+            monitor_logs(global_vars['workflow_status_file'], coordinator),
+            workflow_submission_loop(coordinator, node_allocator),
+            return_exceptions=True,
+        )
+    finally:
+        if node_allocator is not None:
+            log_action(f"Cleaning up {config['scheduler']} allocation resources...")
+            node_allocator.cancel()
 
 
 if __name__ == "__main__":
@@ -569,6 +689,12 @@ if __name__ == "__main__":
         sanitize_input(num_cores, int)
         config["number_of_cores"] = num_cores
 
+        if scheduler == "2":
+            print("How many workers do you want to wait for before starting the simulations. (default: 10)")
+            num_workers = input("==> ") or "10"
+            sanitize_input(num_workers, int)
+            config["min_num_workers"] = num_workers
+
     else:
         parser = argparse.ArgumentParser(description='Coordinator for running xGFabric workflows.')
 
@@ -607,6 +733,13 @@ if __name__ == "__main__":
             help="Number of cores per simulation (default: 32)"
         )
 
+        parser.add_argument(
+            "--num-workers",
+            type=int,
+            default=10,
+            help="Number of workers to allocate before starting the simulations. Only used on HTCondor (default: 10)"
+        )
+
         args = parser.parse_args()
 
         config["workqueue_mode"] = args.workflow == "workqueue"
@@ -621,10 +754,15 @@ if __name__ == "__main__":
 
         config["number_of_simulations"] = args.num_sims
         config["number_of_cores"] = args.num_cores
-      
+
+        if config["scheduler"] == "HTCondor":
+            config["min_num_workers"] = args.num_workers
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         log_info("Coordinator shut down safely.")
     except SystemExit:
         log_info("Coordinator has finished.")
+    except Exception as e:
+        log_warn(f"Coordinator stopped due to unexpected error: {e}")

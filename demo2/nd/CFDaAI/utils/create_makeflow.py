@@ -26,6 +26,13 @@ def print_prologue(file, workflow_location: str, global_vars: dict, config: dict
     file.write("export NUM_SIMULATIONS\n")
     file.write("\n")
 
+def print_wait_workers(file, system: tuple, config: dict) -> None:
+    file.write("CATEGORY=\"wait_for_workers\"\n")
+    file.write(f"CORES=1\n")
+    file.write("GPUS=0\n")
+    file.write(f"$(WORKFLOW_LOCATION)/workers_ready.out: $(LOGS_DIR) utils\n")
+    file.write(f"\tpython3 utils/wait_workers.py --workers {config["min_num_workers"]} --project {config["wq_project_name"]}\n")
+    file.write("\n")
 
 def print_data_acq(file, system: tuple, config: dict) -> None:
     if config['workqueue_mode']:
@@ -35,7 +42,7 @@ def print_data_acq(file, system: tuple, config: dict) -> None:
         file.write("$(WORKFLOW_LOCATION)/pipeline.0 $(RESULTS_DIR) $(RESULTS_DIR)/data $(RESULTS_DIR)/params/sim_params.csv")
         for i in range(config["number_of_simulations"]):
             file.write(f" $(RESULTS_DIR)/params/sim_{i}.json")
-        file.write(":\n")
+        file.write(": $(WORKFLOW_LOCATION)/workers_ready.out\n")
     else:
         file.write("$(WORKFLOW_LOCATION)/pipeline.0:\n")
     file.write("\tLOCAL ./utils/get_data.sh > $(WORKFLOW_LOCATION)/pipeline.0 2>&1\n")
@@ -142,6 +149,12 @@ def create_makeflow(global_vars: dict, config: dict) -> None:
         print_prologue(file, workflow_location, global_vars, config)
         print_phase(file, "CFDaAI Pipeline - Makeflow")
         file.write("\n")
+
+        # Work Queue wait for workers
+        if config['workqueue_mode'] and config["scheduler"] == "HTCondor":
+            print_phase(file, "Phase 0: Wait for Workers")
+            print_wait_workers(file, system, config)
+            file.write("\n")
 
         # phase 1
         print_phase(file, "Phase 1: Data Acquisition")
