@@ -52,7 +52,7 @@ class DavisWind(UtilityTask):
 
         self.config = config
 
-        # @self.flow.function_task
+        @self.flow.function_task
         async def sensor_loop(config, stream_config: PubSubConfig):
             psclient = await stream_config.connect()
             register_task(config, "", "", "DavisWind", 0)

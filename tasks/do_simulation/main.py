@@ -6,16 +6,6 @@ import math
 from ..common.log_formatter import register_log
 from utils_architecture import close_task, register_task
 
-# def tk_do_simulation_tmp(env, sensor_point, sim_id):
-
-#     skip_dir = "/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations"
-
-#     return env["TK_DO_SIMULATION"], (
-#         sim_id,
-#         0.0,
-#         skip_dir + f"/sim_{sim_id}.csv",
-#     )
-
 
 def tk_do_simulation(config, sensor_point):
     # config: dict
@@ -35,7 +25,7 @@ def tk_do_simulation(config, sensor_point):
 
     # comment below three lines to run actual simulation.
     close_task(env)
-    skip_dir = f"/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations/sim_{random.randint(0,71)}.csv"
+    skip_dir = f"/global/cfs/cdirs/m5290/precalc_sims/{random.randint(0,71)}.csv"
     return (random.random(), skip_dir)
 
     # sim_id

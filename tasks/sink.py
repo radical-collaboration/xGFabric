@@ -37,6 +37,20 @@ class CUPS_Sink(UtilityTask):
         self.flow = flow
         self.config = config
 
+        @self.flow.function_task
+        async def save_photo(in_data):
+            fname = self.config["PLAYGROUND_DIR"] + "/out.png"
+            graph(
+                in_data.data["result"][1],
+                fname,
+                in_data.data["arch"],
+                3,
+                w=in_data.data["w"],
+            )
+            print("\n\n" + "=" * 30 + "\n" + str(fname) + "\n" + "=" * 30)
+
+        self.save_photo = save_photo
+
     async def main_loop(self, runtime, in_data: TypedData):
         print(f"Received Inference: {in_data.data['arch']}")
 
@@ -45,14 +59,4 @@ class CUPS_Sink(UtilityTask):
             return
 
         # create graph
-
-        fname = self.config["PLAYGROUND_DIR"] + "/out.png"
-
-        graph(
-            in_data.data["result"][1],
-            fname,
-            in_data.data["arch"],
-            3,
-            w=in_data.data["w"],
-        )
-        print("\n\n" + "=" * 30 + "\n" + str(fname) + "\n" + "=" * 30)
+        await self.save_photo(in_data)

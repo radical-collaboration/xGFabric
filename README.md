@@ -20,52 +20,61 @@ Framework:
 
 ## To run:
 
-```bash
+1. Install prereq's -- conda
 
-# switch to the branch of this README.
-
-# Install the PySPOT submodule
-git submodule init
-git submodule update
-# install CSPOT already if not done (would be done on broker too)
-pushd tasks/common/pyspot
-bash install_cspot_bin.sh
-popd
+The `cfdaai` and `xgfabric` conda environment is required. A compute node should
+be able to activate these. These environments are saved in
+`/global/common/software/m5290/bcarter/mconda/envs/cfdaai` and
+`/global/common/software/m5290/bcarter/mconda/envs/xgfabric`.
 
 
+2. Install PySPOT as a submodule on Perlmutter
 
-# install digital twin:
-cd ../ # outside of repo
+In root of repository:
+`git submodule init`
+`git submodule update`
+`pushd tasks/common/pyspot`
+`bash install_cspot_bin.sh`
+`popd`
+
+3. Install the digital twin in its own location.
 
 git clone https://github.com/radical-cybertools/digital.twins
 cd digital.twins
-git checkout release/vanilla-framework
+git checkout devel
 pip install .
 
-cd ../xGFabric # back to the repo
+4. Back to the xGFabric repo, edit configs.
 
-# Edit CONFIG.
-#  Pay special attention to DT_STREAM_PUB_ADDR, DT_STREAM_SUB_ADDR, PLAYGROUND_DIR, CUPS_STRUCTURE_ZIP.
+Pay attention to the following:
+- `DT_STREAM_PUB_ADDR` and `DT_STREAM_SUB_ADDR` which is the publish address for the ZMQ stream pubsub
+  backend
 
-# If you don't already have the cups structure ZIP, download here:
-wget https://codingcando.com/research/cups_structure.zip
+- `PLAYGROUND_DIR` where all artifacts will go. Recommend the pscratch file
+  system.
 
-# Simulations are currently being skipped and run by the file system. 
-# See `tasks/do_simulation/main.py - tk_do_simulation()` Comment out the three lines to run the full simulation. 
-#
-# Real sensor data is only emitted once every 5 minutes. So, the davis sensor emits fake data every 5 seconds for testing. See `tasks/davis.py`.
+- `CUPS_STRUCTURE_ZIP` where the CUPS structure description goes. If you don't
+  have the zip, use the one available at: ``
 
+5. Notes on run:
 
-# start pubsub broker
-cd test/
-python3 local_broker.py &
+**Simulations are currently being skipped and run by the file system.**
 
-# run
-# in this xGFabric repo:
+See `tasks/do_simulation/main.py - tk_do_simulation()` Comment out the three lines to run the full simulation. 
 
-python3 twin.py
+**Real sensor data is only emitted once every 5 minutes.**
+So, the davis sensor emits fake data every 5 seconds for testing. See `tasks/davis.py`.
+
+6. Start:
+Start the ZMQ Broker:
+```
+python3 local_broker.py
 ```
 
+7. Run:
+```
+python3 twin.py
+```
 This runs the entire DT on the RADICAL Tools stack.
 
 
