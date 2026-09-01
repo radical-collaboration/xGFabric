@@ -114,7 +114,7 @@ async def main():
         runtime.start()
 
         # let it run
-        await asyncio.sleep(90 * 60)  # 110 minutes
+        await asyncio.sleep(70 * 60)  # 70 minutes
         print("DONE======================")
         await runtime.stop()
 

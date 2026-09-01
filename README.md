@@ -63,8 +63,8 @@ Pay attention to the following:
 
 - `CSPOT_LIMIT` and `NUM_SIMULATIONS`. Currently, these should also match. This
   is the number of cspot readings to batch and then simulate. Note: if running
-  on interactive QOS, and since each sim takes 32 cores, it's not recommended to
-  fetch/run more than 32 values and sims. (To run the full 72, use a regular
+  on interactive QOS with 4 nodes, and since each sim takes 32 cores, it's not recommended to
+  fetch/run more than 16 values and sims. (To run the full 72, use a regular
   sbatch)
 
 
