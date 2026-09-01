@@ -94,7 +94,7 @@ class DavisWind(UtilityTask):
                     )
                     # wait 5 seconds.
                     await asyncio.sleep(1)
-                await asyncio.sleep(20 * 60)
+                # await asyncio.sleep(20 * 60)
                 # actual:
 
                 # wind_data = parse(latest)  # type: ignore
