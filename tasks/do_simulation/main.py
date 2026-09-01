@@ -33,11 +33,10 @@ def tk_do_simulation(config, sensor_point):
     )
     logger = register_log(env, logging.INFO)
 
+    # comment below three lines to run actual simulation.
     close_task(env)
     skip_dir = f"/pscratch/sd/b/bcarter/xgfabric-ryan/results/run_26-06-22_15_22_44/workflow_1/simulations/sim_{random.randint(0,71)}.csv"
     return (random.random(), skip_dir)
-
-    # return tk_do_simulation_tmp(env, sensor_point, sim_id)
 
     # sim_id
 

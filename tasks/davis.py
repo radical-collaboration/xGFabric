@@ -76,10 +76,8 @@ class DavisWind(UtilityTask):
                     await asyncio.sleep(5)
                     continue
 
-                # Now, format.
-                # wind_data = parse(latest)  # type: ignore
-
-                # fake: replaces wind_data
+                # fake: replaces wind_data. Comment out the for loop and replace
+                # with the below comment block for the real thing.
                 for _ in range(int(config["CSPOT_LIMIT"])):
                     r = random.random()
                     fake = [(datetime.datetime.now(), r * 20, r * 15, r * 360)]
@@ -96,7 +94,13 @@ class DavisWind(UtilityTask):
                     )
                     # wait 5 seconds.
                     await asyncio.sleep(5)
-                # await asyncio.sleep(60)
+
+                # actual:
+
+                # wind_data = parse(latest)  # type: ignore
+                # out = strip_cols(wind_data)
+                # await psclient.publish(DAVIS_WIND_SENSOR, outputs.to_dict(orient="records")[0])
+                # await asyncio.sleep(5 * 60)
 
         self.sensor_loop = sensor_loop
 
