@@ -93,8 +93,8 @@ class DavisWind(UtilityTask):
                         DAVIS_WIND_SENSOR, outputs.to_dict(orient="records")[0]
                     )
                     # wait 5 seconds.
-                    await asyncio.sleep(5)
-
+                    await asyncio.sleep(1)
+                await asyncio.sleep(20 * 60)
                 # actual:
 
                 # wind_data = parse(latest)  # type: ignore

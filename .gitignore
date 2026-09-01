@@ -4,6 +4,9 @@ VERSION
 ve/
 test_config.sh
 
+runinfo/
+ddict_*
+
 tmp.py
 *.csv
 *.pkl

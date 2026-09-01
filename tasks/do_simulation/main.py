@@ -24,9 +24,10 @@ def tk_do_simulation(config, sensor_point):
     logger = register_log(env, logging.INFO)
 
     # comment below three lines to run actual simulation.
-    close_task(env)
-    skip_dir = f"/global/cfs/cdirs/m5290/precalc_sims/{random.randint(0,71)}.csv"
-    return (random.random(), skip_dir)
+
+    # close_task(env)
+    # skip_dir = f"/global/cfs/cdirs/m5290/precalc_sims/{random.randint(0,71)}.csv"
+    # return (random.random(), skip_dir)
 
     # sim_id
 

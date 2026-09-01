@@ -10,15 +10,12 @@ from rose.al.active_learner import Learner
 
 from ..common.dtypes import *
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 class FNOInvestigator(ModelInvestigator):
-    def __init__(self, flow: WorkflowEngine, config: dict):
+    def __init__(self, flow: WorkflowEngine, config: dict, logger):
         super().__init__(flow)
         self.flow = flow
+        self.logger = logger
 
         self.learner = Learner(flow)
 
@@ -33,9 +30,11 @@ class FNOInvestigator(ModelInvestigator):
         async def incoming_cb(in_data: TypedData):
             if not self.incoming.is_set():
                 self.batch.append(in_data.data)
-                logger.info(f"FNO batch: {len(self.batch)} / {config['CSPOT_LIMIT']}")
+                self.logger.info(
+                    f"FNO batch: {len(self.batch)} / {config['CSPOT_LIMIT']}"
+                )
             else:
-                logger.info(f"FNO batch: Drop... already training...")
+                self.logger.info(f"FNO batch: Drop... already training...")
                 return
             if (
                 len(self.batch) == int(config["CSPOT_LIMIT"])
@@ -54,7 +53,7 @@ class FNOInvestigator(ModelInvestigator):
                 return TypedData(WIND_FIELD, {"arch": "na"})
 
             # model available!
-            logger.info(f"Do FNO inference: {model}")
+            # logger.info(f"Do FNO inference: {model}")
             wind = in_data.data["wind_speed"]
             result = tk_fno_eval(config, model, wind)
 

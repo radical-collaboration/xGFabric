@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from rhapsody.backends import DragonExecutionBackendV3
+from rhapsody.backends import DragonExecutionBackend
 
 # You must run this below before running program.
 # dragon-config add --ofi-runtime-lib=/opt/cray/libfabric/1.22.0/lib64
@@ -21,7 +21,7 @@ class NerscCPU:
         mp.set_start_method("dragon")
 
         # because the sim task will spawn 32 cores, and NERSC is 128 core
-        return DragonExecutionBackendV3(
+        return DragonExecutionBackend(
             # defaults to full number of nodes
             batch_kwargs={
                 "scheduler_workers": self.node_count * CORES_PER_MACHINE // 32,
