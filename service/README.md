@@ -112,4 +112,23 @@ Two items remain open before a real run is trustworthy:
 | profiler subprocess + Pi learner | `ServiceProfiler` (inline timed run) + `ServicePiPredictor` |
 | CUPS_Sink                        | `ServiceSink` (runtime-resolved workspace) |
 | ZMQ stream                       | ORBIT data plane                     |
-| asyncflow telemetry + reports    | not yet — see the telemetry branch   |
+| asyncflow telemetry + reports    | endpoint-side rhapsody telemetry + `collect_reports.py` |
+
+## Telemetry and reports
+
+Nothing to enable: the rhapsody plugin on the endpoint records every
+task plus a resource poll on its own (the `[telemetry]` extra), into
+`telemetry-output/session.*.telemetry.jsonl` under the endpoint's
+working directory.  After (or during) a run:
+
+    <venv>/bin/python service/collect_reports.py [telemetry-dir]
+
+renders twin.py's report set — task waterfall, dependency wait, stage
+timers, swimlane, concurrency/resources, and the gantt — next to the
+jsonl.  For a remote endpoint, scp the jsonl files first.
+
+Known gap: per-workflow grouping in the gantt needs
+`asyncflow.workflow_id`, which only `workflow_scope()` stamps — the
+service engine does not run one.  That is an engine-side telemetry
+feature for the DT service (digital.twins), tracked there; every other
+report is complete without it.
