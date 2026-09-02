@@ -47,11 +47,11 @@ class ServiceSink(UtilityTask):
     async def main_loop(self, runtime, in_data: TypedData):
         arch = in_data.data["arch"]
         print(f"[sink] field from {arch}", flush=True)
-        if arch == "na":
-            return
+        # if arch == "na":
+        #     return
 
-        self.count += 1
-        fname = str(_workspace() / f"field_{self.count:04d}_{arch}.png")
-        await self._save(in_data.data["result"][1], arch,
-                         in_data.data["w"], fname)
-        print("\n" + "=" * 30 + f"\n{fname}\n" + "=" * 30, flush=True)
+        # self.count += 1
+        # fname = str(_workspace() / f"field_{self.count:04d}_{arch}.png")
+        # await self._save(in_data.data["result"][1], arch,
+        #                  in_data.data["w"], fname)
+        # print("\n" + "=" * 30 + f"\n{fname}\n" + "=" * 30, flush=True)
