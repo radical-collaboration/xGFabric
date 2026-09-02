@@ -56,11 +56,25 @@ Pay attention to the following:
 - `CUPS_STRUCTURE_ZIP` where the CUPS structure description goes. If you don't
   have the zip, use the one available at: ``
 
+- `NODE_COUNT` - number of nodes to run on (specific when running on Dragon)
+
+- `SIM_THREADS` and `NUM_OF_CORES_PER_SIM`. These should match. The number of
+  cores used for a sim. Recommended to be 32 cores
+
+- `CSPOT_LIMIT` and `NUM_SIMULATIONS`. Currently, these should also match. This
+  is the number of cspot readings to batch and then simulate. Note: if running
+  on interactive QOS with 4 nodes, and since each sim takes 32 cores, it's not recommended to
+  fetch/run more than 16 values and sims. (To run the full 72, use a regular
+  sbatch)
+
+
+
 5. Notes on run:
 
 **Simulations are currently being skipped and run by the file system.**
 
-See `tasks/do_simulation/main.py - tk_do_simulation()` Comment out the three lines to run the full simulation. 
+See `tasks/do_simulation/main.py - tk_do_simulation()` Uncomment out the three
+lines to simply return pre-run simulations. 
 
 **Real sensor data is only emitted once every 5 minutes.**
 So, the davis sensor emits fake data every 5 seconds for testing. See `tasks/davis.py`.

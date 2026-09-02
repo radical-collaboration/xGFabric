@@ -12,4 +12,6 @@ class LocalCPU:
         # async, as the ConcurrentExecutionBackend returns a future.
 
         # because the sim task will spawn 32 cores, and NERSC is 128 core
-        return ConcurrentExecutionBackend(ProcessPoolExecutor(max_workers=4))
+
+        # MUST BE BIGGER THAN MAX CONCURRENT TASK COUNT.
+        return ConcurrentExecutionBackend(ProcessPoolExecutor(max_workers=128))

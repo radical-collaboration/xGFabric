@@ -38,8 +38,8 @@ class CUPS_Sink(UtilityTask):
         self.config = config
 
         @self.flow.function_task
-        async def save_photo(in_data):
-            fname = self.config["PLAYGROUND_DIR"] + "/out.png"
+        async def save_photo(in_data, config):
+            fname = config["PLAYGROUND_DIR"] + "/out.png"
             graph(
                 in_data.data["result"][1],
                 fname,
@@ -59,4 +59,4 @@ class CUPS_Sink(UtilityTask):
             return
 
         # create graph
-        await self.save_photo(in_data)
+        await self.save_photo(in_data, self.config)

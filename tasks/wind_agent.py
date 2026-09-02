@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class WindFieldAgent(SciAgent):
-    def __init__(self, flow: WorkflowEngine, config: dict):
+    def __init__(self, flow: WorkflowEngine, config: dict, logger):
         super().__init__(flow)
         self.flow = flow
         self.config = config.copy()
@@ -46,7 +46,7 @@ class WindFieldAgent(SciAgent):
         self.sim_master = wrapper
 
         # Investigators:
-        self.fno = FNOInvestigator(flow, self.config)
+        self.fno = FNOInvestigator(flow, self.config, logger)
         self.pinn = PINNInvestigator(flow, self.config)
         self.pcr = PCRInvestigator(flow, self.config)
 

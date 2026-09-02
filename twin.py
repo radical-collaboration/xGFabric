@@ -32,13 +32,15 @@ logger = logging.getLogger(__name__)
 dotenv.load_dotenv("tasks/common/config.sh")
 
 rhapsody.enable_logging(level=logging.INFO)
+
 from utils_architecture import register_master_run
 from tasks.common.log_formatter import register_log_main
 
 # Load backends:
 from resources.local_cpu import LocalCPU
 
-# from resources.nersc_cpu import NerscCPU
+from resources.nersc_cpu import NerscCPU
+
 # from resources.nersc_gpu import NerscGPU
 
 ENABLE_TELEMETRY = True
@@ -50,9 +52,12 @@ async def main():
     logging.getLogger("radical.asyncflow").setLevel(logging.WARNING)
     logging.getLogger("rhapsody").setLevel(logging.WARNING)
     logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
-
+    print("START")
     # Get backends
-    exe = LocalCPU()  # node_count=config["NODE_COUNT"]
+    # Do LocalCPU for 1 node. - Concurrent is faster. Dragon is slow (I think
+    # it's in the task creation and tear down)
+
+    exe = NerscCPU(node_count=int(config["NODE_COUNT"]))
     backend = await exe.get_backend()
     flow = await WorkflowEngine.create(backend=[backend])
 
@@ -78,7 +83,7 @@ async def main():
 
     # xGFabric Graph....
     wind_sensor = DavisWind(flow, config)
-    field = WindFieldAgent(flow, config)
+    field = WindFieldAgent(flow, config, logger)
     sink = CUPS_Sink(flow, config)
 
     base_profiler = ProfilerInvestigator(
@@ -109,7 +114,7 @@ async def main():
         runtime.start()
 
         # let it run
-        await asyncio.sleep(40 * 60)  # 10 minutes
+        await asyncio.sleep(70 * 60)  # 70 minutes
         print("DONE======================")
         await runtime.stop()
 

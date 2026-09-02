@@ -4,10 +4,10 @@
 # TWIN CONFIG
 #####################################
 
-DT_STREAM_PUB_ADDR="tcp://login02:5000"
-DT_STREAM_SUB_ADDR="tcp://login02:5001"
+DT_STREAM_PUB_ADDR="tcp://login35:5000"
+DT_STREAM_SUB_ADDR="tcp://login35:5001"
 
-NODE_COUNT=1
+NODE_COUNT=4
 #####################################
 
 
@@ -49,7 +49,7 @@ CSPOT_ENDPOINT="woof://128.111.45.61/davisstations/daviscupsout"
 # Number of CSPOT records to fetch (default: 50)
 # When combined with DATA_CUTOFF_DATE: fetches up to N records AFTER the cutoff date
 # When used alone: fetches the N most recent records
-CSPOT_LIMIT=72
+CSPOT_LIMIT=16
 
 # Cutoff date for sensor data.
 # Format: YYYY-MM-DDTHH:MM:SSZ or YYYY-MM-DD
@@ -69,7 +69,7 @@ SIM_PARAM_MODE="sensor_direct"
 # Number of simulations (meaning depends on mode):
 #   interpolated mode: number of evenly-spaced points to generate
 #   sensor_direct mode: maximum number of unique sensor measurements to use
-NUM_SIMULATIONS=72
+NUM_SIMULATIONS=16
 NUM_OF_CORES_PER_SIM=32
 
 ################################################################################
