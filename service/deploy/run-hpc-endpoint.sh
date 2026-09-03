@@ -10,7 +10,7 @@
 # (client-env.sh remote) asks for.  DT_DIR as in setup-hpc-endpoint.sh.
 set -euo pipefail
 BROKER="${1:?usage: $0 <broker-host>}"
-DT_DIR="${DT_DIR:-$HOME/digital_twins}"
+DT_DIR="${DT_DIR:-${SCRATCH:-$HOME}/digital_twins}"
 VENV="$DT_DIR/ve.demo"
 
 # dragon resolves its helpers BY NAME through srun on the task side

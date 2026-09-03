@@ -4,10 +4,11 @@
 #
 #   ./setup-hpc-endpoint.sh <broker-host>
 #
-# DT_DIR overrides the checkout+venv location (default ~/digital_twins).
+# DT_DIR overrides the checkout+venv location; the default lands on
+# $SCRATCH -- the venv is far too big for a Perlmutter home quota.
 set -euo pipefail
 BROKER="${1:?usage: $0 <broker-host>}"
-DT_DIR="${DT_DIR:-$HOME/digital_twins}"
+DT_DIR="${DT_DIR:-${SCRATCH:-$HOME}/digital_twins}"
 
 # same Python minor as every other host -- the service rejects skew, and
 # exactly 3.12.0 breaks dragon's transport import (needs >= 3.12.1)
