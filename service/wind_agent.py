@@ -23,13 +23,13 @@ from service.profiler import PI_PREDICT_RUNTIME, PROFILE_RESULTS, \
 
 
 class ServiceWindFieldAgent(SciAgent):
-    def __init__(self, flow):
+    def __init__(self, flow, learn_backend: str | None = None):
         super().__init__(flow)
         self.flow = flow
 
-        self.fno = SurrogateInvestigator(flow, "fno")
-        self.pinn = SurrogateInvestigator(flow, "pinn")
-        self.pcr = SurrogateInvestigator(flow, "pcr")
+        self.fno = SurrogateInvestigator(flow, "fno", learn_backend)
+        self.pinn = SurrogateInvestigator(flow, "pinn", learn_backend)
+        self.pcr = SurrogateInvestigator(flow, "pcr", learn_backend)
 
         @flow.function_task
         async def simulate(sensor_pt):

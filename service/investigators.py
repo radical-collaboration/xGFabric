@@ -33,14 +33,19 @@ WINDOW = 4  # sensor points per training window
 class SurrogateInvestigator(ModelInvestigator):
     """One fake surrogate; ``arch`` picks its cost profile."""
 
-    def __init__(self, flow, arch: str):
+    def __init__(self, flow, arch: str, learn_backend: str | None = None):
         super().__init__(flow)
         self.flow = flow
         self.arch = arch
         self.batch: list = []
         train_s, infer_s = ARCH_COST[arch]
 
-        @flow.function_task
+        # Route retraining to the 'learning' engine when the session has
+        # one, so it shows in its own dashboard lane; inference stays on
+        # the default (inference) engine.  backend=None is the plain
+        # default -- asyncflow has no aliasing, so a label is set only
+        # when the caller declares the matching engine.
+        @flow.function_task(backend=learn_backend)
         async def train(arch, points, sim):
             # endpoint-side "training": cost is the architecture's
             await asyncio.sleep(train_s)

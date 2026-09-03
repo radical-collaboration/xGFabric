@@ -59,11 +59,18 @@ DT_HOST = os.environ.get("DT_SERVICE_HOST", "broker")
 
 INFERENCE_EP = os.environ.get("DT_INFERENCE_ENDPOINT", "dt_inference_ep")
 INFERENCE_BE = os.environ.get("DT_INFERENCE_BACKEND", "concurrent")
+# learning defaults to the same endpoint on the concurrent executor: its
+# own dashboard lane for the surrogate retraining, no second dragon
+# runtime, and the training tasks stay clear of dragon's mp bridge
+LEARNING_EP = os.environ.get("DT_LEARNING_ENDPOINT", INFERENCE_EP)
+LEARNING_BE = os.environ.get("DT_LEARNING_BACKEND", "concurrent")
 
 ENGINES = {
     "engines": {
         "inference": {"endpoint_name": INFERENCE_EP,
                       "backends": [INFERENCE_BE]},
+        "learning": {"endpoint_name": LEARNING_EP,
+                     "backends": [LEARNING_BE]},
     }
 }
 
@@ -79,7 +86,7 @@ def main(args) -> int:
         twin = dt.create_twin()
         print(f"[client] twin: {twin}")
 
-        agent = dt.package(ServiceWindFieldAgent)
+        agent = dt.package(ServiceWindFieldAgent, learn_backend="learning")
         profiler = dt.package(ServiceProfiler)
         pi = dt.package(ServicePiPredictor)
         sink = dt.package(ServiceSink)
