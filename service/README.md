@@ -35,8 +35,10 @@ the defaults (`dt_inference_ep` / `concurrent`).
 `service/deploy/` adapts the AmSC dt-complete deploy kit (same debugged
 constraints: dragon launcher requirement, python >= 3.12.1,
 SLURM_EXPORT_ENV, cert staging), pinning rhapsody's
-`fix/dragon-cancel-and-traceback` branch on every tier for the
-idempotent-cancel fixes this demo surfaced.
+`fix/dragon-cancel-idempotent` branch (e491cd2-based) on every tier: it
+carries the dragon cancel + traceback fixes and stays compatible with
+the pinned dragonhpc 0.14.1 (rhapsody main's dragon backend passes
+`task_logs=` to `Batch()`, which that dragon rejects).
 
     # broker host, once
     service/deploy/setup-broker.sh

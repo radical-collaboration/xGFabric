@@ -20,9 +20,12 @@ cd "$DT_DIR" && git checkout devel && git pull
 ./deploy/install.sh endpoint                      # pinned stack -> ./ve.demo
 # the surrogate/sink task bodies unpickle and run here
 ./ve.demo/bin/pip install -q numpy matplotlib
-# dragon backend + idempotent cancels + failure-traceback logging
+# dragon backend + idempotent cancel + failure-traceback logging.
+# e491cd2-based (NOT main): main's dragon backend passes task_logs= to
+# Batch(), which the pinned dragonhpc 0.14.1 does not accept.  This is
+# the branch the AmSC demo proved on the same dragon.
 ./ve.demo/bin/pip install -q --force-reinstall --no-deps \
-  "rhapsody-py[telemetry,dragon] @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-and-traceback"
+  "rhapsody-py[telemetry,dragon] @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
 
 mkdir -p ~/.radical/orbit
 scp "$BROKER:.radical/orbit/broker_cert.pem" "$BROKER:.radical/orbit/broker.token" ~/.radical/orbit/
