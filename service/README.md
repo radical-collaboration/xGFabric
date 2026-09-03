@@ -80,18 +80,27 @@ and need no TensorFlow.
     DT_VENV=<clone> XGF_DIR=<xgf checkout> \
       service/deploy/run-hpc-endpoint.sh <broker-host>
 
-Two things are NOT done yet and gate an actual real run:
+Driver: `twin_service_real.py` wires the real components (done, but
+experimental -- not yet validated end to end; it is the on-Perlmutter
+starting point).  The lazy-import refactor is in place, so the real
+investigators import TF-free on the client/broker; TF loads only in the
+task bodies on the endpoint.
 
-- **Lazy TensorFlow imports.**  The real investigator wrappers
-  `import tensorflow` at module load, which would drag TF onto the
-  client and broker just to package/instantiate the class.  The wrappers
-  need their heavy imports deferred into the task bodies (which run on
-  the endpoint, where TF lives).  Until that lands, only the endpoint
-  tier is provisioned; the driver still uses the fake components.
+Client/broker still need the light deps the real components carry:
+
+    git submodule update --init --recursive          # pyspot (sensor)
+    <ve.demo>/bin/pip install python-dotenv numpy pandas
+
+Two items remain open before a real run is trustworthy:
+
+- **Shared filesystem.**  The real components write to
+  `config['PLAYGROUND_DIR']` from both main_loops (broker) and tasks
+  (endpoint); those line up only on a shared filesystem, so run the
+  **broker on Perlmutter too** for the real workload (PLAYGROUND_DIR on
+  `$SCRATCH`).  A broker on radical.3 splits the playground across hosts.
 - **cloudpickle parity.**  The cloned conda env and `ve.demo` may carry
-  different cloudpickle versions; align them (the endpoint install pulls
-  our pinned stack, but verify against the client) or unpickling the
-  shipped classes can fail.
+  different cloudpickle versions; align them or unpickling the shipped
+  classes can fail.
 
 ## What maps to what
 

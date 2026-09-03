@@ -58,7 +58,8 @@ fi
 # real task bodies import tasks.* at run time (run-hpc-endpoint.sh puts
 # XGF_DIR on PYTHONPATH)
 [ -d "$XGF_DIR" ] || git clone https://github.com/radical-collaboration/xGFabric.git "$XGF_DIR"
-( cd "$XGF_DIR" && git checkout feature/dtaas-twin && git pull )
+( cd "$XGF_DIR" && git checkout feature/dtaas-twin && git pull \
+    && git submodule update --init --recursive )   # pyspot (davis/sensor)
 # the Pi predictor's clean-slate dataset (Ben: the sample IS the real one)
 cp -n "$XGF_DIR/tasks/profiler/pi_profiler/data.csv.sample" \
       "$XGF_DIR/tasks/profiler/pi_profiler/data.csv" 2>/dev/null || true
