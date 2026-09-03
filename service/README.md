@@ -58,6 +58,41 @@ The client venv must be the same Python minor (digital.twins
 `./deploy/install.sh client` + `pip install numpy`); a 3.13 venv is
 rejected at the first verb.
 
+## Real workload (Level A: real training, faked simulation)
+
+The fake `service/*` components run the DTaaS mechanics end to end.  The
+real path swaps in the actual FNO/PINN/PCR investigators (TensorFlow /
+scikit-learn) and the real profiler, still on precalc simulation data
+(`/global/cfs/cdirs/m5290/precalc_sims`) -- real OpenFOAM (Level B,
+`cups_structure.zip`) is a later step.
+
+Only the **endpoint** changes: the trainings need TensorFlow, so it runs
+in a clone of Ben's `cfdaai` conda env (which carries the stack) with our
+runtime installed into the clone -- built by `setup-hpc-endpoint-real.sh`,
+then launched via `run-hpc-endpoint.sh` with `DT_VENV`/`XGF_DIR` set (the
+setup script prints the exact line).  Broker and client stay on `ve.demo`
+and need no TensorFlow.
+
+    # Perlmutter login node, once (clones cfdaai, installs our runtime,
+    # checks out the tasks tree, stages the profiler dataset)
+    service/deploy/setup-hpc-endpoint-real.sh <broker-host>
+    # then in an allocation, per the line it prints:
+    DT_VENV=<clone> XGF_DIR=<xgf checkout> \
+      service/deploy/run-hpc-endpoint.sh <broker-host>
+
+Two things are NOT done yet and gate an actual real run:
+
+- **Lazy TensorFlow imports.**  The real investigator wrappers
+  `import tensorflow` at module load, which would drag TF onto the
+  client and broker just to package/instantiate the class.  The wrappers
+  need their heavy imports deferred into the task bodies (which run on
+  the endpoint, where TF lives).  Until that lands, only the endpoint
+  tier is provisioned; the driver still uses the fake components.
+- **cloudpickle parity.**  The cloned conda env and `ve.demo` may carry
+  different cloudpickle versions; align them (the endpoint install pulls
+  our pinned stack, but verify against the client) or unpickling the
+  shipped classes can fail.
+
 ## What maps to what
 
 | twin.py (standalone)             | twin_service.py (DTaaS)              |
