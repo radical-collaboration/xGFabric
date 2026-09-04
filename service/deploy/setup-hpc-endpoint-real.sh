@@ -53,8 +53,11 @@ fi
 "$PY" -m pip install -q --force-reinstall --no-deps \
     "rhapsody-py[telemetry,dragon] @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
 # force-reinstall orbit: a cloned env may already carry a stale radical.orbit
-# that pip would treat as satisfied, leaving the endpoint script uninstalled
+# that pip would treat as satisfied, leaving the endpoint script uninstalled.
+# --no-deps places the script/version; the plain install backfills orbit's
+# own deps (fastapi, uvicorn, websockets) without disturbing the pins above.
 "$PY" -m pip install -q --force-reinstall --no-deps "radical.orbit>=0.7"
+"$PY" -m pip install -q "radical.orbit>=0.7"
 "$PY" -m pip install -q "$DT_DIR"
 
 # xGFabric tasks tree: the profiler shells out to a script here, and the
