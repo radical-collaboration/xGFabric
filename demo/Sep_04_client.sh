@@ -16,7 +16,7 @@ RUNTIME="${RUNTIME:-600}"
 
 echo "--------------------------"
 echo "xGFabric Demo September 04"
-echo "Broker on $BROKER_IP | Endpoint HPC 'hpc' | Sensor davis-wind | Client twin_service_real.py ($(hostname -f))"
+echo "Client twin_service_real.py ($(hostname -f)) -> broker $BROKER_IP, endpoint HPC 'hpc'"
 echo "--------------------------"
 
 cd "$HERE"

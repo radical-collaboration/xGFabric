@@ -17,7 +17,7 @@ PLAYGROUND_DIR="${PLAYGROUND_DIR:-$SCRATCH/xgf_playground}"
 
 echo "--------------------------"
 echo "xGFabric Demo September 04"
-echo "Broker on $BROKER_IP | Endpoint HPC '$EP' on $(hostname -f) | Sensor davis-wind | Client twin_service_real.py"
+echo "Endpoint HPC '$EP' on $(hostname -f) -> broker $BROKER_IP"
 echo "--------------------------"
 
 # dragon resolves its helpers BY NAME via srun on the task side

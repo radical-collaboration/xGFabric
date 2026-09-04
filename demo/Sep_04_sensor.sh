@@ -14,7 +14,7 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"     # xGFabric checkout root
 
 echo "--------------------------"
 echo "xGFabric Demo September 04"
-echo "Broker on $BROKER_IP | Endpoint HPC 'hpc' | Sensor davis-wind ($(hostname -f)) | Client twin_service_real.py"
+echo "Sensor davis-wind ($(hostname -f)) -> broker $BROKER_IP"
 echo "--------------------------"
 
 export RADICAL_ORBIT_BROKER_URL="wss://$BROKER_IP:8000"

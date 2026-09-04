@@ -16,7 +16,7 @@ RH="rhapsody-py[telemetry] @ git+https://github.com/radical-cybertools/rhapsody@
 
 echo "--------------------------"
 echo "xGFabric Demo September 04"
-echo "Broker on $BROKER_IP ($(hostname -f)) | Endpoint HPC 'hpc' | Sensor davis-wind | Client twin_service_real.py"
+echo "Broker on $BROKER_IP ($(hostname -f))"
 echo "--------------------------"
 
 # checkout + install the pinned stack, then pin the dragon-compatible
