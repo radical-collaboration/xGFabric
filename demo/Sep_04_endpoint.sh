@@ -36,6 +36,17 @@ export RADICAL_ORBIT_LOG_FILE="$SCRATCH/orbit-logs/$EP.log"
 mkdir -p "$SCRATCH/orbit-logs" "$PLAYGROUND_DIR"
 rm -f "$HOME/.radical/orbit/logs/"*.log 2>/dev/null || true
 
+# --- GPU: expose the NVIDIA driver + CUDA to the TF tasks ------------------
+# Ben's cfdaai TF fell back to CPU ("Could not find cuda drivers") because
+# libcuda.so.1 was not on the task LD_LIBRARY_PATH.  Load PM's CUDA module
+# and prepend the compute-node driver path + the env's own CUDA libs.  All
+# best-effort (|| true) so a CPU allocation still launches -- the nvidia-smi
+# line below records whether a GPU is actually present.
+module load cudatoolkit 2>/dev/null || true
+export LD_LIBRARY_PATH="/usr/lib64:$ENV_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+echo "GPU check (nvidia-smi -L):"
+nvidia-smi -L 2>&1 | sed 's/^/  /' || echo "  no GPU visible -- CPU allocation? (need salloc -C gpu)"
+
 echo "launching endpoint '$EP' under dragon ..."
 exec "$ENV_PREFIX/bin/dragon" "$ENV_PREFIX/bin/radical-orbit-endpoint.py" -n "$EP" \
     2>&1 | tee "$SCRATCH/orbit-logs/$EP.console.log"
