@@ -51,6 +51,7 @@ import tasks
 import tasks.common
 import tasks.common.dtypes
 import tasks.wind_agent
+import tasks.wind_learner
 import tasks.sink
 import tasks.profiler.components
 import tasks.do_fno.fno_investigator
@@ -59,6 +60,7 @@ import tasks.do_pcr.pcr_investigator
 
 from tasks.common.dtypes import DAVIS_WIND_SENSOR, WIND_FIELD
 from tasks.wind_agent import WindFieldAgent
+from tasks.wind_learner import WindTrendLearner, WIND_TREND
 from tasks.sink import CUPS_Sink
 from tasks.profiler.components import (
     ProfilerInvestigator,
@@ -113,6 +115,9 @@ def main(args) -> int:
 
         field = dt.package(WindFieldAgent, config)
         sink = dt.package(CUPS_Sink, config)
+        # a visible learning lane on the wind stream (see wind_learner.py);
+        # its training routes to the 'learning' engine declared in ENGINES
+        learner = dt.package(WindTrendLearner, learn_backend="learning")
         base_profiler = dt.package(
             ProfilerInvestigator, playground + "/profiler/nersc_profiler")
         pi_profiler = dt.package(
@@ -129,6 +134,9 @@ def main(args) -> int:
                             TASK_DESCRIPTION_DTYPE, PROFILE_RESULTS)
         dt.add_investigator(twin, pi_profiler,
                             PROFILE_RESULTS, PI_PREDICT_RUNTIME)
+
+        # visible learning lane, fed by the same sensor stream
+        dt.add_investigator(twin, learner, DAVIS_WIND_SENSOR, WIND_TREND)
 
         dt.start(twin)
 
