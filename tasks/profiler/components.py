@@ -153,6 +153,21 @@ class EndpointInvestigator(ModelInvestigator):
 
         self.train_task = train_model
 
+        @self.flow.function_task
+        async def append_row(datastore, row):
+            # runs on the endpoint (a function_task body IS the task), so the
+            # row lands in the same data.csv that train_model (executable,
+            # also endpoint) reads -- see main_loop.  Doing this append in
+            # main_loop instead would write it on the broker, on a different
+            # filesystem from the training task.
+            import os
+
+            os.makedirs(datastore, exist_ok=True)
+            with open(f"{datastore}/data.csv", "a") as fh:
+                fh.write(row + "\n")
+
+        self._append_row = append_row
+
         @self.flow.executable_task
         async def call_inference(in_data: TypedData, model=None, name=""):
             # for inference, just run the simulation.
@@ -224,8 +239,9 @@ class EndpointInvestigator(ModelInvestigator):
             out = ",".join([str(f) for f in nersc_profile.values()]) + ","
             out += pi_time
 
-            with open(f"{self.datastore}/data.csv", "a") as f:
-                f.write(out + "\n")
+            # append on the endpoint (where train_model reads data.csv), not
+            # here on the broker -- see append_row
+            await self._append_row(self.datastore, out)
 
             out = json.loads(await self.train_task())
             model = out["model"]
