@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 TASK_DESCRIPTION_DTYPE = DataType("TASK_INFO")
 PROFILE_RESULTS = DataType("PROFILE_RESULT")
 
-script_path = os.path.dirname(os.path.realpath(__file__))
 
 
 class ProfilerInvestigator(ModelInvestigator):
@@ -127,8 +126,7 @@ class EndpointInvestigator(ModelInvestigator):
         async def train_model():
             return shlex.join(
                 [
-                    "python3",
-                    f"{script_path}/endpoint_trainer.py",
+                    "python3", "-m", "tasks.profiler.endpoint_trainer",
                     f"{self.datastore}/data.csv",
                     f"{self.datastore}/model.json",
                 ]
@@ -173,8 +171,7 @@ class EndpointInvestigator(ModelInvestigator):
             await self._stage_inf(self.datastore, pf)
             return shlex.join(
                 [
-                    "python3",
-                    f"{script_path}/endpoint_eval.py",
+                    "python3", "-m", "tasks.profiler.endpoint_eval",
                     model,
                     f"{self.datastore}/inf.json",
                 ]
