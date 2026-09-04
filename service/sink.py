@@ -3,23 +3,15 @@
 The heatmap is rendered on the endpoint and returned inline (small PNG
 bytes) so the runtime can surface it to the dashboard via
 `record_output` -- the DT service has no file staging, and a downscaled
-heatmap is well under the return-value cap.  It is also written to
-XGF_WORKSPACE on the endpoint for the record (resolved at runtime, since
-this module ships by value).
+heatmap is well under the return-value cap.  A copy is also written to
+XGF_WORKSPACE, but that path is resolved and created *inside* the task
+(endpoint-side); the sink's main_loop runs on the broker, a different
+host, so it must not build or create that path itself.
 """
 
 import base64
-import os
-from pathlib import Path
 
 from digitaltwin.components import TypedData, UtilityTask
-
-
-def _workspace() -> Path:
-    base = Path(os.environ.get("XGF_WORKSPACE", "")
-                or Path.home() / "xgf_twin")
-    base.mkdir(parents=True, exist_ok=True)
-    return base
 
 
 class ServiceSink(UtilityTask):
@@ -29,8 +21,10 @@ class ServiceSink(UtilityTask):
         self.count = 0
 
         @flow.function_task
-        async def render_heatmap(data, arch, w, fname):
+        async def render_heatmap(data, arch, w, count):
             import io
+            import os
+            from pathlib import Path
 
             import matplotlib
             matplotlib.use("Agg")
@@ -44,8 +38,18 @@ class ServiceSink(UtilityTask):
             plt.xlabel("X")
             plt.ylabel("Y")
 
-            # to the endpoint filesystem, for the record
-            fig.savefig(fname, dpi=90, bbox_inches="tight")
+            # a copy to the endpoint filesystem, for the record -- resolved
+            # here (endpoint XGF_WORKSPACE) and best-effort, so a missing or
+            # read-only path never fails the field
+            try:
+                base = Path(os.environ.get("XGF_WORKSPACE", "")
+                            or Path.home() / "xgf_twin")
+                base.mkdir(parents=True, exist_ok=True)
+                fig.savefig(str(base / f"field_{count:04d}_{arch}.png"),
+                            dpi=90, bbox_inches="tight")
+            except OSError:
+                pass
+
             # and to memory, small, for the inline return
             buf = io.BytesIO()
             fig.savefig(buf, format="png", dpi=72, bbox_inches="tight")
@@ -61,9 +65,8 @@ class ServiceSink(UtilityTask):
             return
 
         self.count += 1
-        fname = str(_workspace() / f"field_{self.count:04d}_{arch}.png")
         png = await self._render(in_data.data["result"][1], arch,
-                                 in_data.data["w"], fname)
+                                 in_data.data["w"], self.count)
 
         # surface it to the dashboard -- small enough to ride inline
         b64 = base64.b64encode(png).decode("ascii")
