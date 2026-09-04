@@ -57,6 +57,8 @@ echo "==> installing runtime into $ENV_PREFIX"
 "$PY" -m pip install -q --force-reinstall --no-deps \
     "rhapsody-py @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
 "$PY" -m pip install -q "$RH"
+# endpoint_trainer.py / endpoint_eval.py need these; cfdaai lacks xgboost
+"$PY" -m pip install -q xgboost scikit-learn
 
 # data dirs: seed the Pi-predictor dataset at the RUNTIME datastore (where
 # endpoint_trainer.py reads it)
