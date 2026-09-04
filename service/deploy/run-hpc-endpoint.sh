@@ -31,10 +31,12 @@ export DT_STREAM_BACKEND=orbit
 # heatmaps land on scratch where available
 export XGF_WORKSPACE="${XGF_WORKSPACE:-${SCRATCH:-$HOME}/xgf_twin}"
 # the orbit log defaults to ~/.radical/orbit/logs, which is HOME -- a tiny
-# quota on NERSC.  Put it on scratch and keep the level modest.
+# quota on NERSC.  Put it on scratch and keep the level modest; also clear
+# any old HOME log so a full quota there cannot block the run.
 export RADICAL_ORBIT_LOG_LVL="${RADICAL_ORBIT_LOG_LVL:-WARNING}"
 export RADICAL_ORBIT_LOG_FILE="${RADICAL_ORBIT_LOG_FILE:-${SCRATCH:-$HOME}/orbit-logs/hpc.log}"
 mkdir -p "$(dirname "$RADICAL_ORBIT_LOG_FILE")"
+rm -f "$HOME/.radical/orbit/logs/"*.log 2>/dev/null || true
 
 # real workload: the profiler shells out to a script in the xGFabric tasks
 # tree and the (lazy-imported) task bodies import tasks.* -- put the

@@ -22,6 +22,10 @@ XGF_DIR="${XGF_DIR:-${SCRATCH:-$HOME}/xGFabric}"
 ENV_PREFIX="${DT_ENV:-${SCRATCH:-$HOME}/dt-endpoint-env}"
 BEN_ENVS="/global/common/software/m5290/bcarter/mconda/envs"
 BASE_ENV="${DT_BASE_ENV:-cfdaai}"
+# demo-specific: must match PLAYGROUND_DIR in tasks/common/config.sh (the
+# client ships that value to the components, which use it here on the
+# endpoint).  The Pi-predictor's datastore is seeded under it below.
+PLAYGROUND_DIR="${PLAYGROUND_DIR:-${SCRATCH:-$HOME}/xgf_playground}"
 
 command -v conda >/dev/null || {
     echo "ERROR: conda not on PATH -- module load python, or source Ben's" >&2
@@ -74,9 +78,12 @@ RH="rhapsody-py[telemetry,dragon] @ git+https://github.com/radical-cybertools/rh
 [ -d "$XGF_DIR" ] || git clone https://github.com/radical-collaboration/xGFabric.git "$XGF_DIR"
 ( cd "$XGF_DIR" && git checkout feature/dtaas-twin-real && git pull \
     && git submodule update --init --recursive )   # pyspot (davis/sensor)
-# the Pi predictor's clean-slate dataset (Ben: the sample IS the real one)
+# the Pi predictor's clean-slate dataset (Ben: the sample IS the real one),
+# seeded at the RUNTIME datastore under PLAYGROUND_DIR -- that is where
+# endpoint_trainer.py reads it (the tasks-tree copy is not that path)
+mkdir -p "$PLAYGROUND_DIR/profiler/pi_profiler"
 cp -n "$XGF_DIR/tasks/profiler/pi_profiler/data.csv.sample" \
-      "$XGF_DIR/tasks/profiler/pi_profiler/data.csv" 2>/dev/null || true
+      "$PLAYGROUND_DIR/profiler/pi_profiler/data.csv" 2>/dev/null || true
 
 # broker cert + token
 mkdir -p ~/.radical/orbit
