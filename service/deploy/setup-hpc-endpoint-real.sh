@@ -48,10 +48,10 @@ fi
 # does), then digitaltwin resolves the rest (asyncflow, orbit) from PyPI
 [ -d "$DT_DIR" ] || git clone https://github.com/radical-cybertools/digital.twins.git "$DT_DIR"
 ( cd "$DT_DIR" && git checkout devel && git pull )
+RH="rhapsody-py[telemetry,dragon] @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
+
 "$PY" -m pip install -q \
     "rose @ git+https://github.com/radical-cybertools/ROSE@64330d9cb43c3e13ca67daf0d8ae84a2ae6c3f17"
-"$PY" -m pip install -q --force-reinstall --no-deps \
-    "rhapsody-py[telemetry,dragon] @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
 # force-reinstall orbit: a cloned env may already carry a stale radical.orbit
 # that pip would treat as satisfied, leaving the endpoint script uninstalled.
 # --no-deps places the script/version; the plain install backfills orbit's
@@ -59,6 +59,14 @@ fi
 "$PY" -m pip install -q --force-reinstall --no-deps "radical.orbit>=0.7"
 "$PY" -m pip install -q "radical.orbit>=0.7"
 "$PY" -m pip install -q "$DT_DIR"
+# rhapsody LAST, so the dragon-compatible branch wins over whatever
+# digitaltwin's install pulled (main's dragon backend passes task_logs= to
+# Batch(), which the pinned dragonhpc rejects).  Two steps: --no-deps pins
+# the branch build, then the extras install backfills opentelemetry
+# (telemetry) and dragonhpc (dragon) without re-resolving the rest.
+"$PY" -m pip install -q --force-reinstall --no-deps \
+    "rhapsody-py @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
+"$PY" -m pip install -q "$RH"
 
 # xGFabric tasks tree: the profiler shells out to a script here, and the
 # real task bodies import tasks.* at run time (run-hpc-endpoint.sh puts
