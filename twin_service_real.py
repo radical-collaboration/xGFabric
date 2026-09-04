@@ -72,12 +72,15 @@ PI_PREDICT_RUNTIME = DataType("pi_PREDICT_RUNTIME")
 
 dotenv.load_dotenv("tasks/common/config.sh")
 
+# Ship every user module in the agent's reference graph by value: the
+# broker has no xGFabric checkout, so anything pickled by reference
+# (tasks.davis -> utils_architecture, tasks.do_simulation, the common
+# helpers, ...) fails to import there.  Sweep the whole tasks.* subtree
+# plus the repo-root helpers rather than curate a list that drifts.
 register_user_modules([
-    tasks, tasks.common, tasks.common.dtypes,
-    tasks.wind_agent, tasks.sink, tasks.profiler.components,
-    tasks.do_fno.fno_investigator,
-    tasks.do_pinn.pinn_investigator,
-    tasks.do_pcr.pcr_investigator,
+    m for name, m in list(sys.modules.items())
+    if m is not None and (name == "tasks" or name.startswith("tasks.")
+                          or name == "utils_architecture")
 ])
 
 DT_HOST = os.environ.get("DT_SERVICE_HOST", "broker")
