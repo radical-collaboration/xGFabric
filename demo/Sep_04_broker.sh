@@ -25,7 +25,7 @@ echo "--------------------------"
 ( cd "$DT_DIR" && git checkout devel && git pull )
 ( cd "$DT_DIR"
   ./deploy/install.sh broker
-  ./ve.demo/bin/pip install -q numpy
+  ./ve.demo/bin/pip install -q numpy pandas    # the agent runs broker-side
   ./ve.demo/bin/pip install -q --force-reinstall --no-deps \
       "rhapsody-py @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
   ./ve.demo/bin/pip install -q "$RH" )
