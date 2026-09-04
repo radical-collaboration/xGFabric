@@ -25,6 +25,10 @@ echo "--------------------------"
 ( cd "$DT_DIR" && git checkout devel && git pull )
 ( cd "$DT_DIR"
   ./deploy/install.sh broker
+  # install.sh compares by version string and skips when it is unchanged,
+  # so it can leave stale digitaltwin code (e.g. missing record_output).
+  # Force the checked-out devel tip over whatever it left.
+  ./ve.demo/bin/pip install -q --force-reinstall --no-deps "$DT_DIR"
   ./ve.demo/bin/pip install -q numpy pandas    # the agent runs broker-side
   ./ve.demo/bin/pip install -q --force-reinstall --no-deps \
       "rhapsody-py @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
