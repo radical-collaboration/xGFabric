@@ -33,50 +33,36 @@ class ProfilerInvestigator(ModelInvestigator):
         super().__init__(flow)
         self.flow = flow
         self.workdir = workdir
-        os.makedirs(self.workdir, exist_ok=True)
+        # no makedirs here: the profiling runs in-process on the endpoint
+        # (below), so there is no file to prepare on this (broker) side.
 
-        @self.flow.executable_task
-        async def exec_profiler(task, example_data: TypedData, model_kwargs: dict):
-            if model_kwargs is None:
-                model_kwargs = {}
-            print("Exec profiler request")
-            # fix to use a unique file name.
-            export_inference_function(
-                f"{self.workdir}/meta-profiler.pkl", task, example_data, **model_kwargs
-            )
+        @self.flow.function_task
+        async def run_profiled(blob, example_data, model_kwargs):
+            # runs on the endpoint: reconstruct the candidate's inference
+            # callable and measure one call in-process -- no cloudpickle
+            # file, no subprocess, nothing written on the broker.
+            from .inproc import load_callable, profile_call
 
-            # call profiler
-            return shlex.join(
-                [
-                    "python3",
-                    f"{script_path}/profiler.py",
-                    f"{self.workdir}/meta-profiler.pkl",
-                ]
-            )
+            func = load_callable(blob)
+            return await profile_call(func, example_data, model_kwargs or {})
 
         sim_lock = asyncio.Lock()
         sim_lru = LRUCache(128)  # store 128 different sims
 
         async def do_inference(in_data: TypedData):
-            # # for inference, just run the simulation.
             async with sim_lock:
-                # ignore example_data
                 task, example_data, model_kwargs = in_data.data
                 key = freeze((task, model_kwargs))
 
                 if await sim_lru.exists(key):
                     profile = await sim_lru.fetch_item(key)
-                    task_data = in_data.data
-                    out = {"profile": profile, "task": task_data}
-                    return TypedData(PROFILE_RESULTS, out)
+                    return TypedData(PROFILE_RESULTS,
+                                     {"profile": profile, "task": in_data.data})
 
-                result = await exec_profiler(task, example_data, model_kwargs)
-                r = json.loads(result)
+                r = await run_profiled(task, example_data, model_kwargs)
                 await sim_lru.put_item(key, r)
-
-                task_data = in_data.data
-                out = {"profile": r, "task": task_data}
-                return TypedData(PROFILE_RESULTS, out)
+                return TypedData(PROFILE_RESULTS,
+                                 {"profile": r, "task": in_data.data})
 
         self.inference_task = do_inference
 
@@ -118,25 +104,16 @@ class EndpointInvestigator(ModelInvestigator):
 
         self.learner = Learner(flow)
 
-        @self.flow.executable_task
+        @self.flow.function_task
         async def exec_profiler(task_data):
+            # the endpoint ("Pi") measurement, in-process on this endpoint:
+            # run the candidate's inference and read the counters, no
+            # cloudpickle file and no subprocess (approach 1).
+            from .inproc import load_callable, profile_call
+
             task, example_data, model_kwargs = task_data
-
-            # fix to use a unique file name.
-            export_inference_function(
-                f"{self.datastore}/profile.pkl", task, example_data, **model_kwargs
-            )
-
-            # call profiler
-            print("endpoint profiler request")
-            return shlex.join(
-                [
-                    "python3",
-                    f"{script_path}/profiler.py",
-                    "--csv",
-                    f"{self.datastore}/profile.pkl",
-                ]
-            )
+            func = load_callable(task)
+            return await profile_call(func, example_data, model_kwargs or {})
 
         self.exec_profiler = exec_profiler
 
@@ -230,9 +207,10 @@ class EndpointInvestigator(ModelInvestigator):
 
         while True:
             item = await self.callback_jobs.get()
-            pi_out = await self.exec_profiler(item["task"])
-            # I only want the first column
-            pi_time = pi_out.split(",", 1)[0]
+            # exec_profiler now returns the profile dict (in-process); the
+            # Pi runtime is its wall time
+            pi_profile = await self.exec_profiler(item["task"])
+            pi_time = str(pi_profile["total_seconds"])
 
             # label the endpoint_time as "pi_seconds"
             nersc_profile = item["profile"]
