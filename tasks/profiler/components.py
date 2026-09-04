@@ -97,7 +97,13 @@ class EndpointInvestigator(ModelInvestigator):
         else:
             self.datastore = datastore_path
 
-        os.makedirs(self.datastore, exist_ok=True)
+        # NOT created here: __init__ runs on the broker, but the datastore
+        # is an endpoint path (where the tasks read/write it).  The
+        # endpoint-side tasks makedirs it (stage_inf / append_row).
+        try:
+            os.makedirs(self.datastore, exist_ok=True)
+        except OSError:
+            pass
 
         self.callback_jobs: asyncio.Queue = asyncio.Queue()
         self.done_jobs: set = set()
@@ -145,12 +151,26 @@ class EndpointInvestigator(ModelInvestigator):
 
         self._append_row = append_row
 
+        @self.flow.function_task
+        async def stage_inf(datastore, pf):
+            # write endpoint_eval's input on the endpoint (a function_task
+            # body runs there), so the executable command below reads it on
+            # the same host -- not the broker, where the executable-task
+            # command-builder runs.
+            import json as _json
+            import os
+
+            os.makedirs(datastore, exist_ok=True)
+            with open(f"{datastore}/inf.json", "w") as fh:
+                _json.dump(pf, fh)
+
+        self._stage_inf = stage_inf
+
         @self.flow.executable_task
         async def call_inference(in_data: TypedData, model=None, name=""):
-            # for inference, just run the simulation.
             pf = in_data.data["profile"]
-            with open(f"{self.datastore}/inf.json", "w") as f:
-                json.dump(pf, f)
+            # stage the input endpoint-side before the command runs
+            await self._stage_inf(self.datastore, pf)
             return shlex.join(
                 [
                     "python3",
