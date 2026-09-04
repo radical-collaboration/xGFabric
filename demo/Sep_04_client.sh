@@ -12,11 +12,16 @@ VENV="${DT_VENV:-$HOME/radical/digital_twins/ve.demo}"
 DT_DIR="${DT_DIR:-$HOME/radical/digital_twins}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"     # xGFabric checkout root
 RUNTIME="${RUNTIME:-600}"
+# default to the fast fake-surrogate driver (CPU-friendly: sleeps + numpy,
+# no TF/xgboost, heatmaps in seconds, learning lane built in).  RUN_REAL=1
+# switches to the real TF workload (needs a GPU endpoint to be timely).
+DRIVER="twin_service.py"
+[ "${RUN_REAL:-}" = 1 ] && DRIVER="twin_service_real.py"
 # ---------------------------------------------------------------------------
 
 echo "--------------------------"
 echo "xGFabric Demo September 04"
-echo "Client twin_service_real.py ($(hostname -f)) -> broker $BROKER_IP, endpoint HPC 'hpc'"
+echo "Client $DRIVER ($(hostname -f)) -> broker $BROKER_IP, endpoint HPC 'hpc'"
 echo "--------------------------"
 
 cd "$HERE"
@@ -37,6 +42,6 @@ export DT_INFERENCE_BACKEND=dragon_v3
 export DT_LEARNING_ENDPOINT=hpc
 export DT_LEARNING_BACKEND=concurrent
 
-echo "driving the real twin (runtime ${RUNTIME}s) ..."
+echo "driving twin via $DRIVER (runtime ${RUNTIME}s) ..."
 echo "dashboard: https://$BROKER_IP:8000/broker/dt/ui?live=1"
-exec "$VENV/bin/python" twin_service_real.py --runtime "$RUNTIME"
+exec "$VENV/bin/python" "$DRIVER" --runtime "$RUNTIME"
