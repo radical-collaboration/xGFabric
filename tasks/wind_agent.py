@@ -25,8 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 class WindFieldAgent(SciAgent):
-    def __init__(self, flow: WorkflowEngine, config: dict, logger):
+    def __init__(self, flow: WorkflowEngine, config: dict, logger=None):
         super().__init__(flow)
+        # the DTaaS service instantiates with flow + config only; fall
+        # back to the module logger when no logger is injected
+        logger = logger or logging.getLogger(__name__)
         self.flow = flow
         self.config = config.copy()
         self.config["AGENT_NAME"] = "WindField"
