@@ -8,23 +8,26 @@ Physics stays where twin.py already fakes it (the sensor, and
 tk_do_simulation's precalc-CSV shortcut); the trainings, the profiler
 timing, and the selection are real.
 
-STATUS: experimental scaffold, NOT yet validated end to end.  It is the
-starting point for the on-Perlmutter test cycle, not a proven driver.
-Known open items (see service/README.md "Real workload"):
+STATUS: runs end to end on the DTaaS stack -- broker on radical.3, the
+ORBIT data plane, and a rhapsody/dragon endpoint on Perlmutter.  The real
+TF surrogates are GPU-bound, though: on a CPU allocation each inference is
+tens of seconds, too slow for a live demo, so the September demo defaults
+to the fake driver (twin_service.py) and selects this one only with
+RUN_REAL=1 (see demo/Sep_04_client.sh) on a GPU endpoint.
 
-  * Endpoint must run in a TF-carrying env (Ben's cfdaai clone) --
-    setup-hpc-endpoint-real.sh.  The lazy-import refactor keeps the
-    client/broker TF-free, but they still need dotenv + numpy + pandas
-    and the pyspot submodule (`git submodule update --init`).
-  * Shared-filesystem assumption: the real components write to
-    config['PLAYGROUND_DIR'] both from main_loops (broker side) and
-    from tasks (endpoint side).  Those line up only if broker and
-    endpoint share a filesystem -- so run the BROKER on Perlmutter too
-    for the real workload, with PLAYGROUND_DIR on $SCRATCH.  A broker on
-    radical.3 will split the playground across two hosts.
-  * Backends default to 'concurrent' here: real TF/sklearn under dragon
-    is untested (joblib's mp bridge, TF process model).  Flip to
-    dragon_v3 via the env knobs once it is proven.
+Notes:
+
+  * Endpoint env: demo/Sep_04_endpoint_setup.sh clones Ben's cfdaai
+    (TF + CFD/ML) and adds xgboost.  The lazy-import refactor keeps the
+    client/broker TF-free -- they need only dotenv + numpy + pandas and
+    the pyspot submodule (`git submodule update --init`).
+  * No shared-filesystem requirement: the compute chain runs entirely on
+    the endpoint, and the cross-host hand-offs were moved endpoint-side
+    (data.csv append and inf.json staging are function_tasks, the profiler
+    measures in-process), so a broker on radical.3 with the endpoint on
+    Perlmutter works.
+  * Backends: inference on dragon_v3, learning on concurrent, set via the
+    DT_* env knobs (see demo/Sep_04_client.sh).
 
 Environment: config.sh (tasks/common/config.sh) supplies PLAYGROUND_DIR,
 CSPOT_LIMIT, endpoint/model paths etc., loaded via dotenv as in twin.py.
