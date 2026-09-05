@@ -4,7 +4,9 @@ import types
 from radical.asyncflow import WorkflowEngine
 from digitaltwin.components import Any, ModelInvestigator, TypedData
 from digitaltwin.runtime import RuntimeAPI
-from .main import tk_do_pinn, tk_pinn_eval
+
+# NOTE: `.main` pulls TensorFlow at import -- imported lazily in the task
+# bodies below (which run on the endpoint) so client/broker stay TF-free.
 
 from rose.al.active_learner import Learner
 
@@ -54,6 +56,8 @@ class PINNInvestigator(ModelInvestigator):
                 # pass through, no model yet
                 return TypedData(WIND_FIELD, {"arch": "na"})
 
+            from .main import tk_pinn_eval
+
             # model available!
             wind = in_data.data["wind_speed"]
             result = tk_pinn_eval(config, model, wind)
@@ -76,6 +80,7 @@ class PINNInvestigator(ModelInvestigator):
 
         @self.learner.training_task(as_executable=False)
         async def do_pinn(config, sims):
+            from .main import tk_do_pinn
             return tk_do_pinn(config, sims)
 
         self.config["TASK_COUNTER"] = self.task_counter
