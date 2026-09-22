@@ -21,6 +21,10 @@ cd "$DT_DIR" && git checkout devel && git pull
 # harmless KeyError-cancel line may appear on teardown here.
 ./ve.demo/bin/pip install -q --force-reinstall --no-deps \
   "rhapsody-py[telemetry] @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
+# backfill the telemetry extra's deps (opentelemetry) in case a fresh
+# install did not carry them
+./ve.demo/bin/pip install -q \
+  "rhapsody-py[telemetry] @ git+https://github.com/radical-cybertools/rhapsody@fix/dragon-cancel-idempotent"
 
 echo "done.  start the broker with:"
 echo "  cd $DT_DIR && ./deploy/run-broker.sh \$PWD/ve.demo"

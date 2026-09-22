@@ -12,7 +12,7 @@ NODE_COUNT=4
 
 
 # ROSE / Python config
-PLAYGROUND_DIR=/pscratch/sd/b/bcarter/playground_dt
+PLAYGROUND_DIR=/pscratch/sd/m/merzky/xgf_playground
 
 COMMON_DIR="../common"
 

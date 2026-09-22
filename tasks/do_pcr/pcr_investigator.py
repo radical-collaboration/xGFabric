@@ -6,9 +6,9 @@ from radical.asyncflow import WorkflowEngine
 from digitaltwin.components import Any, ModelInvestigator, TypedData
 from digitaltwin.runtime import RuntimeAPI
 
-from .main import tk_pcr_eval, tk_pcr_partition
-from .main import tk_do_pcr
-from .main import tk_do_pcr_pack
+# NOTE: `.main` pulls scikit-learn (and the PCR train stack) at import --
+# the tk_* helpers are imported lazily in the task bodies below (which run
+# on the endpoint) so packaging/instantiating on client/broker stays light.
 
 from rose.al.active_learner import Learner
 
@@ -32,6 +32,8 @@ class PCRInvestigator(ModelInvestigator):
 
             # PCR works on a range rather than a single data point.
             # for now, assume the wind is stable.
+            from .main import tk_pcr_eval
+
             wind_single = in_data.data["wind_speed"]
             wind = np.ones(13) * wind_single
             result = tk_pcr_eval(config, model, wind)
@@ -87,14 +89,17 @@ class PCRInvestigator(ModelInvestigator):
 
         @self.flow.function_task
         async def partition(config, sims, sensor_vals):
+            from .main import tk_pcr_partition
             return tk_pcr_partition(config, sims, sensor_vals)
 
         @self.flow.function_task
         async def do_pcr(config, machine_data_output):
+            from .main import tk_do_pcr
             return tk_do_pcr(config, machine_data_output)
 
         @self.flow.function_task
         async def do_pack(config, *pcr_output_dirs):
+            from .main import tk_do_pcr_pack
             return tk_do_pcr_pack(config, *pcr_output_dirs)
 
         self.config["TASK_NAME"] = "partition"

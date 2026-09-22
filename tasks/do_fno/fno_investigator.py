@@ -4,7 +4,11 @@ import types
 from radical.asyncflow import WorkflowEngine
 from digitaltwin.components import Any, ModelInvestigator, TypedData
 from digitaltwin.runtime import DTRuntime, RuntimeAPI
-from .main import tk_do_fno, tk_fno_eval
+
+# NOTE: `.main` pulls TensorFlow at import.  It is imported lazily inside
+# the task bodies below (which run on the endpoint, where TF lives), so
+# packaging/instantiating this class on the client and broker stays
+# TF-free.  See service/README.md "Real workload".
 
 from rose.al.active_learner import Learner
 
@@ -52,6 +56,8 @@ class FNOInvestigator(ModelInvestigator):
                 # pass through, no model yet
                 return TypedData(WIND_FIELD, {"arch": "na"})
 
+            from .main import tk_fno_eval
+
             # model available!
             # logger.info(f"Do FNO inference: {model}")
             wind = in_data.data["wind_speed"]
@@ -76,6 +82,7 @@ class FNOInvestigator(ModelInvestigator):
 
         @self.learner.training_task(as_executable=False)
         async def do_fno(config, sims):
+            from .main import tk_do_fno
             return tk_do_fno(config, sims)
 
         self.config["TASK_COUNTER"] = self.task_counter

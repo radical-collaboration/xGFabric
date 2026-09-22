@@ -113,8 +113,6 @@ def main(args) -> int:
             time.sleep(10)
 
             info = dt.twin(twin)
-            print(f"[client] state={info['state']}"
-                  f" calls={info.get('calls') or {}}", flush=True)
             if info["state"] == "failed":
                 print(f"[client] twin failed: {info.get('last_error')}")
                 return 1
