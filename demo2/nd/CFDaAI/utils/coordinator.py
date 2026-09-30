@@ -41,14 +41,15 @@ def _flush_status_newline() -> None:
         sys.stdout.write('\n')
         _is_inline_status = False
 
-def log_status(msg: str, file: str = global_vars['coordinator_output']) -> None:
+def log_status(msg: str, file: str = global_vars['coordinator_output'], save: bool = False) -> None:
     global _is_inline_status
     s = f"{datetime.now().strftime('%H:%M:%S')} [Status] {msg}"
     sys.stdout.write(f"\r{s}")
     sys.stdout.flush()
     _is_inline_status = True
-    with open(file, 'a') as f:
-        f.write(s + "\n")
+    if save:
+        with open(file, 'a') as f:
+            f.write(s + "\n")
 
 def log_info(msg: str, file: str = global_vars['coordinator_output']) -> None:
     _flush_status_newline()
@@ -286,7 +287,7 @@ async def wait_for_nodes_running(node_allocator: NodeAllocator) -> bool:
         job_id = node_allocator.job_id
 
         if job_id is None:
-            log_status("Waiting for SLURM job ID (salloc not yet granted)...")
+            log_status("Waiting for SLURM job ID (salloc not yet granted)...", global_vars['coordinator_output'], True)
         else:
             state = get_slurm_job_state(job_id)
             log_status(f"SLURM job {job_id} state: '{state}'")
@@ -388,7 +389,7 @@ class HTCondorFactoryManager:
             self.submit()
         else:
             workers = self.get_worker_count()
-            log_status(f"Work Queue Factory is active with {workers} worker(s) connected.")
+            log_status(f"Work Queue Factory is active with {workers} worker(s) connected.", global_vars['coordinator_output'], True)
 
 # ---------------------------------------------------------------------------
 # Workflow dataclass + coordinator
@@ -568,12 +569,13 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
         )
 
         coordinator.submit_workflow(wf_id, proc)
+        global_vars['workflow_counter'] += 1
 
         if config["scheduler"] == "HTCondor" and wf_id == 1:
             log_update("Waiting for workers...")
             curr_workers = node_allocator.get_worker_count()
             while curr_workers < config["min_num_workers"]:
-                log_status(f"{curr_workers}/{config["min_num_workers"]} worker(s) are connected.")
+                log_status(f"{curr_workers}/{config['min_num_workers']} worker(s) are connected.")
                 curr_workers = node_allocator.get_worker_count()
                 await asyncio.sleep(5)
             log_update(f"{curr_workers} worker(s) have connected.")
@@ -606,7 +608,6 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
         # Brief pause before the next iteration
         await asyncio.sleep(config["time_between_workflows"])
 
-        wf_id += 1
 
 
 # ---------------------------------------------------------------------------

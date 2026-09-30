@@ -31,7 +31,7 @@ def print_wait_workers(file, system: tuple, config: dict) -> None:
     file.write(f"CORES=1\n")
     file.write("GPUS=0\n")
     file.write(f"$(WORKFLOW_LOCATION)/workers_ready.out: $(LOGS_DIR) utils\n")
-    file.write(f"\tpython3 utils/wait_workers.py --workers {config["min_num_workers"]} --project {config["wq_project_name"]}\n")
+    file.write(f"\tLOCAL python3 utils/wait_workers.py --workers {config['min_num_workers']} --project {config['wq_project_name']}\n")
     file.write("\n")
 
 def print_data_acq(file, system: tuple, config: dict) -> None:
