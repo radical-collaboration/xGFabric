@@ -12,4 +12,4 @@ source $ENV_DIR/env_coordinator.sh
 conda activate cfdaai
 
 # launch the coordinator
-python3 $UTILS_DIR/coordinator.py --mode sim-only --workflow workqueue --scheduler htcondor --num-sims 72 --num-cores 16 --num-workers 10
+python3 $UTILS_DIR/coordinator.py --mode sim-only --workflow workqueue --scheduler htcondor --manager taskvine --num-sims 72 --num-cores 8 --num-workers 20

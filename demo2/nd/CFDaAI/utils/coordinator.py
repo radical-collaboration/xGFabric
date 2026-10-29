@@ -17,12 +17,13 @@ config = {
     "workqueue_mode"           : True,   # always True for Work Queue / Makeflow
     "scheduler"                : "SLURM",
     "mode"                     : "full",
+    "manager"                  : "workqueue",   # "workqueue" or "taskvine" (see BACKENDS)
     # --- SLURM allocation ---
     "wq_project_name"          : "xgfabric",   # -N name shared by workers and makeflow
     "node_poll_interval"       : 60,     # seconds between "are all workers connected?" checks
     "node_ready_timeout"       : 72000,   # seconds to wait for all workers before giving up (20 h)
     # --- HTCondor allocation ---
-    "min_num_workers"          : 10,
+    "wait_workers"             : 0,
 }
 
 global_vars = {
@@ -32,6 +33,38 @@ global_vars = {
     "workflow_status_file" : f"logs/run_{start_time}/coordinator/workflow_status_log.csv",
     "coordinator_output"   : f"logs/run_{start_time}/coordinator/coordinator_output.log",
 }
+
+# ---------------------------------------------------------------------------
+# Manager backends: Work Queue vs TaskVine
+# Each entry names the cctools executables / flags that differ between them.
+# ---------------------------------------------------------------------------
+BACKENDS = {
+    "workqueue": {
+        "label"          : "Work Queue",
+        "makeflow_batch" : "wq",                  # makeflow -T wq
+        "worker"         : "work_queue_worker",
+        "factory"        : "work_queue_factory",
+        "factory_name"   : "-N",                  # project-name flag for the factory
+        "status"         : "work_queue_status",
+        "debug_name"     : "wq.debug",
+        "makeflow_extra" : ["--fast-abort=1000"], # Work Queue-only Makeflow options
+    },
+    "taskvine": {
+        "label"          : "TaskVine",
+        "makeflow_batch" : "vine",                # makeflow -T vine
+        "worker"         : "vine_worker",
+        "factory"        : "vine_factory",
+        "factory_name"   : "-M",
+        "status"         : "vine_status",
+        "debug_name"     : "vine.debug",
+        "makeflow_extra" : [],
+    },
+}
+
+def backend() -> dict:
+    """Settings for the currently selected manager (config['manager'])."""
+    return BACKENDS[config["manager"]]
+
 
 _is_inline_status = False
 
@@ -160,9 +193,9 @@ class NodeAllocator:
             f"--qos={qos}",
             f"--constraint={constraint}",
             f"--time={walltime}",
-            "--job-name=openfoam_wq",
+            f"--job-name=openfoam_{backend()['makeflow_batch']}",
             "srun",
-            "work_queue_worker",
+            backend()["worker"],
             "-M", project,
             "--max-backoff=10", # reconnect quickly
             "--timeout=86400",  # 24 hours
@@ -318,11 +351,11 @@ class HTCondorFactoryManager:
         return self._proc is not None and self._proc.poll() is None
 
     def get_worker_count(self) -> int:
-        """Query work_queue_status for active workers connected to the project."""
+        """Query work_queue_status / vine_status for workers connected to the project."""
         project = config["wq_project_name"]
         try:
             res = subprocess.run(
-                ["work_queue_status", "-M", project],
+                [backend()["status"], "-M", project],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -332,7 +365,7 @@ class HTCondorFactoryManager:
                 # Parse output lines (skipping table header)
                 for line in lines[1:]:
                     parts = line.split()
-                    if len(parts) >= 4 and parts[0] == project:
+                    if len(parts) >= 7 and parts[0] == project:
                         return int(parts[6])  # Workers column
         except Exception as e:
             log_warn(f"Could not retrieve worker status: {e}")
@@ -345,25 +378,29 @@ class HTCondorFactoryManager:
         mem = 1024 * 30
         disk = 1024 * 30
 
+        b = backend()
+        factory_log = (
+            f"{global_vars['log_location']}/workflows/"
+            f"{global_vars['workflow_counter']}/{b['debug_name']}"
+        )
+
         cmd = [
-            "work_queue_factory",
-            f"--min-workers={n_workers}",
+            b["factory"],
+            # f"--min-workers={n_workers}",
             f"--max-workers={n_workers}",
+            # f"--workers-per-cycle=10", # This is the number of workers that will be submitted each go around (~30 seconds). Default is 5.
             "--timeout=86400",
             "--factory-timeout=86400",
-            "-T",
-            "condor",
-            "--cores",
-            str(n_cores),
+            "-T", "condor",
+            "--cores", str(n_cores),
             f"--memory={mem}",
             f"--disk={disk}",
-            "-N",
-            project,
-            "-d",
-            "all",
+            b["factory_name"], project,
+            "-d", "all",
+            "-o", factory_log
         ]
 
-        log_action(f"Submitting HTCondor Factory: {' '.join(cmd)}")
+        log_action(f"Submitting HTCondor {b['label']} Factory: {' '.join(cmd)}")
 
         self._proc = subprocess.Popen(
             cmd,
@@ -375,7 +412,7 @@ class HTCondorFactoryManager:
         """Terminates the factory process when the coordinator stops."""
         if self.is_alive():
             assert self._proc is not None
-            log_action("Terminating Work Queue Factory process.")
+            log_action(f"Terminating {backend()['label']} Factory process.")
             self._proc.terminate()
             try:
                 self._proc.wait(timeout=10)
@@ -385,11 +422,11 @@ class HTCondorFactoryManager:
 
     async def ensure_alive(self) -> None:
         if not self.is_alive():
-            log_warn("Work Queue Factory is not active. Submitting...")
+            log_warn(f"{backend()['label']} Factory is not active. Submitting...")
             self.submit()
         else:
             workers = self.get_worker_count()
-            log_status(f"Work Queue Factory is active with {workers} worker(s) connected.", global_vars['coordinator_output'], True)
+            log_status(f"{backend()['label']} Factory is active with {workers} worker(s) connected.", global_vars['coordinator_output'], True)
 
 # ---------------------------------------------------------------------------
 # Workflow dataclass + coordinator
@@ -502,7 +539,7 @@ async def monitor_logs(log_file_path: str, coordinator: WorkflowCoordinator):
 async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_allocator):
     """
     Endless loop:
-      1. Ensure SLURM nodes are allocated (re-submit if dead).
+      1. Ensure nodes are allocated (re-submit if dead).
       2. Wait until all Work Queue workers have connected.
       3. Run Makeflow non-blocking so both simulations and this loop continue.
       4. Wait for Makeflow to finish before repeating.
@@ -552,34 +589,28 @@ async def workflow_submission_loop(coordinator: WorkflowCoordinator, node_alloca
 
         # ---- Step 4: launch Makeflow non-blocking ----
         wf_id = global_vars['workflow_counter']
+        b = backend()
+        makeflow_cmd = [
+            "makeflow",
+            "-T", b["makeflow_batch"],          # "wq" or "vine"
+            "-N", config["wq_project_name"],
+            makeflow_location,
+            "-d", "all",
+            *b["makeflow_extra"],               # e.g. --fast-abort for Work Queue only
+            "--retry-count=5",
+            "--wait-for-workers", str(config["wait_workers"]),
+            "-P", str(wf_id),
+            "-o", makeflow_log,
+        ]
+        log_action(f"Launching Makeflow ({b['label']}): {' '.join(makeflow_cmd)}")
         proc = subprocess.Popen(
-            [
-                "makeflow",
-                "-T", "wq",
-                "-N", config["wq_project_name"],
-                makeflow_location,
-                "-d", "all",
-                "--fast-abort=1000",
-                "--retry-count=5",
-                "-P", str(wf_id),
-                "-o", makeflow_log,
-            ],
+            makeflow_cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
 
         coordinator.submit_workflow(wf_id, proc)
         global_vars['workflow_counter'] += 1
-
-        if config["scheduler"] == "HTCondor" and wf_id == 1:
-            log_update("Waiting for workers...")
-            curr_workers = node_allocator.get_worker_count()
-            while curr_workers < config["min_num_workers"]:
-                log_status(f"{curr_workers}/{config['min_num_workers']} worker(s) are connected.")
-                curr_workers = node_allocator.get_worker_count()
-                await asyncio.sleep(5)
-            log_update(f"{curr_workers} worker(s) have connected.")
-
 
         # ---- Step 5: wait for this Makeflow to finish ----
         while True:
@@ -667,7 +698,14 @@ if __name__ == "__main__":
         modes = ["full", "sim-only", "train-only"]
         config["mode"] = modes[int(mode) - 1]
         print(config["mode"])
-        sys.exit(0)
+
+        print("Which task manager do you want to use?")
+        print("(1) Work Queue (default)")
+        print("(2) TaskVine")
+        manager = input("==> ") or "1"
+        sanitize_input(manager, int)
+        if manager == "2":
+            config["manager"] = "taskvine"
 
         print("Which scheduler are you using?")
         print("(1) SLURM (default)")
@@ -684,7 +722,7 @@ if __name__ == "__main__":
         num_sims = input("==> ") or "72"
         sanitize_input(num_sims, int)
         config["number_of_simulations"] = num_sims
-        
+
         print("How many cores-per-simulation do you want to have? (default=32)")
         num_cores = input("==> ") or "32"
         sanitize_input(num_cores, int)
@@ -694,7 +732,7 @@ if __name__ == "__main__":
             print("How many workers do you want to wait for before starting the simulations. (default: 10)")
             num_workers = input("==> ") or "10"
             sanitize_input(num_workers, int)
-            config["min_num_workers"] = num_workers
+            config["wait_workers"] = num_workers
 
     else:
         parser = argparse.ArgumentParser(description='Coordinator for running xGFabric workflows.')
@@ -711,6 +749,13 @@ if __name__ == "__main__":
             choices=["workqueue", "makeflow"],
             default="workqueue",
             help="Execution mode (default: workqueue)"
+        )
+
+        parser.add_argument(
+            "--manager",
+            choices=["workqueue", "taskvine"],
+            default="workqueue",
+            help="Task manager Makeflow submits to: Work Queue or TaskVine (default: workqueue)"
         )
 
         parser.add_argument(
@@ -737,14 +782,15 @@ if __name__ == "__main__":
         parser.add_argument(
             "--num-workers",
             type=int,
-            default=10,
-            help="Number of workers to allocate before starting the simulations. Only used on HTCondor (default: 10)"
+            default=0,
+            help="Workers that must connect before Makeflow dispatches any DAG tasks (default: 5)"
         )
 
         args = parser.parse_args()
 
         config["workqueue_mode"] = args.workflow == "workqueue"
         config["mode"] = args.mode
+        config["manager"] = args.manager
 
         scheduler_map = {
             "slurm": "SLURM",
@@ -755,9 +801,14 @@ if __name__ == "__main__":
 
         config["number_of_simulations"] = args.num_sims
         config["number_of_cores"] = args.num_cores
+        if args.num_sims < 1:
+            parser.error("--num-sims must be greater than zero")
+        if args.num_workers < 1:
+            parser.error("--num-workers must be greater than zero")
+        if args.num_workers > args.num_sims:
+            parser.error("--num-workers cannot exceed --num-sims")
 
-        if config["scheduler"] == "HTCondor":
-            config["min_num_workers"] = args.num_workers
+        config["wait_workers"] = args.num_workers
 
     try:
         asyncio.run(main())

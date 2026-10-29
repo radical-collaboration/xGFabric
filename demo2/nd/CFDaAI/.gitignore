@@ -43,6 +43,7 @@ slurm.wrapper
 slurm.status.*
 makeflow.debug
 wq-factory-*/
+vine-*/
 .vscode/
 senspot/
 bin/
