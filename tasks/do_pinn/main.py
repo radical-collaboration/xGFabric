@@ -103,14 +103,16 @@ def tk_pinn_eval(config, path_to_pinn_tar, wind):
         stderr=subprocess.DEVNULL,
     )
 
+    tarproc.communicate()
+
     if tarproc.returncode != 0:
         logger.warning(f"Error executing tar!")
         raise ValueError(f"Error executing tar! {' '.join(cmd_tar)}")
 
-    # Now, files are in env['INTERIM_DIR']
+    # Now, files are in env['INTERIM_DIR'], named as tk_do_pinn archived them
     model, metadata = prepare(
-        env["INTERIM_DIR"] + "/model.weights.h5",
-        env["INTERIM_DIR"] + "/model_meta.json",
+        env["INTERIM_DIR"] + "/pinn.weights.h5",
+        env["INTERIM_DIR"] + "/pinn.model_meta.json",
         logger,
     )
 
