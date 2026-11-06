@@ -15,20 +15,22 @@ def prepare(model_weights, model_meta, logger: logging.Logger):
     with open(model_meta) as f:
         pinn_meta = json.load(f)
 
-    pinn = PhysicsMLP3D(hidden=pinn_meta["hidden"], n_layers=pinn_meta["n_layers"])
+    # keys as MPWB2_CFD.pinn_main_entry writes them
+    hidden = pinn_meta["hidden_dim"]
+    pinn = PhysicsMLP3D(hidden=hidden, n_layers=pinn_meta["n_hidden_layers"])
     _ = pinn(tf.zeros((1, 4)))  # build all layers
 
     # Force-build every block in the list (ensures Keras tracks them before loading)
     for blk in pinn.blocks:
         if not blk.built:
-            blk.build((None, pinn_meta["hidden"]))
+            blk.build((None, hidden))
 
     pinn.load_weights(model_weights)
 
     n_pinn = sum(np.prod(v.shape) for v in pinn.trainable_variables)
     logger.info(f"PINN loaded  ({n_pinn:,} params)")
     logger.info(
-        f'  best_val_mse = {pinn_meta["best_val_mse"]:.5f}  '
+        f'  best_val_loss = {pinn_meta["best_val_loss"]:.5f}  '
         f'epochs = {pinn_meta["epochs_trained"]}'
     )
 

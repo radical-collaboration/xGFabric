@@ -1,5 +1,6 @@
 import glob
 import subprocess
+import tempfile
 import logging
 
 import cloudpickle
@@ -95,6 +96,10 @@ def tk_pinn_eval(config, path_to_pinn_tar, wind):
     )
     logger = register_log(env, logging.INFO)
 
+    # a private interim dir per call: concurrent evals share the
+    # INFERENCE task dir, and close_task(clean=True) removes INTERIM_DIR
+    env["INTERIM_DIR"] = tempfile.mkdtemp(dir=env["INTERIM_DIR"])
+
     cmd_tar = ["tar", "-xf", path_to_pinn_tar, "-C", env["INTERIM_DIR"]]
 
     tarproc = subprocess.Popen(
@@ -103,14 +108,16 @@ def tk_pinn_eval(config, path_to_pinn_tar, wind):
         stderr=subprocess.DEVNULL,
     )
 
+    tarproc.communicate()
+
     if tarproc.returncode != 0:
         logger.warning(f"Error executing tar!")
         raise ValueError(f"Error executing tar! {' '.join(cmd_tar)}")
 
-    # Now, files are in env['INTERIM_DIR']
+    # Now, files are in env['INTERIM_DIR'], named as tk_do_pinn archived them
     model, metadata = prepare(
-        env["INTERIM_DIR"] + "/model.weights.h5",
-        env["INTERIM_DIR"] + "/model_meta.json",
+        env["INTERIM_DIR"] + "/pinn.weights.h5",
+        env["INTERIM_DIR"] + "/pinn.model_meta.json",
         logger,
     )
 

@@ -2,6 +2,7 @@ import asyncio
 import glob
 import os
 import subprocess
+import tempfile
 import time
 import logging
 import random
@@ -53,6 +54,18 @@ def tk_pcr_partition(config, sims_list, sensor_values):
         sensor_df, sims_list, data_w_points, env["OUTPUT_DIR"], logger
     )
 
+    # stage the per-machine data to files and return their paths: the list
+    # itself is about 10 MB, over the 2 MiB limit for a task's return value
+    # through ORBIT (the investigator then received None).  tk_do_pcr runs
+    # on the same endpoint and loads its file.
+    paths = []
+    for i, machine_data in enumerate(machine_data_outputs):
+        path = os.path.join(env["OUTPUT_DIR"], f"machine_{i}.pkl")
+        with open(path, "wb") as f:
+            cloudpickle.dump(machine_data, f)
+        paths.append(path)
+    machine_data_outputs = paths
+
     close_task(env)
     # with open(
     #     "/global/homes/b/bcarter/pppl/repos/xGFabric-radical/debug.pkl", "wb"
@@ -73,6 +86,10 @@ def tk_do_pcr(config, machine_data_output):
 
     # close_task(env)
     # return env["OUTPUT_DIR"]
+
+    if isinstance(machine_data_output, str):  # staged by tk_pcr_partition
+        with open(machine_data_output, "rb") as f:
+            machine_data_output = cloudpickle.load(f)
 
     u_id = machine_data_output["machine_id"]
 
@@ -138,6 +155,10 @@ def tk_pcr_eval(config, path_to_pcr_tar, wind):
         exist_ok=True,
     )
     logger = register_log(env, logging.INFO)
+
+    # a private interim dir per call: concurrent evals share the
+    # INFERENCE task dir, and close_task(clean=True) removes INTERIM_DIR
+    env["INTERIM_DIR"] = tempfile.mkdtemp(dir=env["INTERIM_DIR"])
 
     cmd_tar = ["tar", "-xf", path_to_pcr_tar, "-C", env["INTERIM_DIR"]]
 
