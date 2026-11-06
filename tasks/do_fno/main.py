@@ -1,5 +1,6 @@
 import glob
 import subprocess
+import tempfile
 import logging
 
 import cloudpickle
@@ -102,6 +103,10 @@ def tk_fno_eval(config, path_to_fno_tar, wind):
     #     "/global/homes/b/bcarter/pppl/repos/xGFabric-radical/debug.pkl", "wb"
     # ) as f:
     #     cloudpickle.dump(save, f)
+
+    # a private interim dir per call: concurrent evals share the
+    # INFERENCE task dir, and close_task(clean=True) removes INTERIM_DIR
+    env["INTERIM_DIR"] = tempfile.mkdtemp(dir=env["INTERIM_DIR"])
 
     cmd_tar = ["tar", "-xf", path_to_fno_tar, "-C", env["INTERIM_DIR"]]
 

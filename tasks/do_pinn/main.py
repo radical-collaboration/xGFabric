@@ -1,5 +1,6 @@
 import glob
 import subprocess
+import tempfile
 import logging
 
 import cloudpickle
@@ -94,6 +95,10 @@ def tk_pinn_eval(config, path_to_pinn_tar, wind):
         exist_ok=True,
     )
     logger = register_log(env, logging.INFO)
+
+    # a private interim dir per call: concurrent evals share the
+    # INFERENCE task dir, and close_task(clean=True) removes INTERIM_DIR
+    env["INTERIM_DIR"] = tempfile.mkdtemp(dir=env["INTERIM_DIR"])
 
     cmd_tar = ["tar", "-xf", path_to_pinn_tar, "-C", env["INTERIM_DIR"]]
 
