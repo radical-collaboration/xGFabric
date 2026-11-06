@@ -40,7 +40,8 @@ async def profile_call(func, example_data, kwargs=None) -> dict:
 
     Returns the profiler's schema:
       total_seconds, cpu_seconds, disk_read_bytes, disk_write_bytes,
-      sys_read_bytes, memory_bytes
+      sys_read_bytes, sys_write_bytes, memory_bytes
+    (the column order of the Pi predictor's data.csv, minus pi_seconds)
     """
 
     kwargs = kwargs or {}
@@ -76,6 +77,7 @@ async def profile_call(func, example_data, kwargs=None) -> dict:
         "disk_read_bytes": io_delta("read_bytes"),
         "disk_write_bytes": io_delta("write_bytes"),
         "sys_read_bytes": io_delta("read_chars"),
+        "sys_write_bytes": io_delta("write_chars"),
         # ru_maxrss is peak RSS in KiB on Linux (bytes on macOS); the peak
         # high-water mark, matching the subprocess profiler's peak metric.
         "memory_bytes": int(ru1.ru_maxrss) * 1024,
